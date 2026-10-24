@@ -1,0 +1,1590 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="依 ISO/IEC 27001:2022 架構設計的 ISMS 導入輔助工具：情境案例搜尋、附錄 A 逐項確認、產業建議重點與 SoA Excel 匯出。資料只存在你的瀏覽器。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="ISMS 條款對照台">
+<meta property="og:description" content="依 ISO/IEC 27001:2022 架構設計的 ISMS 導入輔助工具：情境案例搜尋、附錄 A 逐項確認、產業建議重點與 SoA Excel 匯出。資料只存在你的瀏覽器。">
+<meta property="https://coloplay1.github.io/isms-mapper/docs/overview.png" content="docs/overview.png">
+<meta name="theme-color" content="#0e5a6b">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='none' stroke='%230e5a6b' stroke-width='3'/%3E%3Cpath d='M10 16.5l4 4 8-9' fill='none' stroke='%230e5a6b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font-size:14px}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<title>ISMS 條款對照台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: sticky project bar + tabs; work surface below. Control codes in mono like an audit worksheet. */
+:root{
+  --focus:#6a4fc9; --focus-soft:#ece8fa;
+  --bg:#eef2f1; --surface:#ffffff; --surface2:#f6f8f8; --ink:#16232a; --muted:#5a6b72; --line:#d6dedd;
+  --accent:#0e5a6b; --accent-ink:#ffffff; --accent-soft:#dcebee; --seal:#b0442c;
+  --s0:#e4e9e9; --s1:#efc56d; --s2:#62aaa3; --s3:#1c6e61; --na:#c9cfd0;
+  --font-display:"Noto Serif TC","Songti TC",serif;
+  --font-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:8px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f171a; --surface:#16211f; --surface2:#1b2826; --ink:#e3ecea; --muted:#94a6a8; --line:#2b3a3a;
+  --accent:#5cb7c6; --accent-ink:#06191d; --accent-soft:#16343a; --seal:#e07a5f;
+  --s0:#26332f; --s1:#b88a2c; --s2:#3f8f88; --s3:#62c3ad; --na:#3a4545; --focus:#b4a3ff; --focus-soft:#2a2547; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f171a; --surface:#16211f; --surface2:#1b2826; --ink:#e3ecea; --muted:#94a6a8; --line:#2b3a3a;
+  --accent:#5cb7c6; --accent-ink:#06191d; --accent-soft:#16343a; --seal:#e07a5f;
+  --s0:#26332f; --s1:#b88a2c; --s2:#3f8f88; --s3:#62c3ad; --na:#3a4545; --focus:#b4a3ff; --focus-soft:#2a2547; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.6;margin:0}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding-block:12px 8px}
+.brand{font-family:var(--font-display);font-size:19px;letter-spacing:.02em;display:flex;align-items:center;gap:8px;margin-right:auto}
+.brand .mark{width:22px;height:22px;border:2px solid var(--accent);border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:10px;color:var(--accent)}
+.proj{display:flex;align-items:center;gap:8px;min-width:0}
+.saved{font-size:12px;color:var(--muted);white-space:nowrap}
+.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.tabs button{border:0;background:none;color:var(--muted);font:inherit;font-size:14px;padding:8px 12px 10px;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:500}
+main{padding-block:22px 60px}
+h2{font-family:var(--font-display);font-size:22px;margin:0 0 4px;text-wrap:balance}
+h3{font-size:15px;margin:0 0 10px;font-weight:700}
+.lede{color:var(--muted);margin:0 0 18px;max-width:65ch}
+select,input,textarea{font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0}
+select:focus,input:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:6px;padding:6px 12px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--seal);border-color:var(--seal)}
+.mono{font-family:var(--font-mono);font-size:13px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.grid2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:18px}
+@media (max-width:860px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.stats{display:flex;flex-wrap:wrap;gap:28px;margin-bottom:18px}
+.stat b{display:block;font-family:var(--font-mono);font-size:26px;font-variant-numeric:tabular-nums;line-height:1.2}
+.stat span{font-size:12px;color:var(--muted);letter-spacing:.04em}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);margin-top:14px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.heat-row{margin-bottom:14px}
+.heat-row .lab{font-size:13px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between;gap:8px}
+.cells{display:flex;flex-wrap:wrap;gap:4px}
+.cell{width:34px;height:30px;border-radius:4px;border:0;cursor:pointer;font-family:var(--font-mono);font-size:10px;color:var(--ink);display:grid;place-items:center;position:relative;padding:0}
+.cell.new::after{content:"";position:absolute;top:3px;right:3px;width:5px;height:5px;border-radius:50%;background:var(--seal)}
+.cell.lvl3{color:#fff}
+.na{background:repeating-linear-gradient(135deg,var(--na) 0 3px,transparent 3px 6px)!important;opacity:.7}
+.undec{background:transparent!important;outline:1px dashed var(--line)}
+.pdca{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (max-width:560px){.pdca{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.pdca div{background:var(--surface2);border-radius:6px;padding:10px}
+.pdca b{font-family:var(--font-mono);font-size:12px;color:var(--accent);letter-spacing:.06em}
+.pdca p{margin:2px 0 6px;font-size:13px}
+.minibar{height:6px;background:var(--s0);border-radius:3px;overflow:hidden}
+.minibar span{display:block;height:100%;background:var(--s3)}
+.charts{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.2fr) minmax(0,1fr);gap:18px}
+@media (max-width:980px){.charts{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.charts>:last-child{grid-column:1/-1}}
+@media (max-width:640px){.charts{grid-template-columns:minmax(0,1fr)}}
+.donutwrap{display:flex;flex-wrap:wrap;align-items:center;gap:14px}
+.donut{width:168px;max-width:100%;flex:none}
+.ring{width:100%;max-width:280px;display:block;margin:0 auto}
+.donut text,.ring text{fill:var(--ink)}
+svg .big{font-family:var(--font-mono);font-size:26px;font-weight:500}
+svg .small{font-size:11px;fill:var(--muted)}
+svg .ph{font-size:13px;font-weight:700}
+svg path[data-tip]:hover{opacity:.85}
+.lg{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:13px;flex:1;min-width:120px}
+.lg li{display:flex;align-items:center;gap:8px}
+.lg b{margin-left:auto;font-family:var(--font-mono);font-weight:500;font-variant-numeric:tabular-nums}
+.lg i{width:11px;height:11px;border-radius:2px;flex:none}
+.brow{margin-bottom:12px}
+.blab{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted);margin-bottom:4px}
+.stack{display:flex;gap:2px;height:14px;border-radius:4px;overflow:hidden}
+.stack span{min-width:3px}
+.stack .undec,.lg .undec{background:var(--surface2)!important;outline:none;box-shadow:inset 0 0 0 1px var(--muted)}
+[data-lseg],[data-lphase]{cursor:pointer}
+svg path[data-lseg]:focus-visible,svg path[data-lphase]:focus-visible{outline:none;stroke:var(--ink);stroke-width:2}
+.stack.live span:hover{filter:brightness(.92)}
+.stack.live span:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.lg li{border-radius:4px;padding:1px 4px;margin:0 -4px}
+.lg li:hover{background:var(--surface2)}
+.llist{display:grid;gap:4px;margin-top:10px}
+.lrow{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:2px 8px;align-items:center;text-align:left;background:var(--surface2);border:1px solid var(--line);border-radius:6px;padding:7px 10px;cursor:pointer;font:inherit;color:var(--ink)}
+.lrow:hover{border-color:var(--accent)}
+.lrow .mono{color:var(--accent);min-width:4.8em}
+.lrow .ln{font-size:14px;min-width:0}
+.lrow .lmeta{grid-column:3;font-size:12px;color:var(--muted)}
+.dot.undec{background:var(--surface2);box-shadow:inset 0 0 0 1px var(--muted)}
+.utoast{display:flex;align-items:center;gap:14px;padding:8px 8px 8px 16px}
+.utoast button{background:none;border:1px solid currentColor;color:inherit;border-radius:4px;padding:3px 10px;font:inherit;font-size:13px;cursor:pointer}
+input.warn{border-color:var(--seal);box-shadow:inset 0 0 0 1px var(--seal)}
+.warnhint{display:block;color:var(--seal);font-size:12px;margin-top:4px}
+.warnhint[hidden]{display:none}
+.alertrow{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline;width:100%;text-align:left;background:var(--surface2);border:1px solid var(--seal);border-radius:6px;padding:8px 12px;margin-bottom:12px;cursor:pointer;font:inherit;font-size:14px;color:var(--ink)}
+.alertrow b{color:var(--seal)}
+.alertrow span{margin-left:auto;color:var(--seal);font-size:13px}
+.hist{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:13px}
+.hist li{display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:6px}
+.hist time{font-family:var(--font-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.hist s{color:var(--muted)}
+.hist .hcode{background:none;border:0;padding:0;color:var(--accent);cursor:pointer}
+.ppl{list-style:none;margin:0 0 4px;padding:0;display:grid;gap:6px}
+.ppl li{display:flex;flex-wrap:wrap;align-items:center;gap:8px;border:1px solid var(--line);border-radius:6px;padding:6px 8px 6px 12px;background:var(--surface2)}
+.ppl .pn{font-weight:500;margin-right:auto}
+.ppl .chip[disabled]{opacity:.5;cursor:default}
+.opick{position:fixed;z-index:35;background:var(--surface);border:1px solid var(--line);border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,.15);overflow-y:auto;padding:4px}
+.opick .oi{padding:6px 10px;border-radius:4px;cursor:pointer;font-size:14px}
+.opick .oi:hover,.opick .oi.hl{background:var(--accent-soft)}
+.opick .oi.on{font-weight:500;color:var(--accent)}
+.opick .oi.clr{color:var(--muted);border-top:1px solid var(--line);border-radius:0;margin-top:2px}
+.opick .oi.add{color:var(--accent)}
+.opick .oi{display:flex;gap:8px;align-items:flex-start}
+.opick .ck{width:1em;flex:none;color:var(--accent)}
+.opick .ol{flex:1;min-width:0}
+.opick .oh{font-size:11px;letter-spacing:.06em;color:var(--muted);padding:8px 10px 2px}
+.opick .ohint{font-size:11px;color:var(--muted);padding:4px 10px 2px}
+.opick .odel{background:none;border:0;color:var(--muted);cursor:pointer;font-size:15px;line-height:1;padding:0 2px}
+.opick .odel:hover{color:var(--seal)}
+.opick .oempty{padding:8px 10px;font-size:13px;color:var(--muted)}
+.tip{position:fixed;z-index:40;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:5px 9px;border-radius:5px;max-width:260px}
+.tabs button[aria-disabled="true"]{opacity:.4}
+.sbanner{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:var(--r);padding:10px 14px;margin-bottom:18px;font-size:14px}
+.sbanner[hidden]{display:none}
+.sbanner .msg{margin-right:auto;min-width:0}
+.home{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px}
+.home .full{grid-column:1/-1}
+@media (max-width:860px){.home{grid-template-columns:minmax(0,1fr)}}
+.cform{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 14px;margin-top:6px}
+.cform .wide{grid-column:1/-1}
+@media (max-width:560px){.cform{grid-template-columns:minmax(0,1fr)}}
+.cform label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+.cform fieldset{border:0;padding:0;margin:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+@media (max-width:560px){.cform fieldset{grid-template-columns:minmax(0,1fr)}}
+.cform legend{font-size:13px;color:var(--muted);margin-bottom:6px}
+.cform .radio{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:6px;padding:10px 12px;color:var(--ink);font-size:14px;cursor:pointer}
+.cform .radio:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.cform .radio input{margin-top:4px}
+.cform .radio small{display:block;color:var(--muted);font-size:12px}
+.cform .actions{display:flex;flex-wrap:wrap;gap:8px}
+.secthead{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;margin-bottom:10px}
+.secthead h3{margin:0}
+.secthead .note{margin:0}
+.samples{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:860px){.samples{grid-template-columns:minmax(0,1fr)}}
+.scard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:10px}
+.scard.active{border-color:var(--accent)}
+.scard .stage{font-family:var(--font-mono);font-size:12px;color:var(--accent);letter-spacing:.04em}
+.scard h4{margin:0;font-size:17px;font-family:var(--font-display)}
+.scard p{margin:0;font-size:13px;color:var(--muted);flex:1}
+.scard .nums{display:flex;gap:16px;font-size:12px;color:var(--muted)}
+.scard .nums b{font-family:var(--font-mono);font-size:15px;color:var(--ink);font-weight:500;margin-right:3px}
+.pempty{border:1px dashed var(--line);border-radius:var(--r);padding:22px;color:var(--muted);font-size:14px;text-align:center}
+.fchips{display:flex;flex-wrap:wrap;gap:6px}
+.fchip{position:relative;cursor:pointer}
+.fchip input{position:absolute;opacity:0;pointer-events:none}
+.fchip span{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:3px 11px;font-size:13px;color:var(--ink);background:var(--surface)}
+.fchip input:checked+span{border-color:var(--focus);background:var(--focus-soft);color:var(--ink)}
+.fchip input:checked+span::before{content:"✓ ";color:var(--focus);font-weight:700}
+.fchip input:focus-visible+span{outline:2px solid var(--focus);outline-offset:1px}
+.fcount{font-size:12px;color:var(--focus)}
+.fstar{background:none;border:0;padding:0 6px 0 0;cursor:pointer;color:var(--muted);font-size:15px;line-height:1;vertical-align:-1px}
+.fstar.on{color:var(--focus)}
+.fstar:hover{color:var(--focus)}
+.fname{text-decoration:underline;text-decoration-color:var(--focus);text-decoration-thickness:2px;text-underline-offset:4px}
+tr.focus td.code{box-shadow:inset 4px 0 0 var(--focus)}
+.ftag{font-size:11px;color:var(--focus);border:1px solid var(--focus);border-radius:3px;padding:0 4px;margin-left:6px;white-space:nowrap;background:var(--focus-soft)}
+.ctag{font-size:11px;color:var(--muted);border:1px dashed var(--muted);border-radius:3px;padding:0 4px;margin-left:6px;white-space:nowrap}
+.cell.focus{box-shadow:inset 0 -4px 0 var(--focus)}
+.fpanel{border-color:var(--focus);margin-top:18px}
+.fgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:20px}
+@media (max-width:860px){.fgrid{grid-template-columns:minmax(0,1fr)}}
+.laws{display:grid;gap:10px}
+.law{border:1px solid var(--line);border-radius:6px;padding:12px 14px;background:var(--surface2)}
+.law h4{margin:0;font-size:15px;display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}
+.law h4 small{font-size:11px;color:var(--muted);font-weight:400;border:1px solid var(--line);border-radius:3px;padding:0 5px}
+.law p{margin:6px 0;font-size:13px;color:var(--muted)}
+.law ul{margin:4px 0 8px;padding-left:18px;font-size:13px}
+.law .refs{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.law a{font-size:13px;color:var(--accent)}
+.why{background:var(--focus-soft);border-radius:6px;padding:10px 12px;font-size:13px;margin:12px 0}
+.why b{color:var(--focus)}
+.why ul{margin:4px 0 0;padding-left:18px}
+.todo{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.todo li{display:flex;gap:10px;align-items:baseline;font-size:14px}
+.todo button{background:none;border:0;padding:0;color:var(--accent);cursor:pointer;font:inherit;text-align:left}
+/* search */
+.searchbox{display:flex;gap:8px;margin-bottom:10px}
+.searchbox input{flex:1;font-size:16px;padding:10px 12px}
+.hints{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px;font-size:13px;color:var(--muted);align-items:center}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:2px 10px;font-size:13px;cursor:pointer;color:var(--ink);font-family:inherit}
+.chip:hover{border-color:var(--accent)}
+.ref{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);background:var(--surface2);border-radius:5px;padding:2px 8px;font-size:13px;cursor:pointer;color:var(--ink);font-family:inherit;text-align:left}
+.ref:hover{border-color:var(--accent)}
+.ref .mono{color:var(--accent)}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.cases{display:grid;gap:12px}
+.case{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.case h4{margin:0 0 4px;font-size:16px}
+.case p{margin:0 0 8px;font-size:14px;color:var(--muted)}
+.case .refs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.case .rec{font-size:13px}
+.case .rec b{font-weight:500;color:var(--muted);margin-right:4px}
+.rank{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.rank li{display:flex;align-items:center;gap:8px}
+.rank .w{margin-left:auto;font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.empty{color:var(--muted);padding:24px;text-align:center;border:1px dashed var(--line);border-radius:var(--r)}
+/* checklist */
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.filters .grow{flex:1 1 180px}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{border:0;background:var(--surface);font:inherit;font-size:13px;padding:6px 10px;cursor:pointer;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--ink);font-weight:500}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:980px;font-size:14px}
+th{text-align:left;font-size:12px;letter-spacing:.04em;color:var(--muted);font-weight:500;padding:8px 10px;border-bottom:1px solid var(--line);background:var(--surface2);position:sticky;top:0}
+td{padding:6px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td input,td select{width:100%}
+td.code{white-space:nowrap}
+td.code button{background:none;border:0;padding:0;cursor:pointer;color:var(--accent);font-family:var(--font-mono);font-size:13px}
+.name{min-width:170px}
+.tag{font-size:11px;color:var(--seal);border:1px solid var(--seal);border-radius:3px;padding:0 4px;margin-left:6px;white-space:nowrap}
+tr.isna td:not(.keep){opacity:.55}
+.stsel{border-left-width:5px}
+.count{font-size:13px;color:var(--muted);margin-left:auto}
+/* projects */
+.plist{display:grid;gap:10px}
+.prow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.prow.active{border-color:var(--accent)}
+.prow .meta{margin-right:auto;min-width:0}
+.pacts{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.prow .meta b{display:block}
+.prow .meta small{color:var(--muted)}
+.form{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.form input{flex:1 1 200px}
+.note{font-size:13px;color:var(--muted);max-width:70ch}
+.banner{background:var(--accent-soft);border-radius:6px;padding:8px 12px;font-size:13px;margin-bottom:14px}
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(10,20,22,.45);z-index:20}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--surface);z-index:21;overflow-y:auto;padding:calc(20px + env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) 20px;border-left:1px solid var(--line)}
+.drawer .x{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px))}
+.drawer .code{font-family:var(--font-mono);color:var(--accent);font-size:14px}
+.drawer h2{margin-top:4px}
+.drawer dl{display:grid;gap:10px;margin:16px 0}
+.drawer dt{font-size:12px;color:var(--muted);letter-spacing:.04em}
+.drawer dd{margin:2px 0 0}
+.drawer dd input,.drawer dd select,.drawer dd textarea{width:100%}
+.drawer .rel{display:grid;gap:6px;font-size:14px}
+.drawer .rel button{text-align:left;background:var(--surface2);border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer;font:inherit;color:var(--ink)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:6px;font-size:14px;z-index:30}
+footer{font-size:12px;color:var(--muted);padding-block:0 30px}
+@media (max-width:560px){.bar{padding-block:10px 4px}.brand{font-size:17px}.proj select{max-width:52vw}}
+@media (prefers-reduced-motion:no-preference){.drawer{animation:slide .18s ease-out}@keyframes slide{from{transform:translateX(24px);opacity:.6}}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="bar">
+      <div class="brand"><span class="mark">27k</span>ISMS 條款對照台</div>
+      <div class="proj">
+        <label for="projSel" class="saved">專案</label>
+        <select id="projSel"></select>
+        <button class="btn" id="newBtn">＋ 新專案</button>
+        <span class="saved" id="savedAt"></span>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" id="tabs">
+      <button role="tab" data-tab="home" aria-selected="true">首頁</button>
+      <button role="tab" data-tab="overview" aria-selected="false">總覽</button>
+      <button role="tab" data-tab="search">案例搜尋</button>
+      <button role="tab" data-tab="annex">附錄 A 確認</button>
+      <button role="tab" data-tab="clauses">條款 4–10</button>
+      <button role="tab" data-tab="projects">專案與備份</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="storeBanner" class="banner" hidden>這個瀏覽器目前無法自動儲存。請在「專案與備份」匯出專案檔，下次再匯入。</div>
+  <div id="sampleBanner" class="sbanner" hidden></div>
+  <section id="view-home"></section>
+  <section id="view-overview" hidden></section>
+  <section id="view-search" hidden></section>
+  <section id="view-annex" hidden></section>
+  <section id="view-clauses" hidden></section>
+  <section id="view-projects" hidden></section>
+</main>
+<footer class="wrap">依 ISO/IEC 27001:2022 結構整理。條款名稱與說明為本工具自行撰寫的摘要，不含標準原文；正式內容請參照取得授權的標準文件。</footer>
+
+<div id="drawerHost"></div>
+<datalist id="ownerList"></datalist>
+<input type="file" id="importFile" accept=".json,application/json" hidden>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+"use strict";
+/* ================= DATA ================= */
+const THEMES = [
+  {id:"5", name:"組織控制", en:"Organizational"},
+  {id:"6", name:"人員控制", en:"People"},
+  {id:"7", name:"實體控制", en:"Physical"},
+  {id:"8", name:"技術控制", en:"Technological"}
+];
+const NEW2022 = new Set(["A.5.7","A.5.23","A.5.30","A.7.4","A.8.9","A.8.10","A.8.11","A.8.12","A.8.16","A.8.23","A.8.28"]);
+// [code, 名稱(自撰), 說明(自撰), 常見證據]
+const ANNEX_RAW = [
+["A.5.1","資訊安全政策","訂定經管理階層核准的資安政策與主題政策，並定期檢討。","資安政策文件、核准紀錄、公告紀錄"],
+["A.5.2","資安角色與責任","明確定義並分派資安相關的角色與責任。","組織圖、職掌說明、任命書"],
+["A.5.3","職責區隔","將互相衝突的職責分開，避免單一人員可獨自完成高風險作業。","權責矩陣、簽核流程設定"],
+["A.5.4","管理階層責任","管理階層要求所有人員依政策與程序落實資安。","管理審查紀錄、宣導紀錄"],
+["A.5.5","與主管機關聯繫","建立並維持與相關主管機關的聯繫管道。","聯絡清單、通報紀錄"],
+["A.5.6","與專業團體聯繫","與資安社群、公會等專業團體保持聯繫。","會員資格、研討會參與紀錄"],
+["A.5.7","威脅情資","蒐集並分析資安威脅資訊，作為防護決策依據。","情資來源清單、情資分析報告"],
+["A.5.8","專案管理中的資安","在專案管理各階段納入資安要求。","專案資安檢核表、需求文件"],
+["A.5.9","資訊與相關資產清冊","建立並維護資訊與相關資產清冊，指定擁有者。","資產清冊、盤點紀錄"],
+["A.5.10","資訊與資產的可接受使用","訂定資訊與資產可接受使用的規則並落實。","可接受使用規範、簽署紀錄"],
+["A.5.11","資產歸還","人員離職或合約結束時歸還組織資產。","資產歸還單、離職檢核表"],
+["A.5.12","資訊分級","依機密性、完整性、可用性與法規需求將資訊分級。","分級準則、分級清單"],
+["A.5.13","資訊標示","依分級制度對資訊進行標示。","標示規範、文件標示範例"],
+["A.5.14","資訊傳遞","規範組織內外資訊傳遞的方式與保護措施。","資訊傳遞規範、加密傳輸設定"],
+["A.5.15","存取控制","依營運與資安需求訂定存取控制規則。","存取控制政策、權限矩陣"],
+["A.5.16","身分管理","管理身分的完整生命週期，從建立到停用。","帳號申請單、帳號清冊"],
+["A.5.17","鑑別資訊","控管密碼等鑑別資訊的配發與使用。","密碼政策、MFA 設定紀錄"],
+["A.5.18","存取權限","依規則配發、審查、調整與撤銷存取權限。","權限申請單、定期審查紀錄"],
+["A.5.19","供應商關係中的資安","識別並管理使用供應商產品或服務的資安風險。","供應商評估表、合格供應商名冊"],
+["A.5.20","供應商協議中的資安","在供應商合約中訂定資安要求。","合約資安條款、保密協議"],
+["A.5.21","ICT 供應鏈資安管理","管理資通訊產品與服務供應鏈的資安風險。","供應鏈風險評估、軟體來源清單"],
+["A.5.22","供應商服務監督與變更","監督、審查並管理供應商服務品質與變更。","服務水準報告、供應商稽核紀錄"],
+["A.5.23","雲端服務使用的資安","規範雲端服務的取得、使用、管理與退出。","雲端使用規範、共同責任分界表"],
+["A.5.24","資安事故管理規劃與準備","規劃事故管理流程、角色與責任。","事故管理程序、應變小組名單"],
+["A.5.25","資安事件評估與決策","評估資安事件並判定是否列為資安事故。","事件分級標準、評估紀錄"],
+["A.5.26","資安事故回應","依程序回應資安事故。","事故處理紀錄、應變報告"],
+["A.5.27","從資安事故中學習","利用事故經驗強化控制措施。","事後檢討報告、改善追蹤"],
+["A.5.28","證據蒐集","建立蒐集與保全資安事件相關證據的程序。","證據保全程序、監管鏈紀錄"],
+["A.5.29","中斷期間的資安","規劃營運中斷時仍維持適當資安。","營運持續計畫、演練紀錄"],
+["A.5.30","營運持續的 ICT 整備","依營運持續目標規劃並測試 ICT 整備度。","RTO/RPO 定義、DR 演練報告"],
+["A.5.31","法律、法規與契約要求","識別並遵循適用的法律、法規與契約要求。","法規鑑別清單、遵循評估"],
+["A.5.32","智慧財產權","保護智慧財產權，確保軟體授權合法。","軟體授權清單、授權盤點紀錄"],
+["A.5.33","紀錄保護","保護紀錄避免遺失、毀損、竄改或未授權存取。","紀錄保存期限表、保存方式說明"],
+["A.5.34","隱私與個人資料保護","依法規與契約保護個人資料。","個資盤點、個資保護管理程序"],
+["A.5.35","資安的獨立審查","定期由獨立方審查資安管理方式。","內稽報告、第三方查核報告"],
+["A.5.36","資安政策與標準的遵循","定期檢查是否符合政策、規則與標準。","遵循性檢查紀錄、技術檢測報告"],
+["A.5.37","書面化作業程序","將資訊處理設施的作業程序文件化並提供使用。","SOP 文件、文件管制清單"],
+["A.6.1","人員篩選","任用前依法規與職務風險進行背景查核。","背景查核紀錄、任用程序"],
+["A.6.2","聘用條款與條件","在聘用合約中載明人員與組織的資安責任。","聘僱合約、工作規則"],
+["A.6.3","資安意識與教育訓練","提供人員適當的資安意識教育與訓練。","訓練計畫、簽到表、測驗成績"],
+["A.6.4","懲處程序","訂定違反資安政策時的懲處程序。","獎懲辦法、懲處紀錄"],
+["A.6.5","離職或職務變更後的責任","明定離職或調職後仍持續有效的資安責任。","離職切結書、職務異動檢核"],
+["A.6.6","保密協議","與人員及外部人員簽署保密協議。","保密協議、簽署清冊"],
+["A.6.7","遠距工作","規範遠距工作時的資安措施。","遠距工作規範、VPN 申請紀錄"],
+["A.6.8","資安事件通報","提供人員通報資安事件的管道與機制。","通報管道說明、通報紀錄"],
+["A.7.1","實體安全周界","定義並保護存放資訊資產的區域周界。","區域劃分圖、周界防護說明"],
+["A.7.2","實體進出","以門禁與進出管制保護安全區域。","門禁紀錄、進出登記簿"],
+["A.7.3","辦公室與設施保全","規劃並落實辦公室與設施的實體保護。","設施安全檢查表"],
+["A.7.4","實體安全監控","持續監控場所，偵測未授權的實體進入。","CCTV 配置、監控紀錄"],
+["A.7.5","防範實體與環境威脅","防範火災、水災、地震等實體與環境威脅。","消防檢查、環境監控紀錄"],
+["A.7.6","安全區域內作業","訂定在安全區域內工作的規則。","機房作業規範、作業登記"],
+["A.7.7","桌面淨空與螢幕淨空","規範桌面文件與螢幕畫面的保護。","淨空規範、抽查紀錄"],
+["A.7.8","設備安置與保護","妥善安置並保護設備。","機櫃配置圖、設備位置清單"],
+["A.7.9","場外資產安全","保護攜出場外的資產。","攜出申請單、筆電加密紀錄"],
+["A.7.10","儲存媒體","管理儲存媒體的生命週期，從取得、使用到處置。","媒體使用規範、媒體清冊"],
+["A.7.11","支援設施","保護設備免受電力中斷等支援設施失效影響。","UPS 維護紀錄、發電機測試"],
+["A.7.12","佈線安全","保護電力與通訊線路免受干擾或破壞。","佈線圖、線路標示"],
+["A.7.13","設備維護","正確維護設備以確保可用性與完整性。","維護合約、保養紀錄"],
+["A.7.14","設備安全報廢或再使用","報廢或再利用前清除敏感資料與授權軟體。","報廢單、資料清除證明"],
+["A.8.1","使用者端點設備","保護端點設備上的資訊。","端點管理政策、MDM 報表"],
+["A.8.2","特權存取權限","限制並管理特權存取權限的配發與使用。","特權帳號清冊、審查紀錄"],
+["A.8.3","資訊存取限制","依存取控制政策限制對資訊的存取。","系統權限設定、存取清單"],
+["A.8.4","原始碼存取","適當管理原始碼與開發工具的讀寫權限。","版本庫權限設定"],
+["A.8.5","安全鑑別","依存取限制採用安全的鑑別技術與程序。","MFA 設定、登入政策"],
+["A.8.6","容量管理","監控並調整資源使用以符合需求。","容量監控報表、擴充規劃"],
+["A.8.7","惡意軟體防護","落實惡意軟體防護並搭配使用者意識。","防毒派送報表、病毒碼更新紀錄"],
+["A.8.8","技術脆弱性管理","取得脆弱性資訊、評估暴露程度並採取措施。","弱掃報告、修補追蹤表"],
+["A.8.9","組態管理","建立、記錄並監控安全組態基準。","組態基準文件、組態檢核報告"],
+["A.8.10","資訊刪除","在不再需要時刪除系統與裝置中的資訊。","資料刪除紀錄、保存期限規範"],
+["A.8.11","資料遮罩","依政策與法規對資料進行遮罩或去識別化。","遮罩規則、去識別化程序"],
+["A.8.12","資料外洩預防","對處理敏感資訊的系統與網路採取防外洩措施。","DLP 政策、告警紀錄"],
+["A.8.13","資訊備份","依備份政策保存並定期測試資訊、軟體與系統備份。","備份排程、還原測試紀錄"],
+["A.8.14","資訊處理設施備援","建置足夠備援以符合可用性要求。","備援架構圖、切換測試紀錄"],
+["A.8.15","日誌紀錄","產生、保存、保護並分析活動日誌。","日誌保存設定、日誌清單"],
+["A.8.16","活動監控","監控網路、系統與應用程式的異常行為。","監控告警紀錄、SOC 報告"],
+["A.8.17","時鐘同步","將系統時鐘同步至核可的時間來源。","NTP 設定截圖"],
+["A.8.18","特權公用程式使用","限制並嚴格控管可繞過控制措施的公用程式。","工具使用清單、使用申請"],
+["A.8.19","作業系統軟體安裝","控管正式環境中的軟體安裝。","軟體安裝申請、白名單"],
+["A.8.20","網路安全","保護網路與網路設備。","網路架構圖、設備設定"],
+["A.8.21","網路服務安全","識別並落實網路服務的安全機制與服務等級。","網路服務合約、SLA"],
+["A.8.22","網路區隔","依服務、使用者與系統分隔網段。","網段規劃表、VLAN 設定"],
+["A.8.23","網頁過濾","管理對外部網站的存取，降低惡意內容風險。","網頁過濾政策、阻擋紀錄"],
+["A.8.24","密碼技術使用","訂定並落實加密與金鑰管理規則。","加密政策、金鑰管理紀錄"],
+["A.8.25","安全開發生命週期","建立安全的軟體與系統開發規則。","SDLC 程序、各階段檢核"],
+["A.8.26","應用程式安全要求","在開發或取得應用程式時定義資安要求。","需求規格中的資安條目"],
+["A.8.27","安全系統架構與工程原則","建立並套用安全系統設計原則。","架構設計原則文件"],
+["A.8.28","安全程式設計","在軟體開發中落實安全程式撰寫原則。","程式碼審查紀錄、SAST 報告"],
+["A.8.29","開發與驗收的安全測試","在開發生命週期中定義並執行安全測試。","測試計畫、滲透測試報告"],
+["A.8.30","委外開發","指導、監督並審查委外開發活動。","委外合約、驗收紀錄"],
+["A.8.31","開發、測試與正式環境分離","區隔開發、測試與正式環境並加以保護。","環境架構圖、權限區隔設定"],
+["A.8.32","變更管理","對資訊處理設施與系統的變更實施管理程序。","變更申請單、變更審核紀錄"],
+["A.8.33","測試資訊","適當選擇、保護並管理測試資料。","測試資料管理規範"],
+["A.8.34","稽核測試期間的系統保護","規劃稽核測試時避免影響正式系統。","稽核作業計畫、授權紀錄"]
+];
+const ANNEX = ANNEX_RAW.map(([code,name,desc,ev])=>({code,name,desc,ev,theme:code.split(".")[1],isNew:NEW2022.has(code)}));
+const ANNEX_MAP = Object.fromEntries(ANNEX.map(c=>[c.code,c]));
+
+// 條款 4–10 ; phase for PDCA
+const CLAUSES = [
+["4.1","了解組織及其環境","識別影響資安目標的內外部議題。","內外部議題分析表","P"],
+["4.2","了解利害關係者需求","找出利害關係者及其資安相關要求。","利害關係者需求清單","P"],
+["4.3","決定 ISMS 範圍","界定管理系統的邊界與適用範圍。","ISMS 範圍文件","P"],
+["4.4","資訊安全管理系統","建立、實施、維持並持續改善 ISMS。","ISMS 手冊、流程架構","P"],
+["5.1","領導與承諾","高階管理階層展現對 ISMS 的領導與承諾。","管理階層簽署、資源核准","P"],
+["5.2","政策","制定適合組織目的的資安政策。","資安政策","P"],
+["5.3","組織角色、責任與權限","分派並傳達資安相關的責任與權限。","組織職掌、任命紀錄","P"],
+["6.1.1","風險與機會：一般要求","規劃處理風險與機會的措施。","風險與機會評估","P"],
+["6.1.2","資安風險評鑑","訂定並執行一致的風險評鑑方法。","風險評鑑方法、風險清冊","P"],
+["6.1.3","資安風險處理","選擇處理方式與控制措施，產出 SoA 與處理計畫。","SoA、風險處理計畫","P"],
+["6.2","資安目標與達成規劃","訂定可量測的資安目標與執行計畫。","年度資安目標、KPI","P"],
+["6.3","變更的規劃","有計畫地進行 ISMS 的變更。","變更規劃紀錄","P"],
+["7.1","資源","提供 ISMS 所需的資源。","預算、人力配置","D"],
+["7.2","適任性","確保人員具備必要能力並保存證據。","能力需求表、證照與訓練紀錄","D"],
+["7.3","認知","讓人員了解政策與自身對 ISMS 的貢獻。","宣導紀錄、測驗","D"],
+["7.4","溝通","決定內外部溝通的內容、時機與對象。","溝通計畫","D"],
+["7.5","文件化資訊","建立、更新並管制 ISMS 所需文件與紀錄。","文件管制程序、文件清單","D"],
+["8.1","運作的規劃與控制","規劃並控制達成要求所需的流程。","作業程序、執行紀錄","D"],
+["8.2","資安風險評鑑（執行）","依規劃時程或重大變更時執行風險評鑑。","風險評鑑結果","D"],
+["8.3","資安風險處理（執行）","實施風險處理計畫並保存結果。","處理計畫執行紀錄","D"],
+["9.1","監督、量測、分析與評估","評估資安績效與 ISMS 有效性。","量測指標報告","C"],
+["9.2","內部稽核","定期進行內部稽核。","稽核計畫、稽核報告","C"],
+["9.3","管理審查","高階管理階層定期審查 ISMS。","管理審查會議紀錄","C"],
+["10.1","持續改善","持續改善 ISMS 的適切性與有效性。","改善提案、追蹤紀錄","A"],
+["10.2","不符合事項與矯正措施","處理不符合事項並消除根本原因。","矯正措施單、根因分析","A"]
+].map(([code,name,desc,ev,phase])=>({code,name,desc,ev,phase}));
+const CLAUSE_MAP = Object.fromEntries(CLAUSES.map(c=>[c.code,c]));
+
+// 案例庫： t 標題, s 情境, k 關鍵字, r 對應, w 為什麼, e 應留紀錄
+const CASES = [
+{t:"員工離職，帳號未即時停用",s:"業務人員離職一週後，CRM 帳號仍可登入。",k:["離職","退職","辭職","資遣","帳號停用","權限回收","offboarding"],r:["A.5.18","A.6.5","A.5.11","A.5.16"],w:"權限撤銷屬存取權限管理；離職後責任與資產歸還也要一併處理。",e:"離職檢核表、帳號停用紀錄、資產歸還單"},
+{t:"新進人員到職開通帳號",s:"新人第一天需要郵件、VPN 與 ERP 帳號。",k:["到職","新人","新進","報到","開帳號","onboarding"],r:["A.5.16","A.5.18","A.6.2","A.6.6","A.6.3"],w:"帳號建立走身分管理，權限依職務核給；同時要簽保密協議並安排資安訓練。",e:"帳號申請單、保密協議、新人訓練簽到表"},
+{t:"人員調職，舊權限沒移除",s:"財務人員調到業務部，仍保有會計系統權限。",k:["調職","調動","職務異動","轉調","升遷"],r:["A.5.18","A.6.5","A.8.2","A.5.3"],w:"職務變更時需重新審查權限，避免累積權限與職責衝突。",e:"職務異動單、權限調整紀錄"},
+{t:"每半年做一次權限盤點",s:"IT 匯出各系統帳號清單，請主管確認。",k:["權限盤點","權限審查","帳號清查","帳號盤點"],r:["A.5.18","A.8.2","A.5.15"],w:"定期審查是存取權限控制的核心要求。",e:"權限審查簽核表、異常處理紀錄"},
+{t:"多人共用管理者帳號",s:"三位工程師共用 root 密碼維運伺服器。",k:["共用帳號","admin","root","管理者","特權","administrator"],r:["A.8.2","A.5.16","A.8.5","A.8.15"],w:"特權帳號需專人專用並留存可追溯的操作紀錄。",e:"特權帳號清冊、特權使用日誌"},
+{t:"密碼太簡單、沒有啟用多因子",s:"雲端郵件只靠密碼登入，曾被撞庫。",k:["密碼","MFA","多因子","雙因子","2FA","OTP","撞庫"],r:["A.5.17","A.8.5"],w:"鑑別資訊的管理與鑑別強度分屬兩項控制措施。",e:"密碼政策、MFA 啟用報表"},
+{t:"每日備份重要資料",s:"檔案伺服器每晚做增量備份，週末完整備份。",k:["備份","backup","異地備份","快照","snapshot"],r:["A.8.13","A.5.30","A.5.33"],w:"備份本身是 A.8.13，備份目標要對應營運持續的 RPO。",e:"備份排程、備份成功報表"},
+{t:"備份還原測試",s:"每季抽一份備份還原到測試機確認可用。",k:["還原","還原測試","還原演練","restore"],r:["A.8.13","A.5.30","A.5.29"],w:"控制措施要求備份必須定期測試，不是只有執行備份。",e:"還原測試紀錄、測試結果"},
+{t:"作業系統與軟體修補",s:"每月第二週派送 Windows 更新。",k:["patch","修補","更新","更新程式","漏洞修補","windows update"],r:["A.8.8","A.8.32","A.8.19"],w:"修補屬脆弱性管理；正式環境的更新也應走變更流程。",e:"修補派送報表、變更單"},
+{t:"弱點掃描與滲透測試",s:"委託廠商每年針對官網做弱掃與滲透測試。",k:["弱掃","弱點","弱點掃描","滲透測試","pentest","掃描"],r:["A.8.8","A.8.29","A.5.35","A.8.34"],w:"找出脆弱性是 A.8.8；測試時要保護正式系統不受影響。",e:"弱掃報告、修補追蹤表、測試授權書"},
+{t:"電腦遭勒索軟體加密",s:"一台會計電腦檔案被加密，畫面出現勒索訊息。",k:["勒索","勒索軟體","ransomware","中毒","病毒","加密勒索","惡意程式"],r:["A.8.7","A.5.24","A.5.26","A.8.13","A.6.8","A.5.28"],w:"涉及惡意軟體防護、事故應變、通報與備份還原。",e:"事故處理紀錄、通報單、還原紀錄"},
+{t:"員工點擊釣魚郵件",s:"同仁點了假冒物流通知的連結並輸入帳密。",k:["釣魚","釣魚郵件","phishing","社交工程","假冒","詐騙郵件"],r:["A.6.3","A.6.8","A.8.7","A.8.23","A.5.17"],w:"意識訓練與通報機制是主要防線，網頁過濾可降低點擊後的危害。",e:"演練報告、通報紀錄、密碼重設紀錄"},
+{t:"發生資安事件要通報",s:"同仁發現共用資料夾被誤設為公開。",k:["通報","事件","事故","資安事件","資安事故","incident"],r:["A.6.8","A.5.24","A.5.25","A.5.5"],w:"人員通報、事件評估與必要時向主管機關通報。",e:"通報單、事件評估紀錄"},
+{t:"事故結束後的檢討",s:"系統中斷修復後召開檢討會議。",k:["檢討","事後檢討","復盤","根因","lessons learned"],r:["A.5.27","10.2","10.1"],w:"從事故學習並採取矯正措施，連結到管理系統的持續改善。",e:"檢討報告、矯正措施單"},
+{t:"筆電遺失或遭竊",s:"業務在高鐵上遺失公務筆電。",k:["遺失","被偷","失竊","掉了","筆電","laptop"],r:["A.8.1","A.7.9","A.8.24","A.6.8","A.5.9"],w:"端點保護與場外資產安全，硬碟加密決定資料是否外洩。",e:"遺失通報、加密狀態紀錄、資產異動"},
+{t:"使用 USB 隨身碟複製資料",s:"同仁用私人隨身碟把客戶資料帶回家。",k:["USB","隨身碟","外接硬碟","儲存媒體","光碟","可攜式"],r:["A.7.10","A.8.12","A.8.1","A.5.10"],w:"儲存媒體管理與資料外洩預防，也涉及可接受使用規範。",e:"媒體使用規範、端點管控報表"},
+{t:"舊硬碟與電腦報廢",s:"汰換 20 台舊電腦準備回收。",k:["報廢","銷毀","汰換","回收","硬碟","資料清除"],r:["A.7.14","A.8.10","A.7.10","A.5.9"],w:"報廢前需確認資料清除，並更新資產清冊。",e:"報廢單、資料清除證明、清冊異動"},
+{t:"機房門禁管理",s:"機房使用刷卡門禁，僅 IT 人員可進入。",k:["機房","門禁","刷卡","進出","資料中心"],r:["A.7.1","A.7.2","A.7.6","A.7.4"],w:"安全區域的周界、進出管制與區內作業規範。",e:"門禁權限清單、進出紀錄"},
+{t:"訪客進出辦公室",s:"廠商來訪需登記並由同仁陪同。",k:["訪客","來賓","外來人員","訪客登記"],r:["A.7.2","A.7.3"],w:"實體進出管制涵蓋訪客登記與陪同。",e:"訪客登記簿"},
+{t:"機房停電、UPS 與空調",s:"颱風停電，UPS 撐了 30 分鐘。",k:["UPS","停電","空調","電力","發電機","颱風"],r:["A.7.11","A.7.5","A.7.13","A.5.29"],w:"支援設施與環境威脅防護，並影響營運持續。",e:"UPS 測試紀錄、維護保養紀錄"},
+{t:"監視器與實體監控",s:"大門與機房裝有 CCTV，錄影保存 30 天。",k:["CCTV","監視器","攝影機","錄影"],r:["A.7.4","A.8.15"],w:"2022 版新增的實體安全監控控制措施。",e:"監視器配置圖、錄影保存設定"},
+{t:"離座未鎖螢幕、桌上放機密文件",s:"稽核發現多人離座未鎖定電腦。",k:["桌面淨空","螢幕鎖定","鎖螢幕","離座","清桌"],r:["A.7.7","A.8.1"],w:"桌面與螢幕淨空，並可透過端點設定自動鎖定。",e:"抽查紀錄、螢幕保護程式設定"},
+{t:"在家遠距工作",s:"同仁每週兩天在家透過 VPN 連線。",k:["WFH","遠距","遠端","在家","居家辦公","VPN","遠端桌面"],r:["A.6.7","A.8.1","A.8.20","A.8.5"],w:"遠距工作規範搭配端點與網路連線保護。",e:"遠距工作規範、VPN 帳號清冊"},
+{t:"委外廠商遠端維護系統",s:"ERP 廠商需要遠端連入協助除錯。",k:["廠商","外包","委外","供應商","維護廠商","遠端維護","vendor"],r:["A.5.19","A.5.20","A.5.22","A.8.2","A.6.6"],w:"供應商風險、合約條款、服務監督與其特權存取。",e:"供應商評估、合約資安條款、連線紀錄"},
+{t:"導入雲端服務",s:"公司決定改用 Microsoft 365 與 Google Workspace。",k:["雲端","SaaS","AWS","Azure","GCP","M365","Google Workspace","cloud"],r:["A.5.23","A.5.19","A.5.21","A.5.20"],w:"2022 版新增雲端服務控制，需釐清共同責任分界。",e:"雲端服務評估、共同責任表、退出計畫"},
+{t:"系統委外開發",s:"官網改版交由外包團隊開發。",k:["外包開發","委外開發","系統開發","接案"],r:["A.8.30","A.5.20","A.8.29","A.8.25"],w:"委外開發要監督品質與安全，驗收時做安全測試。",e:"開發合約、驗收測試報告"},
+{t:"程式上線與系統變更",s:"新版訂單系統週五晚上部署上線。",k:["上線","部署","變更","版本更新","deploy","release"],r:["A.8.32","A.8.31","A.8.29"],w:"變更需申請、測試與核准，並區隔環境。",e:"變更申請單、測試紀錄、上線核准"},
+{t:"測試環境使用正式客戶資料",s:"工程師把正式資料庫複製到測試機。",k:["測試資料","去識別","測試環境","假資料","複製資料庫"],r:["A.8.33","A.8.11","A.8.31","A.5.34"],w:"測試資料需保護或遮罩，個資更需依法處理。",e:"測試資料申請、遮罩規則"},
+{t:"原始碼與版本控管",s:"程式碼放在 GitLab，部分外包人員有寫入權限。",k:["git","github","gitlab","原始碼","程式碼","版本控制","source code"],r:["A.8.4","A.8.28","A.8.25"],w:"原始碼存取權限與安全程式設計。",e:"版本庫權限清單、Code review 紀錄"},
+{t:"客戶個資外洩",s:"會員資料疑似被下載外流。",k:["個資","個人資料","隱私","個資法","外洩","洩漏","GDPR"],r:["A.5.34","A.8.12","A.5.26","A.5.31","A.8.11"],w:"個資保護、外洩預防、事故回應與法規通報義務。",e:"個資盤點、事故報告、通報紀錄"},
+{t:"系統日誌保存",s:"防火牆與 AD 日誌要保存一年。",k:["log","日誌","紀錄保存","稽核軌跡","audit log","syslog"],r:["A.8.15","A.8.17","A.5.33","A.8.16"],w:"日誌產生與保護、時間同步確保日誌可比對。",e:"日誌保存設定、日誌伺服器清單"},
+{t:"異常登入監控",s:"SIEM 偵測到凌晨境外 IP 登入。",k:["SIEM","SOC","監控","異常登入","告警","alert"],r:["A.8.16","A.8.15","A.5.25"],w:"2022 版新增活動監控，告警後進入事件評估。",e:"告警紀錄、處理紀錄"},
+{t:"伺服器時間不一致",s:"各主機時間差數分鐘，日誌對不起來。",k:["NTP","時間同步","時鐘","校時"],r:["A.8.17"],w:"時鐘同步確保事件調查時日誌可對應。",e:"NTP 設定截圖"},
+{t:"防火牆規則調整",s:"業務需要對外開放一個新的連接埠。",k:["防火牆","firewall","port","連接埠","ACL","網路設定"],r:["A.8.20","A.8.22","A.8.9","A.8.32"],w:"網路安全與區隔，規則調整也是組態變更。",e:"防火牆規則表、變更單"},
+{t:"訪客 Wi-Fi 與內網區隔",s:"訪客 Wi-Fi 與員工網路在同一網段。",k:["wifi","wi-fi","無線","無線網路","訪客網路","VLAN"],r:["A.8.22","A.8.20"],w:"依使用者類型區隔網段。",e:"網段規劃表"},
+{t:"限制瀏覽惡意或不當網站",s:"導入 DNS 過濾封鎖已知惡意網域。",k:["上網","網站封鎖","網頁過濾","DNS 過濾","URL 過濾"],r:["A.8.23","A.8.7"],w:"2022 版新增的網頁過濾控制措施。",e:"過濾政策、阻擋報表"},
+{t:"員工自行安裝軟體",s:"同仁安裝來路不明的破解版繪圖軟體。",k:["安裝軟體","盜版","破解","授權","軟體授權","免費軟體"],r:["A.8.19","A.5.32","A.8.7"],w:"軟體安裝控管與智慧財產權，破解版也是惡意程式來源。",e:"軟體白名單、授權清單"},
+{t:"資產盤點",s:"年度盤點伺服器、筆電與重要資料。",k:["資產","資產清冊","盤點","財產","CMDB"],r:["A.5.9","A.5.12","A.5.13"],w:"資產清冊是風險評鑑與分級的基礎。",e:"資產清冊、盤點紀錄"},
+{t:"文件機密等級與標示",s:"報價單應標示「機密」並限制分享。",k:["機密","分級","標示","密等","限閱"],r:["A.5.12","A.5.13","A.5.14"],w:"分級決定保護方式，標示讓人一眼辨識。",e:"分級準則、標示範例"},
+{t:"寄送機密資料給客戶",s:"用 Email 寄送含身分證號的檔案給客戶。",k:["寄送","email","郵件","傳送","加密壓縮","檔案傳輸"],r:["A.5.14","A.8.24","A.8.12","A.5.34"],w:"資訊傳遞規範搭配加密，避免外洩。",e:"傳遞規範、加密方式說明"},
+{t:"年度資安教育訓練",s:"全員每年需完成 3 小時資安課程。",k:["訓練","教育訓練","宣導","課程","資安意識"],r:["A.6.3","7.2","7.3"],w:"附錄 A 的訓練要求，也對應本文的適任性與認知條款。",e:"訓練計畫、簽到表、測驗成績"},
+{t:"內部稽核",s:"每年由跨部門稽核員執行 ISMS 內稽。",k:["內稽","稽核","內部稽核","audit","稽核員"],r:["9.2","A.5.35","A.8.34","10.2"],w:"內稽是本文必要條款，發現事項要走矯正措施。",e:"稽核計畫、稽核報告、不符合事項單"},
+{t:"管理審查會議",s:"總經理主持年度 ISMS 管理審查。",k:["管審","管理審查","審查會議","主管會議"],r:["9.3","5.1","A.5.4","9.1"],w:"管理審查需涵蓋績效、稽核結果與改善機會。",e:"管審會議紀錄、決議追蹤"},
+{t:"執行風險評鑑",s:"每年依資產清冊評估威脅與脆弱性。",k:["風險","風險評鑑","風險評估","風險分析","威脅","risk"],r:["6.1.2","8.2","6.1.3","8.3","A.5.9"],w:"本文第 6 章規劃方法、第 8 章執行，結果決定 SoA。",e:"風險評鑑表、風險處理計畫"},
+{t:"法規遵循（資通安全管理法、個資法）",s:"公司被列為特定非公務機關，需符合資安法要求。",k:["法規","資安法","資通安全管理法","合規","遵循","個資法","主管機關"],r:["A.5.31","A.5.36","4.2","A.5.5","A.5.34"],w:"法規屬利害關係者要求，需鑑別並定期檢查遵循狀況。",e:"法規鑑別清單、遵循檢核表"},
+{t:"營運持續與災難復原演練",s:"模擬主機房失效，切換至備援機房。",k:["BCP","DR","災難","災難復原","營運持續","備援","切換演練"],r:["A.5.29","A.5.30","A.8.14"],w:"營運持續的資安與 ICT 整備，備援設施需能實際切換。",e:"BCP、演練報告、RTO/RPO 達成紀錄"},
+{t:"伺服器組態強化",s:"依政府組態基準（GCB）設定 Windows 主機。",k:["hardening","組態","GCB","基準","組態基準","安全設定"],r:["A.8.9","A.8.19","A.5.36"],w:"2022 版新增組態管理，需建立基準並監控偏離。",e:"組態基準文件、檢核報告"},
+{t:"收集威脅情資",s:"訂閱 TWCERT/CC 與 HISAC 的資安通報。",k:["情資","威脅情資","TWCERT","HISAC","資安通報","IOC"],r:["A.5.7","A.5.6","A.8.8"],w:"2022 版新增威脅情資，情資可回饋到脆弱性管理。",e:"情資來源清單、處理紀錄"},
+{t:"同一人申請又核准",s:"系統管理員自己申請、自己核准權限。",k:["職責分離","同一人","自己核准","職責區隔","審核"],r:["A.5.3","A.5.18","A.8.2"],w:"申請與核准職責需分開。",e:"簽核流程設定、權責矩陣"},
+{t:"撰寫與管理 SOP",s:"各項維運作業整理成標準作業程序。",k:["SOP","作業程序","標準作業","程序書","文件管制"],r:["A.5.37","7.5"],w:"作業程序文件化，並納入文件管制。",e:"SOP、文件管制清單"},
+{t:"制定資安政策",s:"首次導入 ISMS，需要一份資安政策。",k:["政策","資安政策","policy","方針"],r:["5.2","A.5.1","5.1"],w:"本文 5.2 要求制定政策，附錄 A.5.1 要求政策體系與定期檢討。",e:"資安政策、核准與公告紀錄"},
+{t:"定義 ISMS 範圍",s:"先以台北總部與核心系統為驗證範圍。",k:["範圍","驗證範圍","ISMS 範圍","scope"],r:["4.3","4.1","4.2"],w:"範圍需考量內外部議題與利害關係者需求。",e:"範圍文件"},
+{t:"資安目標與 KPI",s:"訂定年度目標：重大事故 0 件、訓練完成率 100%。",k:["目標","KPI","指標","績效","量測"],r:["6.2","9.1"],w:"目標需可量測，並在第 9 章持續監督。",e:"目標計畫、量測報告"}
+];
+
+// 同義詞群組
+const SYN = [
+["離職","退職","辭職","資遣","offboarding"],["到職","新人","新進","報到","onboarding"],
+["密碼","帳密","password","鑑別"],["MFA","多因子","雙因子","2FA","OTP","二階段驗證"],
+["病毒","中毒","惡意程式","惡意軟體","malware","勒索","ransomware"],["釣魚","phishing","社交工程","詐騙郵件"],
+["備份","backup","快照","snapshot"],["修補","patch","更新","漏洞修補"],["弱點","弱掃","漏洞","脆弱性","滲透"],
+["廠商","供應商","外包","委外","vendor"],["雲端","cloud","saas","aws","azure","gcp","m365"],
+["日誌","log","紀錄檔","syslog","稽核軌跡"],["個資","個人資料","隱私","pii","gdpr"],
+["遠距","遠端","在家","wfh","vpn","居家"],["筆電","筆記型電腦","laptop","電腦"],["遺失","失竊","被偷","掉了"],
+["usb","隨身碟","外接硬碟","儲存媒體"],["報廢","銷毀","汰換","回收"],["機房","資料中心","伺服器室"],
+["門禁","刷卡","進出"],["稽核","內稽","audit"],["管審","管理審查"],["風險","威脅","risk"],
+["事件","事故","incident","通報"],["上線","部署","deploy","release","變更"],["防火牆","firewall","acl"],
+["wifi","wi-fi","無線"],["監控","siem","soc","告警"],["訓練","教育訓練","宣導","課程"],["法規","合規","資安法","資通安全管理法"]
+];
+
+
+/* ================= 產業與業務特性規則 =================
+   建議只做標示，不會自動變更適用性。資料整理日期：2026-10 */
+const RULES_DATE="2026 年 10 月";
+const FEATURES=[
+  {id:"pii",label:"儲存會員或客戶個資",why:"大量個資一旦外洩，同時涉及法規通報、罰則與商譽",codes:["A.5.34","A.8.11","A.8.12","A.8.10","A.5.31","A.8.24"]},
+  {id:"payment",label:"處理線上付款或信用卡資料",why:"持卡人資料是攻擊者首要目標，收單銀行通常要求符合 PCI DSS",codes:["A.8.24","A.8.22","A.8.8","A.8.15","A.5.20"]},
+  {id:"dev",label:"自行開發系統、網站或 App",why:"自行開發的程式碼與上線流程都在驗證範圍內，安全開發相關控制幾乎都會被檢視",codes:["A.8.25","A.8.28","A.8.29","A.8.31","A.8.32","A.8.33"]},
+  {id:"cloud",label:"主要使用雲端服務",why:"雲端的共同責任分界、帳號安全與退出機制是常見缺口",codes:["A.5.23","A.5.19","A.8.5","A.8.9","A.8.13"]},
+  {id:"remote",label:"有遠距工作或外勤人員",why:"端點與連線離開公司網路後，防護要靠設備與帳號本身",codes:["A.6.7","A.8.1","A.7.9","A.8.5"]},
+  {id:"vendor",label:"系統由外部廠商維運或開發",why:"廠商的權限與交付品質會直接影響組織的資安",codes:["A.5.19","A.5.20","A.5.22","A.8.30","A.8.2"]},
+  {id:"ci",label:"資安法適用對象或其委外廠商",why:"需配合主管機關的通報時限、應辦事項與委外契約要求",codes:["A.5.24","A.5.26","A.5.5","A.5.20","A.5.21","A.8.8","A.6.1"]},
+  {id:"health",label:"處理病歷或健康資料",why:"病歷屬特種個資，系統中斷也會影響醫療作業",codes:["A.5.34","A.8.13","A.5.30","A.8.15","A.5.18","A.5.20"]},
+  {id:"finance",label:"受金管會監理的金融業務",why:"主管機關對事故通報、營運持續與存取控制有額外要求",codes:["A.5.24","A.5.29","A.5.30","A.8.14","A.8.16","A.8.2"]},
+  {id:"ot",label:"有生產線或工控（OT）設備",why:"OT 設備難以修補，一旦中毒常造成停產",codes:["A.8.22","A.8.8","A.8.19","A.7.10","A.5.30"]},
+  {id:"onprem",label:"自建機房或伺服器室",why:"實體環境與支援設施由組織自行負責",codes:["A.7.1","A.7.2","A.7.5","A.7.11","A.8.14"]}
+];
+const FEATURE_MAP=Object.fromEntries(FEATURES.map(x=>[x.id,x]));
+FEATURE_MAP.manual={id:"manual",label:"自行標示",why:"由專案成員手動加入的重點"};
+const INDUSTRIES=[
+  {id:"",label:"未選擇",features:[]},
+  {id:"ecom",label:"電商／線上零售",features:["pii","payment","cloud","dev"]},
+  {id:"saas",label:"軟體與雲端服務",features:["dev","cloud","pii","remote"]},
+  {id:"finance",label:"金融／保險",features:["pii","finance","payment","onprem","vendor","remote"]},
+  {id:"health",label:"醫療院所",features:["pii","health","vendor","onprem"]},
+  {id:"mfg",label:"製造業",features:["ot","onprem","vendor","remote"]},
+  {id:"gov",label:"政府委外／資訊服務廠商",features:["ci","dev","vendor","remote"]},
+  {id:"edu",label:"教育／補教",features:["pii","cloud"]},
+  {id:"general",label:"一般企業",features:["cloud","remote"]}
+];
+const INDUSTRY_MAP=Object.fromEntries(INDUSTRIES.map(x=>[x.id,x]));
+const mojq=kw=>"https://law.moj.gov.tw/Law/LawSearchResult.aspx?ty=ONEBAR&kw="+encodeURIComponent(kw);
+const LAWS=[
+  {when:{f:"pii"},name:"個人資料保護法",kind:"法律",
+   note:"2025 年 11 月修正公布，將設立個人資料保護委員會，並強化外洩通報與安全維護義務；修正條文的施行日期由行政院另定。",
+   todo:["網站與 App 公告隱私權政策，蒐集時完成告知","建立個資盤點清冊與外洩通報流程","確認所屬產業的個資檔案安全維護辦法"],
+   codes:["A.5.34","A.5.31","A.5.26"],link:mojq("個人資料保護法")},
+  {when:{i:["ecom","saas"]},name:"數位經濟相關產業個人資料檔案安全維護管理辦法",kind:"法規命令",
+   note:"數位發展部主管，適用無店面零售、軟體出版、電腦系統設計、資料處理等業別。要求訂定個資安全維護計畫，事故知悉後 72 小時內通報。",
+   todo:["訂定個資保護管理政策與安全維護計畫","準備 72 小時內通報的流程與聯絡窗口","每年執行個資盤點、教育訓練與稽核"],
+   codes:["A.5.34","A.5.24","A.6.3","A.5.35"],link:mojq("數位經濟相關產業個人資料檔案安全維護管理辦法")},
+  {when:{f:"ci"},name:"資通安全管理法",kind:"法律",
+   note:"2025 年 9 月修正公布，主管機關改為數位發展部；提高未通報資安事件的罰鍰上限，並規定委外須以書面契約約定資安責任。修正條文的施行日期由行政院另定。",
+   todo:["確認組織或客戶的資通安全責任等級與應辦事項","依時限通報資安事件","委外契約載明資安要求，避免使用危害國家資安產品"],
+   codes:["A.5.24","A.5.26","A.5.20","A.5.21"],link:mojq("資通安全管理法")},
+  {when:{f:"health"},name:"醫療機構電子病歷製作及管理辦法",kind:"法規命令",
+   note:"衛生福利部主管，2022 年修正。允許使用雲端與委外，但須簽訂書面契約、採取風險管控與避免中斷措施，並具備資料移轉機制。",
+   todo:["委外與雲端契約載明資安保障機制","規劃雲端終止時的資料移轉","病歷系統納入營運持續演練"],
+   codes:["A.5.20","A.5.23","A.5.30"],link:mojq("醫療機構電子病歷製作及管理辦法")},
+  {when:{f:"finance"},name:"金融監督管理委員會資安相關規範",kind:"主管機關規範",
+   note:"金管會透過金融資安行動方案與各業別的內控、資安規範提出要求，例如設置資安長與專責單位。實際要求依業別不同，請以主管機關與公會的最新公告為準。",
+   todo:["對照所屬業別的資安自律規範","確認重大事件的通報時限與管道"],
+   codes:["A.5.31","A.5.24","A.5.2"],link:"https://www.fsc.gov.tw/"},
+  {when:{f:"payment"},name:"PCI DSS",kind:"產業標準",
+   note:"支付卡產業資料安全標準，目前版本為 v4.0.1。只要儲存、處理或傳輸持卡人資料就適用，通常由收單銀行要求。改用金流業者代收可大幅縮小適用範圍。",
+   todo:["確認系統是否接觸完整卡號","評估改由金流服務商代收以縮小範圍"],
+   codes:["A.8.24","A.8.22","A.5.20"],link:"https://www.pcisecuritystandards.org/"},
+  {when:{f:"ot"},name:"IEC 62443",kind:"參考標準",
+   note:"工業自動化與控制系統的資安標準系列，適合作為 OT 網路分區與設備防護的參考。半導體業另可參考 SEMI E187。",
+   todo:["盤點 OT 設備並劃分網路區域","規劃無法修補設備的補償措施"],
+   codes:["A.8.22","A.8.8"],link:"https://www.isa.org/standards-and-publications/isa-standards/isa-iec-62443-series-of-standards"}
+];
+// 未勾選「自行開發」時，可能不適用的候選（僅供參考）
+// SoA 常見的納入與排除理由（ISO 27001 6.1.3 要求說明納入與排除的理由）
+const REASONS_IN=["依風險評鑑結果，需處理已識別的風險","法律或法規要求","契約或客戶要求","主管機關或稽核要求","營運需求與業界最佳實務","集團或母公司政策要求"];
+const REASONS_OUT=["範圍內沒有此業務或活動","範圍內沒有相關的資產或系統","風險評鑑結果低於可接受水準，經管理階層核准","已由其他控制措施涵蓋（請註明編號）"];
+const DEV_ONLY=["A.8.25","A.8.26","A.8.27","A.8.28","A.8.29","A.8.31","A.8.33","A.8.4"];
+function projFeatures(p){return (p&&p.features)||[]}
+function baseFocus(p){const m={};projFeatures(p).forEach(fid=>{const f=FEATURE_MAP[fid];if(f&&f.codes)f.codes.forEach(c=>(m[c]=m[c]||[]).push(fid))});return m}
+// 依業務特性產生建議，再套用使用者自行加入（focusOn）與取消（focusOff）的調整
+function focusMap(p){const m=baseFocus(p);if(!p)return m;
+  (p.focusOff||[]).forEach(c=>delete m[c]);
+  (p.focusOn||[]).forEach(c=>{if(!m[c])m[c]=["manual"]});
+  return m}
+function toggleFocus(code,silent){
+  const p=cur();if(!p)return;const was=!!FM[code];
+  const on=new Set(p.focusOn||[]),off=new Set(p.focusOff||[]),base=baseFocus(p);
+  if(FM[code]){ if(on.has(code))on.delete(code); else if(base[code])off.add(code); }
+  else { if(off.has(code))off.delete(code); else on.add(code); }
+  p.focusOn=[...on];p.focusOff=[...off];
+  logChange(code,"focus",was,!was);save();refreshFocus();
+  if(!silent)undoToast(FM[code]?`已將 ${code} 標為重點`:`已取消 ${code} 的重點標示`,()=>toggleFocus(code,true));
+  if($("#drawerHost").innerHTML)openDrawer(code,!!lastList);
+  if(tab==="annex")renderAnnexRows();
+  else if(tab==="overview")renderOverview();
+}
+function resetFocus(){const p=cur();if(!p)return;p.focusOn=[];p.focusOff=[];save();refreshFocus();render();toast("已恢復預設建議")}
+document.addEventListener("click",e=>{const t=e.target.closest("[data-ftoggle]");if(t){e.preventDefault();e.stopPropagation();toggleFocus(t.dataset.ftoggle)}
+  if(e.target.closest("[data-freset]"))resetFocus()},true);
+function naCandidates(p){
+  const fs=projFeatures(p);if(!p||(!p.industry&&!fs.length))return {};
+  const m={};
+  if(!fs.includes("dev")){DEV_ONLY.forEach(c=>m[c]="未勾選「自行開發系統」，若組織確實沒有開發活動，可評估排除");
+    if(!fs.includes("vendor"))m["A.8.30"]="未勾選自行開發或委外開發，若沒有委外開發活動，可評估排除"}
+  return m;
+}
+function lawsFor(p){const fs=projFeatures(p);return LAWS.filter(l=>(l.when.f&&fs.includes(l.when.f))||(l.when.i&&l.when.i.includes(p&&p.industry)))}
+let FM={},NAC={};
+function refreshFocus(){const p=cur();FM=focusMap(p);NAC=naCandidates(p)}
+function featureChips(selected,name){
+  return FEATURES.map(f=>`<label class="fchip"><input type="checkbox" name="${name}" value="${f.id}" ${selected.includes(f.id)?"checked":""}><span>${esc(f.label)}</span></label>`).join("");
+}
+function industryOptions(sel){return INDUSTRIES.map(i=>`<option value="${i.id}" ${i.id===sel?"selected":""}>${esc(i.label)}</option>`).join("")}
+function wireIndustry(root,selId,name,countId){
+  const sel=root.querySelector("#"+selId);
+  const upd=()=>{if(!countId)return;const fs=[...root.querySelectorAll(`input[name="${name}"]:checked`)].map(x=>x.value);
+    const n=Object.keys(focusMap({features:fs})).length;const el=root.querySelector("#"+countId);if(el)el.textContent=n?`會標示 ${n} 項建議重點`:"不選也可以，之後在「專案與備份」修改"};
+  sel.addEventListener("change",()=>{const ind=INDUSTRY_MAP[sel.value];root.querySelectorAll(`input[name="${name}"]`).forEach(cb=>cb.checked=ind.features.includes(cb.value));upd()});
+  root.querySelectorAll(`input[name="${name}"]`).forEach(cb=>cb.addEventListener("change",upd));upd();
+}
+const readFeatures=(root,name)=>[...root.querySelectorAll(`input[name="${name}"]:checked`)].map(x=>x.value);
+
+const STATUS = [
+  {v:0,label:"未開始"},{v:1,label:"建置中"},{v:2,label:"已實施"},{v:3,label:"已有證據"}
+];
+const APP = [{v:"",label:"未決定"},{v:"Y",label:"適用"},{v:"N",label:"不適用"}];
+
+/* ================= STATE & STORAGE ================= */
+const KEY = "isms-mapper-v1";
+let storeOK = true;
+function uid(){return "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function blankProject(name,org){
+  const now = Date.now();
+  return {id:uid(),name,org:org||"",created:now,updated:now,controls:{},clauses:{}};
+}
+const SAMPLE_DEFS=[
+  {id:"sample:intro",stage:"導入初期",name:"綠葉聯合診所",industry:"health",features:["pii","health","vendor","onprem"],desc:"剛決定導入 ISMS，正在訂定範圍與政策。大部分控制措施還沒判定適用性，負責人也還沒分派。",
+   seed:3,undec:.6,cum:[.72,.95,1,1],owners:["資訊組 黃組長","行政組 吳專員","行政組 吳專員","資訊組 黃組長"],ownerFrom:1,
+   na:["A.8.25","A.8.26","A.8.27","A.8.28","A.8.29","A.8.30","A.8.4","A.8.31","A.8.33"],naReason:"診所未自行開發系統，皆採購套裝軟體",
+   cl:i=>i<4?1:i===5?2:0,scope:"診所門診與病歷資訊系統"},
+  {id:"sample:build",stage:"建置中",name:"示範科技",industry:"general",features:["cloud","remote","vendor","onprem"],desc:"適用性聲明大致完成，各部門正在落實控制措施，邊做邊整理紀錄與證據。",
+   seed:7,undec:.08,cum:[.18,.4,.73,1],owners:["資訊部 王經理","人資部 林專員","總務部 陳課長","研發部 張主任"],ownerFrom:0,
+   na:["A.8.30","A.8.4","A.7.12","A.8.28"],naReason:"範圍內無自行開發系統",
+   cl:i=>i<12?3:i<20?2:i<23?1:0,scope:"台北總部資訊機房與核心營運系統"},
+  {id:"sample:audit",stage:"驗證稽核前",name:"北辰精密製造",industry:"mfg",features:["ot","onprem","vendor","remote"],desc:"內部稽核與管理審查已完成，正在補齊最後幾項證據，準備迎接第三方驗證稽核。",
+   seed:11,undec:0,cum:[0,.04,.3,1],owners:["資訊處 周處長","人資處 許經理","廠務課 蔡課長","研發處 鄭經理","稽核室 何稽核"],ownerFrom:0,
+   na:["A.8.30","A.7.12","A.8.11"],naReason:"經風險評鑑判定不適用",
+   cl:i=>i===24?2:3,scope:"台中廠區生產管理系統與總部 IT"}
+];
+const SAMPLES={};
+function buildSample(d){
+  const p={id:d.id,sample:true,stage:d.stage,name:`範例｜${d.stage}：${d.name}`,org:d.name,scope:d.scope,industry:d.industry,features:[...d.features],created:0,updated:0,controls:{},clauses:{}};
+  let seed=d.seed; const rnd=()=>{seed=(seed*9301+49297)%233280;return seed/233280};
+  const na=new Set(d.na);
+  ANNEX.forEach(c=>{
+    if(na.has(c.code)){p.controls[c.code]={app:"N",status:0,owner:"",evidence:"",reason:d.naReason};return}
+    if(rnd()<d.undec){p.controls[c.code]={app:"",status:0,owner:"",evidence:"",reason:""};return}
+    const r=rnd(); const st=d.cum.findIndex(x=>r<x);
+    const ow=d.owners[c.theme==="6"?1:c.theme==="7"?2:c.code.startsWith("A.8.2")&&d.owners[3]?3:c.code==="A.5.35"&&d.owners[4]?4:0];
+    p.controls[c.code]={app:"Y",status:st<0?3:st,owner:st>=d.ownerFrom?ow:"",evidence:st>=2?c.ev.split("、")[0]:"",reason:REASONS_IN[0]};
+  });
+  CLAUSES.forEach((c,i)=>{const st=d.cl(i);p.clauses[c.code]={status:st,owner:st?"資安小組":"",evidence:st>=2?c.ev:""}});
+  return p;
+}
+function resetSample(id){const d=SAMPLE_DEFS.find(x=>x.id===id);if(d)SAMPLES[id]=buildSample(d)}
+SAMPLE_DEFS.forEach(d=>resetSample(d.id));
+const isSample=id=>typeof id==="string"&&id.startsWith("sample:");
+const OLD_SAMPLE_NAME="範例：示範科技股份有限公司（示範資料）";
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(raw){const s=JSON.parse(raw);
+      if(s&&s.projects){
+        // 舊版自動產生的範例改由內建範例提供，不再放在「我的專案」
+        Object.values(s.projects).forEach(p=>{if(p.name===OLD_SAMPLE_NAME)delete s.projects[p.id]});
+        return {activeId:s.activeId&&s.projects[s.activeId]?s.activeId:null,projects:s.projects};
+      }}
+  }catch(e){storeOK=false}
+  return {activeId:null,projects:{}};
+}
+let S = load();
+let lastSaved = null;
+function save(){
+  const p = cur(); if(p&&!p.sample) p.updated = Date.now();
+  try{localStorage.setItem(KEY,JSON.stringify(S));lastSaved=new Date();storeOK=true}
+  catch(e){storeOK=false}
+  renderSaved();
+}
+let saveTimer=null;
+function saveSoon(){clearTimeout(saveTimer);saveTimer=setTimeout(save,300)}
+function cur(){return isSample(S.activeId)?SAMPLES[S.activeId]:(S.projects[S.activeId]||null)}
+function ctl(code){const p=cur();if(!p)return {app:"",status:0,owner:"",evidence:"",reason:""};return p.controls[code]||(p.controls[code]={app:"",status:0,owner:"",evidence:"",reason:""})}
+function cls(code){const p=cur();if(!p)return {status:0,owner:"",evidence:""};return p.clauses[code]||(p.clauses[code]={status:0,owner:"",evidence:""})}
+function newProject(name,org,scope,start,industry,features){
+  const p=blankProject(name||"未命名專案",org);p.scope=scope||"";p.industry=industry||"";p.features=features||[];p.people=[];
+  if(start==="all")ANNEX.forEach(c=>p.controls[c.code]={app:"Y",status:0,owner:"",evidence:"",reason:""});
+  S.projects[p.id]=p;S.activeId=p.id;save();resetBuilt();return p;
+}
+function openProject(id,toTab){copying=false;editingId=null;S.activeId=id;pendingDelete=null;save();resetBuilt();tab=toTab||"overview";render();window.scrollTo(0,0)}
+let copying=false;
+function copySample(name){
+  const sp=cur(); if(!sp||!sp.sample)return;
+  copying=false;
+  const p=JSON.parse(JSON.stringify(sp)); p.id=uid(); delete p.sample; delete p.stage; p.log=[];
+  p.name=(typeof name==="string"&&name.trim())||sp.org+"（由範例建立）"; p.created=p.updated=Date.now();
+  S.projects[p.id]=p; S.activeId=p.id; save(); resetSample(sp.id); resetBuilt(); render(); toast("已建立專案："+p.name);
+}
+
+/* 專案清單列：開啟、重新命名、刪除（首頁與專案頁共用） */
+let editingId=null;
+function projRows(list,ctx){
+  return `<div class="plist" data-plist="${ctx}">${list.map(p=>{
+    const st=sampleStats(p), isCur=p.id===S.activeId;
+    const meta=editingId===p.id
+      ?`<div class="meta" style="display:flex;gap:6px;flex-wrap:wrap;flex:1"><input data-rename-in="${p.id}" value="${esc(p.name)}" aria-label="專案名稱" style="flex:1 1 180px"><button class="btn primary" data-pact="rsave" data-id="${p.id}">儲存</button><button class="btn" data-pact="rcancel">取消</button></div>`
+      :`<div class="meta"><b>${esc(p.name)}</b><small>${p.org?esc(p.org)+"・":""}最後修改 ${fmtDate(p.updated)}・已實施 ${st.impl}%${isCur?"・目前專案":""}</small></div>`;
+    const acts=editingId===p.id?"":pendingDelete===p.id
+      ?`<span class="saved">刪除後無法復原</span><button class="btn danger" data-pact="del2" data-id="${p.id}">確認刪除</button><button class="btn" data-pact="dcancel">取消</button>`
+      :`<button class="btn ${isCur&&ctx==="home"?"primary":""}" data-pact="open" data-id="${p.id}">${isCur?"繼續":"開啟"}</button><button class="btn" data-pact="rename" data-id="${p.id}">重新命名</button><button class="btn" data-pact="del" data-id="${p.id}">刪除</button>`;
+    return `<div class="prow ${isCur?"active":""}">${meta}${acts?`<div class="pacts">${acts}</div>`:""}</div>`}).join("")}</div>`;
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-pact]"); if(!b)return;
+  const a=b.dataset.pact, id=b.dataset.id;
+  if(a==="open"){editingId=null;openProject(id);return}
+  if(a==="rename"){editingId=id;pendingDelete=null}
+  if(a==="rcancel"||a==="dcancel"){editingId=null;pendingDelete=null}
+  if(a==="rsave"){const inp=document.querySelector(`[data-rename-in="${id}"]`);const n=inp&&inp.value.trim();
+    if(!n){toast("專案名稱不能空白");return}
+    S.projects[id].name=n;S.projects[id].updated=Date.now();editingId=null;save();toast("已重新命名")}
+  if(a==="del"){pendingDelete=id;editingId=null}
+  if(a==="del2"){const n=S.projects[id]&&S.projects[id].name;delete S.projects[id];pendingDelete=null;if(S.activeId===id)S.activeId=null;save();resetBuilt();toast("已刪除："+n)}
+  render();
+  if(a==="rename"){const inp=document.querySelector(`[data-rename-in="${id}"]`);if(inp){inp.focus();inp.select()}}
+});
+document.addEventListener("keydown",e=>{const inp=e.target.closest&&e.target.closest("[data-rename-in]");if(!inp)return;
+  if(e.key==="Enter"){e.preventDefault();inp.parentElement.querySelector('[data-pact="rsave"]').click()}
+  if(e.key==="Escape"){e.stopPropagation();editingId=null;render()}});
+
+/* ================= HELPERS ================= */
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+function lvlColor(v){return `var(--s${v})`}
+function toast(msg){const t=document.createElement("div");t.className="toast";t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2200)}
+function fmtTime(d){return d.toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"})}
+function fmtDate(ts){return new Date(ts).toLocaleDateString("zh-TW")}
+function renderSaved(){
+  const p=cur();
+  $("#savedAt").textContent = p&&p.sample ? "範例：修改不會儲存" : !storeOK ? "無法自動儲存" : !p ? "" : (lastSaved?`已自動儲存 ${fmtTime(lastSaved)}`:"自動儲存已開啟");
+  $("#storeBanner").hidden = storeOK;
+}
+function refLabel(code){
+  if(ANNEX_MAP[code]) return {code, name:ANNEX_MAP[code].name, kind:"annex"};
+  if(CLAUSE_MAP[code]) return {code:"第 "+code+" 條", raw:code, name:CLAUSE_MAP[code].name, kind:"clause"};
+  return {code,name:"",kind:"?"};
+}
+function refStatus(code){
+  if(ANNEX_MAP[code]){const c=ctl(code);return c.app==="N"?"na":c.status}
+  if(CLAUSE_MAP[code]) return cls(code).status;
+  return 0;
+}
+function refChip(code){
+  const r=refLabel(code), st=refStatus(code);
+  const dot = st==="na"?`<span class="dot na"></span>`:`<span class="dot" style="background:${lvlColor(st)}"></span>`;
+  return `<button class="ref" data-open="${esc(code)}">${dot}<span class="mono">${esc(r.code)}</span>${esc(r.name)}</button>`;
+}
+
+/* ================= DOWNLOADS ================= */
+const dlReady = (window.claude && typeof window.claude.use==="function") ? window.claude.use("downloads").catch(()=>null) : Promise.resolve(null);
+async function saveFile(filename, data, mime){
+  const dl = await dlReady;
+  if(dl){
+    try{await dl.save({filename,data});toast("已匯出 "+filename);}
+    catch(e){toast(e&&e.code==="declined"?"已取消匯出":"這個檢視中無法匯出檔案");}
+    return;
+  }
+  const blob = data instanceof Blob?data:new Blob([data],{type:mime});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);toast("已匯出 "+filename);
+}
+function safeName(s){return s.replace(/[\\/:*?"<>|（）()]/g,"").replace(/\s+/g,"_").slice(0,40)||"專案"}
+function exportExcel(){
+  refreshFocus();
+  if(typeof XLSX==="undefined"){toast("Excel 元件尚未載入，請稍後再試");return}
+  const p=cur();
+  const soa=[["控制措施編號","主題","控制措施","2022 新增","產業建議重點","適用性","納入或排除理由","執行狀態","負責人","證據位置","常見證據參考"]];
+  ANNEX.forEach(c=>{const v=ctl(c.code);
+    soa.push([c.code,THEMES.find(t=>t.id===c.theme).name,c.name,c.isNew?"是":"",FM[c.code]?FM[c.code].map(f=>FEATURE_MAP[f].label).join("、"):"",APP.find(a=>a.v===v.app).label,v.reason,v.app==="N"?"—":STATUS[v.status].label,v.owner,v.evidence,c.ev])});
+  const cl=[["條款","名稱","PDCA","說明","執行狀態","負責人","證據位置"]];
+  CLAUSES.forEach(c=>{const v=cls(c.code);cl.push([c.code,c.name,c.phase,c.desc,STATUS[v.status].label,v.owner,v.evidence])});
+  const sum=[["專案",p.name],["組織",p.org],["驗證範圍",p.scope||""],["產業",INDUSTRY_MAP[p.industry||""]?INDUSTRY_MAP[p.industry||""].label:""],["業務特性",projFeatures(p).map(f=>FEATURE_MAP[f].label).join("、")],["匯出時間",new Date().toLocaleString("zh-TW")],[],["主題","控制措施數","適用","不適用","未決定","已實施","已有證據"]];
+  THEMES.forEach(t=>{const list=ANNEX.filter(c=>c.theme===t.id);const vs=list.map(c=>ctl(c.code));
+    sum.push([t.name,list.length,vs.filter(v=>v.app==="Y").length,vs.filter(v=>v.app==="N").length,vs.filter(v=>v.app==="").length,vs.filter(v=>v.app==="Y"&&v.status===2).length,vs.filter(v=>v.app==="Y"&&v.status===3).length])});
+  sum.push([],["不適用但未填排除理由",ANNEX.filter(c=>missingReason(ctl(c.code))).length]);
+  sum.push([],["說明","控制措施名稱與說明為工具自撰摘要，不含 ISO/IEC 27001 原文。"]);
+  const laws=lawsFor(p); if(laws.length){sum.push([],["相關法規與標準（整理於"+RULES_DATE+"，請以官方公告為準）"]);laws.forEach(l=>sum.push([l.name,l.kind,l.note]))}
+  const wb=XLSX.utils.book_new();
+  const ws1=XLSX.utils.aoa_to_sheet(soa);ws1["!cols"]=[12,10,24,9,22,8,30,10,16,26,30].map(w=>({wch:w}));ws1["!autofilter"]={ref:"A1:K"+soa.length};
+  const ws2=XLSX.utils.aoa_to_sheet(cl);ws2["!cols"]=[8,24,6,40,10,14,26].map(w=>({wch:w}));
+  const ws3=XLSX.utils.aoa_to_sheet(sum);ws3["!cols"]=[14,14,8,8,8,8,10].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,ws1,"適用性聲明SoA");
+  XLSX.utils.book_append_sheet(wb,ws2,"條款4-10檢核");
+  XLSX.utils.book_append_sheet(wb,ws3,"統計摘要");
+  const lg=[["時間","編號","名稱","欄位","變更前","變更後"]];
+  (p.log||[]).slice().reverse().forEach(e=>{const c=ANNEX_MAP[e.c]||CLAUSE_MAP[e.c];lg.push([new Date(e.t).toLocaleString("zh-TW",{hour12:false}),e.c,c?c.name:"",FIELD_LABEL[e.f]||e.f,fmtVal(e.f,e.from),fmtVal(e.f,e.to)])});
+  const ws4=XLSX.utils.aoa_to_sheet(lg);ws4["!cols"]=[20,9,24,10,18,18].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,ws4,"修改紀錄");
+  const buf=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+  saveFile(`SoA_${safeName(p.name)}_${new Date().toISOString().slice(0,10)}.xlsx`,new Blob([buf]),"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+}
+function exportJSON(){
+  const p=cur();
+  saveFile(`ISMS專案_${safeName(p.name)}.json`,JSON.stringify({app:"isms-mapper",version:1,project:p},null,2),"application/json");
+}
+
+/* ================= SEARCH ================= */
+function norm(s){return String(s).toLowerCase().replace(/\s+/g," ").trim()}
+function expand(q){
+  const nq=norm(q); const terms=new Set(nq.split(/[\s,，、;；/]+/).filter(Boolean));
+  SYN.forEach(g=>{if(g.some(w=>nq.includes(norm(w)))) g.forEach(w=>terms.add(norm(w)))});
+  return {nq,terms:[...terms]};
+}
+function search(q){
+  const {nq,terms}=expand(q); if(!nq) return {cases:[],refs:[],direct:[]};
+  const scored=CASES.map(c=>{
+    let sc=0; const hit=new Set();
+    c.k.forEach(k=>{const nk=norm(k);
+      if(nq.includes(nk)){sc+=4;hit.add(k)}
+      else if(terms.some(t=>t===nk||(t.length>=2&&nk.includes(t))||(nk.length>=2&&t.includes(nk)))){sc+=2;hit.add(k)}});
+    const hay=norm(c.t+" "+c.s);
+    terms.forEach(t=>{if(t.length>=2&&hay.includes(t))sc+=1});
+    return {c,sc,hit:[...hit]};
+  }).filter(x=>x.sc>0).sort((a,b)=>b.sc-a.sc);
+  const w={};
+  scored.forEach((x,i)=>x.c.r.forEach((code,j)=>{w[code]=(w[code]||0)+x.sc*(j===0?1.5:1)/(1+i*0.15)}));
+  const refs=Object.entries(w).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const max=refs.length?refs[0][1]:1;
+  // direct match on control code or name
+  const codeQ=nq.replace(/^a\.?/,"");
+  const direct=[...ANNEX.filter(c=>c.code.toLowerCase()==="a."+codeQ||c.code.toLowerCase()===nq||terms.some(t=>t.length>=2&&norm(c.name).includes(t))),
+    ...CLAUSES.filter(c=>c.code===codeQ||terms.some(t=>t.length>=2&&norm(c.name).includes(t)))].slice(0,8).map(c=>c.code);
+  return {cases:scored.slice(0,12),refs:refs.map(([code,v])=>({code,pct:Math.round(v/max*100)})),direct};
+}
+
+/* ================= VIEWS ================= */
+let tab="overview";
+const filt={theme:"all",status:"all",q:""};
+let searchQ="";
+
+const NEEDS_PROJECT=new Set(["overview","annex","clauses"]);
+function render(){
+  if(!cur()&&NEEDS_PROJECT.has(tab))tab="home";
+  refreshFocus();refreshOwnerList();personEdit=personDel=null;
+  renderProjSel(); renderSaved(); renderSampleBanner();
+  document.querySelectorAll("#tabs button").forEach(b=>{b.setAttribute("aria-selected",b.dataset.tab===tab);
+    b.setAttribute("aria-disabled",!cur()&&NEEDS_PROJECT.has(b.dataset.tab))});
+  ["home","overview","search","annex","clauses","projects"].forEach(v=>$("#view-"+v).hidden=v!==tab);
+  ({home:renderHome,overview:renderOverview,search:renderSearch,annex:renderAnnex,clauses:renderClauses,projects:renderProjects})[tab]();
+}
+function renderProjSel(){
+  const sel=$("#projSel");
+  const mine=Object.values(S.projects).sort((a,b)=>b.updated-a.updated);
+  sel.innerHTML=(cur()?"":`<option value="" selected>尚未開啟專案</option>`)+
+    (mine.length?`<optgroup label="我的專案">${mine.map(p=>`<option value="${p.id}" ${p.id===S.activeId?"selected":""}>${esc(p.name)}</option>`).join("")}</optgroup>`:"")+
+    `<optgroup label="範例（不會儲存）">${SAMPLE_DEFS.map(d=>`<option value="${d.id}" ${d.id===S.activeId?"selected":""}>${esc(d.stage)}：${esc(d.name)}</option>`).join("")}</optgroup>`;
+}
+function renderSampleBanner(){
+  const p=cur(), b=$("#sampleBanner");
+  if(!p||!p.sample||tab==="home"){b.hidden=true;return}
+  b.hidden=false;
+  b.innerHTML=`<span class="msg">正在預覽範例「${esc(p.org)}」（${esc(p.stage)}）。可以隨意操作，修改不會儲存。</span>
+    <button class="btn primary" id="sbCopy">以此範例建立我的專案</button><button class="btn" id="sbHome">回首頁</button>`;
+  if(copying){b.innerHTML=`<span class="msg">為新專案取個名字，範例目前的內容會一起複製過去。</span>
+    <input id="sbName" value="${esc(p.org)}（由範例建立）" aria-label="新專案名稱" style="flex:1 1 220px">
+    <button class="btn primary" id="sbDo">建立</button><button class="btn" id="sbCancel">取消</button>`;
+    const go=()=>copySample($("#sbName").value);
+    $("#sbDo").addEventListener("click",go);
+    $("#sbName").addEventListener("keydown",e=>{if(e.key==="Enter")go();if(e.key==="Escape"){copying=false;renderSampleBanner()}});
+    $("#sbCancel").addEventListener("click",()=>{copying=false;renderSampleBanner()});
+    const n=$("#sbName");n.focus();n.select();return}
+  $("#sbCopy").addEventListener("click",()=>{copying=true;renderSampleBanner()});
+  $("#sbHome").addEventListener("click",()=>{tab="home";render()});
+}
+function sampleStats(p){
+  const vs=ANNEX.map(c=>p.controls[c.code]||{app:""});
+  const app=vs.filter(v=>v.app==="Y");
+  const t={s0:0,s1:0,s2:0,s3:0,undec:0,na:0};vs.forEach(v=>t[v.app==="N"?"na":v.app===""?"undec":"s"+v.status]++);
+  return {t,undec:t.undec,impl:app.length?Math.round(app.filter(v=>v.status>=2).length/app.length*100):0,evid:t.s3};
+}
+function renderHome(){
+  const mine=Object.values(S.projects).sort((a,b)=>b.updated-a.updated);
+  $("#view-home").innerHTML=`<div class="home">
+    <section class="panel">
+      <h2>建立新專案</h2>
+      <p class="lede" style="margin-bottom:8px">一個專案代表一家公司或一次稽核。建立後會進入附錄 A 逐項確認，所有修改自動儲存在這個瀏覽器。</p>
+      <form id="homeForm" class="cform">
+        <label>專案名稱<input id="hName" required placeholder="例如：2027 年度 ISMS 驗證"></label>
+        <label>組織名稱<input id="hOrg" placeholder="選填"></label>
+        <label class="wide">驗證範圍<input id="hScope" placeholder="選填，例如：台北總部資訊機房與核心系統"></label>
+        <label>產業<select id="hInd">${industryOptions("")}</select></label>
+        <div class="wide" style="display:grid;gap:6px"><span style="font-size:13px;color:var(--muted)">業務特性　<span class="fcount" id="hCount"></span></span>
+          <div class="fchips">${featureChips([],"hF")}</div>
+          <span class="note" style="font-size:12px">選產業會帶入常見特性，可再自行增減。系統只會標示建議重點，不會替你判定適用性。</span></div>
+        <fieldset class="wide"><legend>附錄 A 起始狀態</legend>
+          <label class="radio"><input type="radio" name="hStart" value="blank" checked><span>全部未決定<small>逐項判定是否適用，適合第一次導入</small></span></label>
+          <label class="radio"><input type="radio" name="hStart" value="all"><span>預設全部適用<small>再挑出要排除的項目並寫理由</small></span></label>
+        </fieldset>
+        <div class="wide actions"><button class="btn primary">建立專案</button><button type="button" class="btn" id="hImport">匯入專案檔</button></div>
+      </form>
+    </section>
+    <section>
+      <div class="secthead"><h3>我的專案</h3>${mine.length?`<span class="note">${mine.length} 個</span>`:""}</div>
+      ${mine.length?projRows(mine,"home")
+        :`<div class="pempty">還沒有自己的專案。<br>在左側建立第一個，或先從下方範例看看完成後的樣子。</div>`}
+    </section>
+    <section class="full">
+      <div class="secthead"><h3>範例專案</h3><span class="note">三個不同階段的虛構公司，點「預覽」切換。範例中的修改不會儲存，也可以複製成自己的專案。</span></div>
+      <div class="samples">${SAMPLE_DEFS.map(d=>{const p=SAMPLES[d.id],st=sampleStats(p);return `<article class="scard ${d.id===S.activeId?"active":""}">
+        <span class="stage">${esc(d.stage)}</span><h4>${esc(d.name)}</h4><p>${esc(d.desc)}</p>
+        ${stackBar(st.t,93)}
+        <div class="nums"><span><b>${st.impl}%</b>已實施</span><span><b>${st.undec}</b>未決定</span><span><b>${st.evid}</b>有證據</span></div>
+        <div class="actions" style="display:flex;gap:8px"><button class="btn ${d.id===S.activeId?"":"primary"}" data-home-open="${d.id}">${d.id===S.activeId?"繼續預覽":"預覽"}</button></div>
+      </article>`}).join("")}</div>
+    </section>
+  </div>`;
+  const v=$("#view-home");
+  $("#homeForm").addEventListener("submit",e=>{e.preventDefault();
+    const p=newProject($("#hName").value.trim(),$("#hOrg").value.trim(),$("#hScope").value.trim(),v.querySelector('input[name="hStart"]:checked').value,$("#hInd").value,readFeatures(v,"hF"));
+    tab="annex";render();window.scrollTo(0,0);toast("已建立專案："+p.name)});
+  $("#hImport").addEventListener("click",()=>$("#importFile").click());
+  wireIndustry(v,"hInd","hF","hCount");
+  v.querySelectorAll("[data-home-open]").forEach(b=>b.addEventListener("click",()=>openProject(b.dataset.homeOpen)));
+}
+function counts(){
+  const vs=ANNEX.map(c=>ctl(c.code));
+  const app=vs.filter(v=>v.app==="Y");
+  return {total:93,app:app.length,na:vs.filter(v=>v.app==="N").length,undec:vs.filter(v=>v.app==="").length,
+    impl:app.filter(v=>v.status>=2).length,evid:app.filter(v=>v.status===3).length,building:app.filter(v=>v.status===1).length,none:app.filter(v=>v.status===0).length};
+}
+/* ---------- chart helpers ---------- */
+const SEGS=[
+  {k:"s3",label:"已有證據",fill:"var(--s3)"},{k:"s2",label:"已實施",fill:"var(--s2)"},
+  {k:"s1",label:"建置中",fill:"var(--s1)"},{k:"s0",label:"未開始",fill:"var(--s0)"},
+  {k:"undec",label:"未決定",fill:"var(--surface2)",dash:true},{k:"na",label:"不適用",fill:"url(#hatch)"}
+];
+function bucket(v){return v.app==="N"?"na":v.app===""?"undec":"s"+v.status}
+function tally(list){const t={s0:0,s1:0,s2:0,s3:0,undec:0,na:0};list.forEach(c=>t[bucket(ctl(c.code))]++);return t}
+const HATCH=`<defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="var(--surface)"/><rect width="3" height="6" fill="var(--na)"/></pattern></defs>`;
+function polar(cx,cy,r,deg){const a=(deg-90)*Math.PI/180;return [cx+r*Math.cos(a),cy+r*Math.sin(a)]}
+function arc(cx,cy,r0,r1,a0,a1){
+  const big=a1-a0>180?1:0;
+  const [x0,y0]=polar(cx,cy,r1,a0),[x1,y1]=polar(cx,cy,r1,a1),[x2,y2]=polar(cx,cy,r0,a1),[x3,y3]=polar(cx,cy,r0,a0);
+  return `M${x0.toFixed(2)} ${y0.toFixed(2)}A${r1} ${r1} 0 ${big} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}L${x2.toFixed(2)} ${y2.toFixed(2)}A${r0} ${r0} 0 ${big} 0 ${x3.toFixed(2)} ${y3.toFixed(2)}Z`;
+}
+function donut(t,total,centerBig,centerSmall){
+  let a=0; const paths=SEGS.filter(s=>t[s.k]>0).map(s=>{
+    const span=t[s.k]/total*360; const a0=a,a1=a+span; a=a1;
+    const d=span>=359.99?arc(100,100,62,90,0,359.99):arc(100,100,62,90,a0,a1);
+    return `<path d="${d}" fill="${s.fill}" stroke="var(--surface)" stroke-width="2" ${s.dash?'stroke-dasharray="3 3" style="stroke:var(--muted)"':""} data-tip="${s.label}：${t[s.k]} 項（${Math.round(t[s.k]/total*100)}%）・點擊查看" data-lseg="${s.k}" data-lscope="all" tabindex="0" role="button" aria-label="${s.label} ${t[s.k]} 項"></path>`}).join("");
+  return `<svg viewBox="0 0 200 200" class="donut" role="img" aria-label="附錄 A 狀態分布">${HATCH}${paths}
+    <text x="100" y="98" text-anchor="middle" class="big">${centerBig}</text>
+    <text x="100" y="120" text-anchor="middle" class="small">${centerSmall}</text></svg>`;
+}
+function stackBar(t,total,scope){
+  const sc=scope?` data-lscope="${esc(scope)}" tabindex="0" role="button"`:"";
+  return `<div class="stack ${scope?"live":""}">${SEGS.filter(s=>t[s.k]>0).map(s=>`<span class="${s.k==="na"?"na":s.k==="undec"?"undec":""}" style="flex:${t[s.k]};${s.k.startsWith("s")?`background:var(--${s.k})`:""}" data-tip="${s.label}：${t[s.k]} 項${scope?"・點擊查看":""}"${scope?` data-lseg="${s.k}"`:""}${sc}></span>`).join("")}</div>`;
+}
+function legendHTML(t){
+  return `<ul class="lg">${SEGS.map(s=>`<li data-lseg="${s.k}" data-lscope="all" tabindex="0" role="button" data-tip="點擊查看「${s.label}」的項目"><i class="${s.k==="na"?"na":s.k==="undec"?"undec":""}" style="${s.k.startsWith("s")?`background:var(--${s.k})`:""}"></i>${s.label}<b>${t?t[s.k]:""}</b></li>`).join("")}</ul>`;
+}
+function pdcaRing(){
+  const ph=[["P","規劃"],["D","執行"],["C","檢查"],["A","改善"]];
+  let svg="", all=0, done=0;
+  ph.forEach(([k,n],i)=>{
+    const l=CLAUSES.filter(x=>x.phase===k), d=l.filter(x=>cls(x.code).status>=2).length; all+=l.length; done+=d;
+    const a0=i*90+3, a1=i*90+87, ap=a0+(a1-a0)*(d/l.length);
+    svg+=`<path d="${arc(140,140,64,84,a0,a1)}" fill="var(--s0)" data-tip="${k} ${n}：${d}/${l.length} 條完成・點擊查看" data-lphase="${k}" tabindex="0" role="button" aria-label="${n} 階段條款"></path>`;
+    if(d>0) svg+=`<path d="${arc(140,140,64,84,a0,ap)}" fill="var(--s3)" pointer-events="none"></path>`;
+    const [hx,hy]=polar(140,140,74,a1+1.5);
+    svg+=`<path d="M0 -6 L6 0 L0 6 Z" transform="translate(${hx.toFixed(1)} ${hy.toFixed(1)}) rotate(${a1+1.5})" fill="var(--muted)" pointer-events="none"></path>`;
+    const mid=i*90+45, [lx,ly]=polar(140,140,110,mid), anchor=mid<180?"start":"end";
+    svg+=`<text x="${lx.toFixed(1)}" y="${(ly-4).toFixed(1)}" text-anchor="${anchor}" class="ph">${k} ${n}</text>
+      <text x="${lx.toFixed(1)}" y="${(ly+13).toFixed(1)}" text-anchor="${anchor}" class="small">${d}/${l.length} 條</text>`;
+  });
+  return `<svg viewBox="0 0 280 280" class="ring" role="img" aria-label="PDCA 各階段完成度">${svg}
+    <text x="140" y="138" text-anchor="middle" class="big">${Math.round(done/all*100)}%</text>
+    <text x="140" y="158" text-anchor="middle" class="small">條款 4–10 完成</text></svg>`;
+}
+
+function focusPanel(p){
+  const fs=projFeatures(p), ind=INDUSTRY_MAP[p.industry||""];
+  if(!fs.length&&!p.industry&&!Object.keys(FM).length) return `<div class="panel fpanel"><h3>產業建議重點</h3><p class="note" style="margin:0 0 10px">選擇產業與業務特性後，會在附錄 A 用紫色底線標出建議優先關注的控制措施，並列出相關法規提示。也可以在附錄 A 點 ☆ 自行標示重點。只做標示，不會改變你的判定。</p><button class="btn" data-goto="projects">設定產業與業務特性</button></div>`;
+  const nOn=(p.focusOn||[]).filter(c=>FM[c]).length,nOff=(p.focusOff||[]).length;
+  const codes=Object.keys(FM).sort((a,b)=>ANNEX.findIndex(x=>x.code===a)-ANNEX.findIndex(x=>x.code===b));
+  const list=codes.map(c=>ANNEX_MAP[c]);const tt=tally(list);
+  const pending=list.filter(c=>{const v=ctl(c.code);return v.app===""||(v.app==="Y"&&v.status<2)});
+  const laws=lawsFor(p);
+  return `<div class="panel fpanel">
+    <div class="secthead"><h3>產業建議重點</h3><span class="note">${esc(ind?ind.label:"")}${ind&&ind.id?"・":""}${fs.map(f=>esc(FEATURE_MAP[f].label)).join("、")}</span><button class="btn" data-goto="projects" style="margin-left:auto">調整</button></div>
+    <div class="fgrid">
+      <div>
+        ${nOn||nOff?`<div class="note" style="margin:0 0 10px;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center">已自行調整：加入 ${nOn} 項、取消 ${nOff} 項<button class="chip" data-freset>恢復預設建議</button></div>`:""}
+        <div class="blab"><span>建議重點 ${codes.length} 項</span><span class="mono">${tt.s2+tt.s3}/${codes.length} 已實施</span></div>
+        ${stackBar(tt,codes.length,"focus")}
+        <h3 style="margin-top:16px">尚未完成的重點（${pending.length}）</h3>
+        ${pending.length?`<div style="display:flex;flex-wrap:wrap;gap:6px">${pending.slice(0,12).map(c=>refChip(c.code)).join("")}${pending.length>12?`<button class="chip" data-goto="annex" data-focusfilter="1">查看全部</button>`:""}</div>`:`<p class="note">建議重點都已實施。</p>`}
+        <p class="note" style="margin-top:14px">建議依業務特性產生，只供參考。可在附錄 A 或項目詳情點 ★／☆ 自行加入或取消重點；適用性仍須依風險評鑑結果決定。</p>
+      </div>
+      <div><h3>相關法規與標準</h3>
+        ${laws.length?`<div class="laws">${laws.map(l=>`<div class="law"><h4>${esc(l.name)}<small>${esc(l.kind)}</small></h4><p>${esc(l.note)}</p>
+          <ul>${l.todo.map(t=>`<li>${esc(t)}</li>`).join("")}</ul>
+          <div class="refs">${l.codes.map(refChip).join("")}<a href="${l.link}" target="_blank" rel="noopener">查看原文 ↗</a></div></div>`).join("")}</div>
+          <p class="note" style="margin-top:10px">法規摘要整理於${RULES_DATE}，修法後內容可能變動，請以官方公告為準。</p>`
+        :`<p class="note">目前勾選的特性沒有對應的法規提示。</p>`}
+      </div>
+    </div></div>`;
+}
+document.addEventListener("click",e=>{const g=e.target.closest("[data-goto]");if(!g)return;
+  if(g.dataset.focusfilter){filt.status="focus";filt.theme="all";delete $("#view-annex").dataset.built}
+  if(g.dataset.gofilter){filt.status=g.dataset.gofilter;filt.theme="all";filt.q="";delete $("#view-annex").dataset.built}
+  tab=g.dataset.goto;render();window.scrollTo(0,0);
+  if(g.dataset.anchor){const a=document.getElementById(g.dataset.anchor);if(a)a.scrollIntoView({block:"start"})}});
+function renderOverview(){
+  const c=counts(), p=cur();
+  const pct=c.app?Math.round(c.impl/c.app*100):0;
+  const tAll=tally(ANNEX);
+  const themeBars=THEMES.map(t=>{const list=ANNEX.filter(x=>x.theme===t.id);const tt=tally(list);const apl=list.length-tt.na-tt.undec;
+    return `<div class="brow"><div class="blab"><span>A.${t.id} ${t.name}</span><span class="mono">${tt.s2+tt.s3}/${apl}</span></div>${stackBar(tt,list.length,"theme:"+t.id)}</div>`}).join("");
+  // owners
+  const om={};
+  ANNEX.forEach(x=>{const v=ctl(x.code);if(v.app!=="Y")return;const o=v.owner.trim()||"未指派";(om[o]=om[o]||[]).push(x)});
+  const owners=Object.entries(om).sort((a,b)=>(a[0]==="未指派")-(b[0]==="未指派")||b[1].length-a[1].length).slice(0,7);
+  const omax=Math.max(1,...owners.map(o=>o[1].length));
+  const ownerBars=owners.map(([o,list])=>{const tt=tally(list);
+    return `<div class="brow"><div class="blab"><span>${esc(o)}</span><span class="mono">${list.length} 項</span></div><div style="width:${Math.max(8,list.length/omax*100)}%">${stackBar(tt,list.length,"owner:"+o)}</div></div>`}).join("");
+  const rows=THEMES.map(t=>{
+    const list=ANNEX.filter(x=>x.theme===t.id);
+    return `<div class="heat-row"><div class="lab"><span>A.${t.id}　${t.name}（${list.length} 項）</span></div><div class="cells">${
+      list.map(x=>{const v=ctl(x.code);const k=v.app==="N"?"na":v.app===""?"undec":"";
+        return `<button class="cell ${k} ${x.isNew?"new":""} ${FM[x.code]?"focus":""} ${v.app==="Y"&&v.status===3?"lvl3":""}" style="background:${v.app==="Y"?lvlColor(v.status):""}" data-open="${x.code}" data-tip="${x.code} ${esc(x.name)}｜${v.app==="N"?"不適用":v.app===""?"未決定":STATUS[v.status].label}${FM[x.code]?"｜建議重點":""}" aria-label="${x.code} ${esc(x.name)}">${x.code.split(".")[2]}</button>`}).join("")}</div></div>`}).join("");
+  const todo=ANNEX.filter(x=>{const v=ctl(x.code);return v.app===""||(v.app==="Y"&&v.status===0)}).slice(0,8);
+  const noReason=ANNEX.filter(x=>missingReason(ctl(x.code))).length;
+  $("#view-overview").innerHTML=`
+    <h2>${esc(p.name)}</h2>
+    <p class="lede">${p.scope?`驗證範圍：${esc(p.scope)}。`:""}附錄 A 共 93 項控制措施的適用與執行狀況。滑過圖表可看數字，點熱圖方格可查看說明並更新狀態。</p>
+    <div class="stats">
+      <div class="stat"><b>${c.app}</b><span>適用控制措施</span></div>
+      <div class="stat"><b>${c.na}</b><span>不適用</span></div>
+      <div class="stat"><b>${c.undec}</b><span>尚未決定</span></div>
+      <div class="stat"><b>${pct}%</b><span>適用項目已實施</span></div>
+      <div class="stat"><b>${c.evid}</b><span>已備妥證據</span></div>
+    </div>
+    <div class="charts">
+      <div class="panel"><h3>整體狀態分布</h3><div class="donutwrap">${donut(tAll,93,pct+"%","適用項目已實施")}${legendHTML(tAll)}</div></div>
+      <div class="panel"><h3>各主題進度</h3><p class="note" style="margin:-4px 0 12px">右側數字為已實施／適用項目</p>${themeBars}</div>
+      <div class="panel"><h3>PDCA 循環</h3>${pdcaRing()}</div>
+    </div>
+    ${focusPanel(p)}
+    <div class="grid2" style="margin-top:18px">
+      <div class="panel">
+        <h3>附錄 A 覆蓋熱圖</h3>
+        ${rows}
+        <div class="legend">
+          ${STATUS.map(s=>`<span><i style="background:${lvlColor(s.v)}"></i>${s.label}</span>`).join("")}
+          <span><i class="na"></i>不適用</span><span><i class="undec"></i>未決定</span>
+          <span><i style="background:var(--seal);border-radius:50%;width:6px;height:6px"></i>2022 新增</span>
+          ${Object.keys(FM).length?`<span><i style="background:transparent;box-shadow:inset 0 -3px 0 var(--focus)"></i>產業建議重點</span>`:""}
+        </div>
+      </div>
+      <div style="display:grid;gap:18px;align-content:start">
+        <div class="panel"><div class="secthead"><h3>負責人工作量</h3><button class="chip" data-goto="projects" data-anchor="pplPanel" style="margin-left:auto">管理名單</button></div>${ownerBars||`<p class="note">尚未指派負責人。</p>`}</div>
+        <div class="panel"><h3>待處理</h3>${noReason?`<button class="alertrow" data-goto="annex" data-gofilter="noreason"><b>${noReason} 項</b>標為不適用但未填排除理由<span>前往補填 →</span></button>`:""}${todo.length?`<ul class="todo">${todo.map(x=>{const v=ctl(x.code);return `<li><span class="mono">${x.code}</span><button data-open="${x.code}">${esc(x.name)}</button><span class="saved" style="margin-left:auto">${v.app===""?"未決定適用性":"未開始"}</span></li>`}).join("")}</ul>`:`<p class="note">所有適用項目都已開始處理。</p>`}</div>
+      </div>
+    </div>`;
+}
+/* tooltip */
+(function(){
+  const tip=document.createElement("div");tip.className="tip";tip.hidden=true;document.body.appendChild(tip);
+  const show=(el,x,y)=>{tip.textContent=el.dataset.tip;tip.hidden=false;
+    const w=tip.offsetWidth,h=tip.offsetHeight;let L=x+12,T=y-h-10;
+    if(L+w>innerWidth-8)L=x-w-12; if(T<8)T=y+14; tip.style.left=L+"px";tip.style.top=T+"px"};
+  document.addEventListener("pointermove",e=>{const el=e.target.closest&&e.target.closest("[data-tip]");if(el)show(el,e.clientX,e.clientY);else tip.hidden=true});
+  document.addEventListener("pointerleave",()=>tip.hidden=true);
+  document.addEventListener("focusin",e=>{const el=e.target.closest("[data-tip]");if(el){const r=el.getBoundingClientRect();show(el,r.left+r.width/2,r.top)}});
+  document.addEventListener("focusout",()=>tip.hidden=true);
+})();
+
+const HINTS=["員工離職","勒索軟體","廠商遠端維護","筆電遺失","備份","雲端","個資外洩","USB","內稽","A.8.13"];
+function renderSearch(){
+  const v=$("#view-search");
+  if(!v.dataset.built){
+    v.innerHTML=`<h2>案例搜尋</h2><p class="lede">輸入日常工作或發生的狀況，例如「同事離職」「中毒」「廠商要連進來」，系統會比對 ${CASES.length} 個內建案例並列出相關條款。也可以直接輸入條款編號。</p>
+      <form class="searchbox" id="sForm"><input id="sInput" type="search" placeholder="描述一個情境或關鍵字…" autocomplete="off"><button class="btn primary">搜尋</button></form>
+      <div class="hints">試試：${HINTS.map(h=>`<button class="chip" data-hint="${esc(h)}">${esc(h)}</button>`).join("")}</div>
+      <div id="sResult"></div>`;
+    v.dataset.built="1";
+    $("#sForm").addEventListener("submit",e=>{e.preventDefault();searchQ=$("#sInput").value;renderSearchResult()});
+    $("#sInput").addEventListener("input",e=>{searchQ=e.target.value;renderSearchResult()});
+    v.addEventListener("click",e=>{const h=e.target.closest("[data-hint]");if(h){$("#sInput").value=h.dataset.hint;searchQ=h.dataset.hint;renderSearchResult()}});
+    if(!searchQ){searchQ="員工離職";$("#sInput").value=searchQ}
+  }
+  renderSearchResult();
+}
+function renderSearchResult(){
+  const box=$("#sResult"); const q=searchQ.trim();
+  if(!q){box.innerHTML=`<div class="empty">輸入關鍵字開始搜尋。</div>`;return}
+  const r=search(q);
+  if(!r.cases.length&&!r.direct.length){box.innerHTML=`<div class="empty">找不到「${esc(q)}」相關的案例。換個說法試試，例如用動作描述「帳號沒關」或設備名稱「防火牆」。</div>`;return}
+  box.innerHTML=`<div class="grid2">
+    <div><h3>相關案例（${r.cases.length}）</h3><div class="cases">${r.cases.map(x=>`
+      <article class="case"><h4>${esc(x.c.t)}</h4><p>${esc(x.c.s)}</p>
+      <div class="refs">${x.c.r.map(refChip).join("")}</div>
+      <div class="rec"><b>為什麼</b>${esc(x.c.w)}</div>
+      <div class="rec"><b>應留紀錄</b>${esc(x.c.e)}</div>
+      ${x.hit.length?`<div class="rec saved">符合關鍵字：${x.hit.map(esc).join("、")}</div>`:""}
+      </article>`).join("")||`<div class="empty">沒有相符案例，可參考右側直接相符的條款。</div>`}</div></div>
+    <div style="display:grid;gap:18px;align-content:start">
+      ${r.refs.length?`<div class="panel"><h3>建議對應條款</h3><ul class="rank">${r.refs.map(x=>`<li>${refChip(x.code)}<span class="w">${x.pct}%</span></li>`).join("")}</ul><p class="note" style="margin:12px 0 0">依相符案例的關聯程度排序，圓點顏色為本專案目前狀態。</p></div>`:""}
+      ${r.direct.length?`<div class="panel"><h3>名稱或編號直接相符</h3><div style="display:flex;flex-wrap:wrap;gap:6px">${r.direct.map(refChip).join("")}</div></div>`:""}
+    </div></div>`;
+}
+function renderAnnex(){
+  const v=$("#view-annex");
+  if(!v.dataset.built){
+    v.innerHTML=`<h2>附錄 A 逐項確認</h2><p class="lede">逐項決定是否適用、填寫理由與執行狀態。內容會自動儲存，可隨時匯出為適用性聲明（SoA）Excel。</p>
+      <div class="filters">
+        <div class="seg" id="themeSeg"><button data-th="all" aria-pressed="true">全部</button>${THEMES.map(t=>`<button data-th="${t.id}" aria-pressed="false">A.${t.id} ${t.name}</button>`).join("")}</div>
+        <select id="stFilter" aria-label="狀態篩選"><option value="all">所有狀態</option><option value="undec">未決定適用性</option><option value="N">不適用</option>${STATUS.map(s=>`<option value="${s.v}">${s.label}</option>`).join("")}<option value="new">2022 新增</option><option value="noreason">不適用但未填理由</option><option value="focus">產業建議重點</option><option value="nacand">可能不適用候選</option></select>
+        <input id="qFilter" class="grow" type="search" placeholder="篩選編號、名稱或負責人">
+        <button class="btn primary" id="xlsBtn">匯出 SoA Excel</button>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>編號</th><th>控制措施</th><th style="width:96px">適用性</th><th>納入／排除理由</th><th style="width:118px">執行狀態</th><th style="width:140px">負責人</th><th>證據位置</th></tr></thead><tbody id="annexBody"></tbody></table></div>
+      <div class="filters" style="margin-top:8px"><span class="count" id="annexCount"></span></div>`;
+    v.dataset.built="1";
+    $("#themeSeg").addEventListener("click",e=>{const b=e.target.closest("[data-th]");if(!b)return;filt.theme=b.dataset.th;
+      $("#themeSeg").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));renderAnnexRows()});
+    $("#stFilter").addEventListener("change",e=>{filt.status=e.target.value;renderAnnexRows()});
+    $("#qFilter").addEventListener("input",e=>{filt.q=e.target.value;renderAnnexRows()});
+    $("#xlsBtn").addEventListener("click",exportExcel);
+    $("#annexBody").addEventListener("change",onAnnexEdit);
+    $("#annexBody").addEventListener("input",e=>{if(e.target.matches("input"))onAnnexEdit(e)});
+  }
+  const sf=$("#stFilter");if(sf)sf.value=filt.status;
+  renderAnnexRows();
+}
+function annexRow(c){
+  const v=ctl(c.code);
+  return `<tr data-code="${c.code}" class="${v.app==="N"?"isna":""} ${FM[c.code]?"focus":""}">
+    <td class="code keep"><button data-open="${c.code}">${c.code}</button></td>
+    <td class="name keep"><button class="fstar ${FM[c.code]?"on":""}" data-ftoggle="${c.code}" aria-pressed="${!!FM[c.code]}" aria-label="${FM[c.code]?"取消重點":"標為重點"}：${c.code}" data-tip="${FM[c.code]?"取消重點標示":"標為重點"}">${FM[c.code]?"★":"☆"}</button><span class="${FM[c.code]?"fname":""}">${esc(c.name)}</span>${c.isNew?'<span class="tag">2022 新增</span>':""}${FM[c.code]?`<span class="ftag" data-tip="${esc(FM[c.code].map(f=>FEATURE_MAP[f].label).join("、"))}">建議重點</span>`:""}${NAC[c.code]&&!v.app?`<span class="ctag" data-tip="${esc(NAC[c.code])}">可能不適用</span>`:""}<div class="saved">${esc(c.desc)}</div></td>
+    <td class="keep"><select data-f="app" aria-label="${c.code} 適用性">${APP.map(a=>`<option value="${a.v}" ${a.v===v.app?"selected":""}>${a.label}</option>`).join("")}</select></td>
+    <td class="keep"><input data-f="reason" data-reason="${c.code}" autocomplete="off" class="${missingReason(v)?"warn":""}" aria-invalid="${missingReason(v)}" value="${esc(v.reason)}" placeholder="${v.app==="N"?"選擇排除理由（必填）":"選擇或輸入理由"}" aria-label="${c.code} 理由" ${missingReason(v)?'data-tip="不適用的項目需要排除理由，稽核時會檢查"':""}></td>
+    <td><select data-f="status" class="stsel" style="border-left-color:${lvlColor(v.status)}" ${v.app==="N"?"disabled":""} aria-label="${c.code} 狀態">${STATUS.map(s=>`<option value="${s.v}" ${s.v===v.status?"selected":""}>${s.label}</option>`).join("")}</select></td>
+    <td><input data-f="owner" data-owner autocomplete="off" value="${esc(v.owner)}" placeholder="選擇或輸入" ${v.app==="N"?"disabled":""} aria-label="${c.code} 負責人"></td>
+    <td><input data-f="evidence" value="${esc(v.evidence)}" placeholder="${esc(c.ev.split("、")[0])}" ${v.app==="N"?"disabled":""} aria-label="${c.code} 證據"></td></tr>`;
+}
+function renderAnnexRows(){
+  const q=norm(filt.q);
+  const list=ANNEX.filter(c=>{const v=ctl(c.code);
+    if(filt.theme!=="all"&&c.theme!==filt.theme)return false;
+    if(filt.status==="undec"&&v.app!=="")return false;
+    if(filt.status==="N"&&v.app!=="N")return false;
+    if(filt.status==="new"&&!c.isNew)return false;
+    if(filt.status==="focus"&&!FM[c.code])return false;
+    if(filt.status==="noreason"&&!missingReason(v))return false;
+    if(filt.status==="nacand"&&!NAC[c.code])return false;
+    if(/^\d$/.test(filt.status)&&(v.app!=="Y"||v.status!==+filt.status))return false;
+    if(q&&!norm(c.code+" "+c.name+" "+c.desc+" "+v.owner).includes(q))return false;
+    return true});
+  $("#annexBody").innerHTML=list.map(annexRow).join("")||`<tr><td colspan="7"><div class="empty">沒有符合篩選條件的控制措施。</div></td></tr>`;
+  $("#annexCount").textContent=`顯示 ${list.length} / 93 項`;
+}
+function onAnnexEdit(e){
+  const el=e.target, tr=el.closest("tr[data-code]"); if(!tr||!el.dataset.f)return;
+  const code=tr.dataset.code, f=el.dataset.f;
+  if(!setField(code,f,el.value))return;
+  if(f==="app"||f==="status"){const nr=document.createElement("tbody");nr.innerHTML=annexRow(ANNEX_MAP[code]);tr.replaceWith(nr.firstElementChild)}
+  else if(f==="reason"){const miss=missingReason(ctl(code));el.classList.toggle("warn",miss);el.setAttribute("aria-invalid",miss)}
+}
+function renderClauses(){
+  const groups=[["4","組織前後環境"],["5","領導"],["6","規劃"],["7","支援"],["8","運作"],["9","績效評估"],["10","改善"]];
+  $("#view-clauses").innerHTML=`<h2>管理系統條款 4–10</h2><p class="lede">本文條款不能排除，全部都要符合。逐條追蹤執行狀態與證據，驗證稽核時最先檢查的就是這些文件與紀錄。</p>
+  <div class="table-wrap"><table style="min-width:820px"><thead><tr><th>條款</th><th>名稱與說明</th><th style="width:60px">PDCA</th><th style="width:118px">執行狀態</th><th style="width:140px">負責人</th><th>證據位置</th></tr></thead><tbody id="clBody">
+  ${groups.map(([ch,n])=>`<tr><td colspan="6" style="background:var(--surface2);font-weight:700;font-size:13px">第 ${ch} 章　${n}</td></tr>`+
+    CLAUSES.filter(c=>c.code.split(".")[0]===ch).map(c=>{const v=cls(c.code);return `<tr data-cl="${c.code}">
+    <td class="code"><button data-open="${c.code}">${c.code}</button></td>
+    <td class="name">${esc(c.name)}<div class="saved">${esc(c.desc)}</div></td>
+    <td class="mono">${c.phase}</td>
+    <td><select data-f="status" class="stsel" style="border-left-color:${lvlColor(v.status)}" aria-label="${c.code} 狀態">${STATUS.map(s=>`<option value="${s.v}" ${s.v===v.status?"selected":""}>${s.label}</option>`).join("")}</select></td>
+    <td><input data-f="owner" data-owner autocomplete="off" value="${esc(v.owner)}" placeholder="選擇或輸入" aria-label="${c.code} 負責人"></td>
+    <td><input data-f="evidence" value="${esc(v.evidence)}" placeholder="${esc(c.ev)}" aria-label="${c.code} 證據"></td></tr>`}).join("")).join("")}
+  </tbody></table></div>`;
+  const body=$("#clBody");
+  const h=e=>{const el=e.target,tr=el.closest("tr[data-cl]");if(!tr||!el.dataset.f)return;
+    if(setField(tr.dataset.cl,el.dataset.f,el.value)&&el.dataset.f==="status")el.style.borderLeftColor=lvlColor(cls(tr.dataset.cl).status)};
+  body.addEventListener("change",h);body.addEventListener("input",e=>{if(e.target.matches("input"))h(e)});
+}
+let pendingDelete=null;
+function renderProjects(){
+  const list=Object.values(S.projects).sort((a,b)=>b.updated-a.updated);
+  const p=cur();
+  $("#view-projects").innerHTML=`<h2>專案與備份</h2><p class="lede">資料自動儲存在這個瀏覽器。換電腦或清除瀏覽資料前，請先匯出專案檔備份。</p>
+  <div class="grid2"><div>
+    <div class="secthead"><h3>我的專案</h3><button class="btn" id="pNew">＋ 新專案</button></div>
+    ${list.length?projRows(list,"projects"):`<div class="pempty">還沒有自己的專案。</div>`}
+  </div>
+  <div class="panel"><h3>目前專案</h3>
+    ${!p?`<p class="note">尚未開啟專案。可以匯入之前匯出的專案檔。</p><div class="form"><button class="btn" id="jsonIn">匯入專案檔</button></div>`:
+    p.sample?`<p class="note">目前是範例專案，不能重新命名或匯出專案檔。想保留內容，請先複製成自己的專案。</p>
+      <div class="form"><button class="btn primary" id="pCopy">以此範例建立我的專案</button><button class="btn" id="xls2">匯出 SoA Excel</button><button class="btn" id="jsonIn">匯入專案檔</button></div>`:
+    `<div class="form" style="margin-top:0"><input id="renameIn" value="${esc(p.name)}" aria-label="專案名稱"><button class="btn" id="renameBtn">重新命名</button></div>
+    <div class="form"><input id="scopeIn" value="${esc(p.scope||"")}" placeholder="驗證範圍" aria-label="驗證範圍"><button class="btn" id="scopeBtn">更新範圍</button></div>
+    <div class="form"><button class="btn primary" id="xls2">匯出 SoA Excel</button><button class="btn" id="jsonOut">匯出專案檔（JSON）</button><button class="btn" id="jsonIn">匯入專案檔</button></div>`}
+    ${p?`<div style="border-top:1px solid var(--line);margin-top:16px;padding-top:14px;display:grid;gap:8px" id="indBox">
+      <h3 style="margin:0">產業與業務特性</h3>
+      <label style="display:grid;gap:4px;font-size:13px;color:var(--muted)">產業<select id="pInd">${industryOptions(p.industry||"")}</select></label>
+      <div class="fchips">${featureChips(projFeatures(p),"pF")}</div>
+      <div class="form" style="margin-top:4px;align-items:center"><button class="btn primary" id="indSave">套用</button><span class="fcount" id="pCount"></span></div>
+      ${p.sample?`<p class="note" style="margin:0">範例中的調整不會儲存。</p>`:""}
+    </div>`:""}
+    <p class="note" style="margin-top:14px">專案檔可在其他電腦匯入繼續編輯；Excel 包含適用性聲明、條款 4–10 檢核、統計摘要與修改紀錄四個工作表。</p>
+  </div></div>
+  ${p?peoplePanel(p):""}
+  ${p?`<div class="panel" style="margin-top:18px"><div class="secthead"><h3>最近修改</h3><span class="note">共 ${(p.log||[]).length} 筆，顯示最近 30 筆。完整紀錄會一併匯出到 Excel。</span></div>
+    ${historyHTML((p.log||[]).slice(-30).reverse(),true)}</div>`:""}`;
+  const v=$("#view-projects");
+  const on=(id,fn)=>{const el=$("#"+id);if(el)el.addEventListener("click",fn)};
+  on("pNew",()=>goNew());
+  if($("#indBox")){wireIndustry(v,"pInd","pF","pCount");
+    on("indSave",()=>{const p=cur();p.industry=$("#pInd").value;p.features=readFeatures(v,"pF");save();resetBuilt();refreshFocus();toast("已套用：建議重點 "+Object.keys(FM).length+" 項")})}
+  on("pCopy",()=>{copying=true;tab="overview";render();window.scrollTo(0,0)});
+  on("renameBtn",()=>{const n=$("#renameIn").value.trim();if(n){cur().name=n;save();render();toast("已重新命名")}});
+  on("scopeBtn",()=>{cur().scope=$("#scopeIn").value.trim();save();toast("已更新驗證範圍")});
+  on("xls2",exportExcel);
+  on("jsonOut",exportJSON);
+  on("jsonIn",()=>$("#importFile").click());
+}
+function goNew(){tab="home";render();window.scrollTo(0,0);const n=$("#hName");if(n)n.focus()}
+function resetBuilt(){["annex"].forEach(v=>delete $("#view-"+v).dataset.built)}
+$("#importFile").addEventListener("change",e=>{
+  const f=e.target.files[0];if(!f)return;const rd=new FileReader();
+  rd.onload=()=>{try{const d=JSON.parse(rd.result);const p=d.project||d;
+      if(!p||!p.controls)throw new Error();p.id=uid();p.name=(p.name||"匯入專案");p.clauses=p.clauses||{};delete p.sample;delete p.stage;p.updated=Date.now();
+      S.projects[p.id]=p;S.activeId=p.id;save();resetBuilt();tab="overview";render();toast("已匯入："+p.name)}
+    catch(err){toast("檔案格式不正確，請選擇本工具匯出的專案檔")}
+    e.target.value=""};
+  rd.readAsText(f);
+});
+
+
+/* ================= 變更、復原與修改紀錄 ================= */
+const FIELD_LABEL={app:"適用性",status:"執行狀態",reason:"理由",owner:"負責人",evidence:"證據位置",focus:"重點標示"};
+const TEXT_FIELDS=new Set(["reason","owner","evidence"]);
+function fmtVal(f,v){
+  if(f==="app")return (APP.find(a=>a.v===v)||{label:v}).label;
+  if(f==="status")return STATUS[v]?STATUS[v].label:String(v);
+  if(f==="focus")return v?"重點":"非重點";
+  return v===""||v==null?"（空白）":String(v);
+}
+function fmtStamp(t){return new Date(t).toLocaleString("zh-TW",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false})}
+function logChange(code,f,from,to){
+  const p=cur();if(!p||from===to)return;
+  p.log=p.log||[];const last=p.log[p.log.length-1],now=Date.now();
+  // 連續輸入文字時合併成一筆
+  if(last&&last.c===code&&last.f===f&&TEXT_FIELDS.has(f)&&now-last.t<60000){last.to=to;last.t=now;if(last.from===last.to)p.log.pop();return}
+  p.log.push({t:now,c:code,f,from,to});
+  if(p.log.length>3000)p.log.splice(0,p.log.length-3000);
+}
+function missingReason(v){return v.app==="N"&&!String(v.reason||"").trim()}
+function setField(code,f,val,opts={}){
+  const isA=!!ANNEX_MAP[code];const v=isA?ctl(code):cls(code);
+  if(f==="status")val=+val;
+  const from=v[f];if(from===val)return false;
+  v[f]=val;logChange(code,f,from,val);saveSoon();
+  if(!opts.silent&&(f==="app"||f==="status"))
+    undoToast(`${code} ${FIELD_LABEL[f]}：${fmtVal(f,from)} → ${fmtVal(f,val)}`,()=>{setField(code,f,from,{silent:true});rerenderAfterUndo(code)});
+  return true;
+}
+let undoEl=null,undoTimer=null;
+function undoToast(msg,fn){
+  if(undoEl)undoEl.remove();clearTimeout(undoTimer);
+  const t=document.createElement("div");t.className="toast utoast";t.setAttribute("role","status");
+  t.innerHTML=`<span></span><button type="button">復原</button>`;t.firstChild.textContent=msg;
+  t.querySelector("button").addEventListener("click",()=>{clearTimeout(undoTimer);t.remove();undoEl=null;fn();toast("已復原")});
+  document.body.appendChild(t);undoEl=t;
+  undoTimer=setTimeout(()=>{t.remove();if(undoEl===t)undoEl=null},6000);
+}
+function rerenderAfterUndo(code){
+  const host=$("#drawerHost");
+  if(host.innerHTML){ if(host.querySelector("#dStatus"))openDrawer(code,!!lastList); else if(lastList)openList(lastList); }
+  if(tab==="annex")renderAnnexRows();else if(tab==="clauses")renderClauses();else if(tab==="overview")renderOverview();
+}
+function historyHTML(entries,withCode){
+  if(!entries.length)return `<p class="note">還沒有修改紀錄。</p>`;
+  return `<ol class="hist">${entries.map(e=>`<li><time>${fmtStamp(e.t)}</time>${withCode?`<button class="hcode mono" data-open="${e.c}">${ANNEX_MAP[e.c]?e.c:"第 "+e.c+" 條"}</button>`:""}<span>${esc(FIELD_LABEL[e.f]||e.f)}：<s>${esc(fmtVal(e.f,e.from))}</s> → <b>${esc(fmtVal(e.f,e.to))}</b></span></li>`).join("")}</ol>`;
+}
+
+
+/* ================= 負責人名單 ================= */
+function people(p){
+  if(!p)return [];
+  if(!Array.isArray(p.people)){ // 舊專案：從已填的負責人整理出名單
+    const set=new Set();Object.values(p.controls||{}).concat(Object.values(p.clauses||{})).forEach(v=>{const o=String(v.owner||"").trim();if(o)set.add(o)});
+    p.people=[...set];
+  }
+  return p.people;
+}
+function refreshOwnerList(){const dl=$("#ownerList");if(dl)dl.innerHTML=people(cur()).map(n=>`<option value="${esc(n)}"></option>`).join("")}
+function addPerson(name,quiet){
+  const p=cur();name=String(name||"").trim();if(!p||!name)return false;
+  const ps=people(p);if(ps.includes(name))return false;
+  ps.push(name);save();refreshOwnerList();
+  if(!quiet)toast(`已將「${name}」加入負責人名單`);
+  return true;
+}
+function assignedTo(name){
+  const out=[];
+  ANNEX.forEach(c=>{const v=ctl(c.code);if(v.owner.trim()===name)out.push(c.code)});
+  CLAUSES.forEach(c=>{const v=cls(c.code);if(String(v.owner).trim()===name)out.push(c.code)});
+  return out;
+}
+function renamePerson(oldN,newN){
+  const p=cur();newN=String(newN||"").trim();if(!p||!newN||newN===oldN)return;
+  assignedTo(oldN).forEach(code=>setField(code,"owner",newN,{silent:true}));
+  const ps=people(p);p.people=ps.includes(newN)?ps.filter(n=>n!==oldN):ps.map(n=>n===oldN?newN:n);
+  save();refreshOwnerList();toast(`已將「${oldN}」改為「${newN}」`);
+}
+function removePerson(name){
+  const p=cur();if(!p)return;
+  const codes=assignedTo(name);codes.forEach(code=>setField(code,"owner","",{silent:true}));
+  p.people=people(p).filter(n=>n!==name);save();refreshOwnerList();
+  toast(codes.length?`已刪除「${name}」，${codes.length} 項改為未指派`:`已刪除「${name}」`);
+}
+// 在任何負責人欄位輸入完成後，新名字自動加入名單
+document.addEventListener("change",e=>{const el=e.target;if(el.matches&&el.matches("[data-owner]"))addPerson(el.value)});
+let personEdit=null,personDel=null;
+function peoplePanel(p){
+  const ps=people(p);
+  const rows=ps.map(n=>{const k=assignedTo(n).length;
+    if(personEdit===n)return `<li><input id="pplRename" value="${esc(n)}" aria-label="新名稱" style="flex:1 1 160px"><button class="btn primary" data-ppl="rsave" data-name="${esc(n)}">儲存</button><button class="btn" data-ppl="cancel">取消</button></li>`;
+    if(personDel===n)return `<li><span class="pn">${esc(n)}</span><span class="saved">${k?`${k} 項會改為未指派`:"沒有指派任何項目"}</span><button class="btn danger" data-ppl="del2" data-name="${esc(n)}">確認刪除</button><button class="btn" data-ppl="cancel">取消</button></li>`;
+    return `<li><span class="pn">${esc(n)}</span><button class="chip" data-ppl="show" data-name="${esc(n)}" ${k?"":"disabled"}>${k} 項</button><span class="pacts"><button class="btn" data-ppl="rename" data-name="${esc(n)}">重新命名</button><button class="btn" data-ppl="del" data-name="${esc(n)}">刪除</button></span></li>`}).join("");
+  return `<div class="panel" style="margin-top:18px" id="pplPanel"><div class="secthead"><h3>負責人名單</h3><span class="note">在附錄 A、條款與詳情中輸入負責人時可直接選用。改名會同步更新所有已指派的項目。</span></div>
+    ${ps.length?`<ul class="ppl">${rows}</ul>`:`<p class="note">名單是空的。新增後，負責人欄位就能直接選擇。</p>`}
+    <form class="form" id="pplAdd"><input id="pplNew" placeholder="例如：資訊部 王經理" aria-label="新增負責人" style="flex:1 1 200px"><button class="btn primary">新增負責人</button></form></div>`;
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-ppl]");if(!b)return;
+  const a=b.dataset.ppl,n=b.dataset.name;
+  if(a==="rename"){personEdit=n;personDel=null}
+  if(a==="del"){personDel=n;personEdit=null}
+  if(a==="cancel"){personEdit=personDel=null}
+  if(a==="rsave"){const v=$("#pplRename").value.trim();if(!v){toast("名稱不能空白");return}renamePerson(n,v);personEdit=null}
+  if(a==="del2"){removePerson(n);personDel=null}
+  if(a==="show"){openList({scope:"owner:"+n});return}
+  renderProjects();
+  if(a==="rename"){const i=$("#pplRename");if(i){i.focus();i.select()}}
+});
+document.addEventListener("submit",e=>{if(e.target.id!=="pplAdd")return;e.preventDefault();
+  const v=$("#pplNew").value.trim();if(!v)return;
+  if(!addPerson(v,true)){toast(`「${v}」已在名單中`);return}
+  toast(`已新增「${v}」`);renderProjects();const i=$("#pplNew");if(i)i.focus()});
+document.addEventListener("keydown",e=>{if(e.target.id==="pplRename"){
+  if(e.key==="Enter"){e.preventDefault();document.querySelector('[data-ppl="rsave"]').click()}
+  if(e.key==="Escape"){e.stopPropagation();personEdit=null;renderProjects()}}});
+
+
+/* 下拉選單：負責人（單選）與納入／排除理由（可複選）。點進欄位顯示完整選項，打字時才過濾 */
+const picker=document.createElement("div");picker.className="opick";picker.hidden=true;picker.setAttribute("role","listbox");document.body.appendChild(picker);
+let pickFor=null,pickIdx=-1,pickItems=[],pickKind="";
+const SEP="；";
+const splitReasons=v=>String(v||"").split(/[；;]/).map(x=>x.trim()).filter(Boolean);
+function customReasons(){const p=cur();if(!p)return [];if(!Array.isArray(p.reasons))p.reasons=[];return p.reasons}
+function placePicker(){if(!pickFor)return;const r=pickFor.getBoundingClientRect();
+  const w=Math.max(r.width,pickKind==="reason"?320:220),left=Math.min(r.left,innerWidth-w-8);
+  picker.style.width=Math.min(w,innerWidth-16)+"px";picker.style.left=Math.max(8,left)+"px";
+  const below=innerHeight-r.bottom;picker.style.maxHeight=Math.max(160,Math.min(340,(below>220?below:r.top)-16))+"px";
+  if(below>220||below>r.top){picker.style.top=(r.bottom+4)+"px";picker.style.bottom=""}else{picker.style.top="";picker.style.bottom=(innerHeight-r.top+4)+"px"}}
+function ownerItems(el,q){
+  const ps=people(cur()),cur0=el.value.trim(),items=[];
+  (q?ps.filter(n=>n.toLowerCase().includes(q)):ps).forEach(n=>items.push({v:n,label:n,on:n===cur0}));
+  if(q&&!ps.some(n=>n.toLowerCase()===q))items.push({v:el.value.trim(),label:`＋ 新增「${el.value.trim()}」`,add:true});
+  if(cur0)items.push({v:"",label:"清除負責人",clear:true});
+  return items;
+}
+function reasonItems(el,q){
+  const code=el.dataset.reason,v=ctl(code),chosen=splitReasons(el.value),items=[];
+  const has=x=>chosen.includes(x),match=x=>!q||x.toLowerCase().includes(q);
+  const group=(title,list,extra={})=>{const l=list.filter(match);if(!l.length)return;items.push({head:title});l.forEach(x=>items.push({v:x,label:x,on:has(x),...extra}))};
+  if(v.app!=="N")group("納入理由",REASONS_IN);
+  if(v.app!=="Y"){
+    const sug=NAC[code]?[code==="A.8.30"?"組織沒有委外開發活動":"組織沒有自行開發系統或程式"]:[];
+    if(sug.length)group("依業務特性的建議",sug);
+    group("排除理由",REASONS_OUT);
+  }
+  group("我的常用理由",customReasons(),{custom:true});
+  const known=new Set([...REASONS_IN,...REASONS_OUT,...customReasons()]);
+  const last=chosen[chosen.length-1];
+  if(q&&last&&!known.has(last))items.push({v:last,label:`＋ 存為常用理由「${last}」`,save:true});
+  if(chosen.length)items.push({v:"",label:"清除理由",clear:true});
+  return items;
+}
+function showPicker(el,filterText){
+  pickFor=el;pickKind=el.matches("[data-reason]")?"reason":"owner";
+  let q=(filterText||"").trim();
+  if(pickKind==="reason"){const parts=splitReasons(filterText);q=parts.length?parts[parts.length-1]:"";if(!filterText)q=""}
+  q=q.toLowerCase();
+  pickItems=pickKind==="reason"?reasonItems(el,q):ownerItems(el,q);
+  if(pickIdx<0||pickIdx>=pickItems.length||pickItems[pickIdx].head)pickIdx=pickItems.findIndex(i=>i.on);
+  picker.innerHTML=pickItems.length?pickItems.map((it,i)=>it.head?`<div class="oh">${esc(it.head)}</div>`:
+    `<div class="oi ${it.on?"on":""} ${it.clear?"clr":""} ${it.add||it.save?"add":""} ${i===pickIdx?"hl":""}" role="option" aria-selected="${!!it.on}" data-i="${i}">
+      <span class="ck">${pickKind==="reason"&&!it.clear&&!it.save?(it.on?"☑":"☐"):(it.on?"✓":"")}</span><span class="ol">${esc(it.label)}</span>${it.custom?`<button class="odel" data-odel="${esc(it.v)}" aria-label="從常用理由移除" title="從常用理由移除">×</button>`:""}</div>`).join("")
+    :`<div class="oempty">${pickKind==="owner"?"名單是空的，直接輸入名字即可新增":"沒有符合的理由，直接輸入即可"}</div>`;
+  if(pickKind==="reason")picker.insertAdjacentHTML("afterbegin",`<div class="ohint">可複選，選取的理由會以「；」分隔</div>`);
+  picker.hidden=false;placePicker();
+  const hl=picker.querySelector(".hl");if(hl)hl.scrollIntoView({block:"nearest"});
+}
+function hidePicker(){picker.hidden=true;pickFor=null;pickIdx=-1}
+function commitValue(el,val){el.value=val;el.dispatchEvent(new Event("input",{bubbles:true}));el.dispatchEvent(new Event("change",{bubbles:true}))}
+function pickAt(i){
+  const it=pickItems[i],el=pickFor;if(!it||it.head||!el)return;
+  if(pickKind==="owner"){commitValue(el,it.v);hidePicker();return}
+  if(it.clear){commitValue(el,"");showPicker(el,"");return}
+  let chosen=splitReasons(el.value);
+  const known=new Set([...REASONS_IN,...REASONS_OUT,...customReasons()]);
+  if(it.save){const list=customReasons();if(!list.includes(it.v)){list.push(it.v);save()}toast(`已存為常用理由`);commitValue(el,chosen.join(SEP));pickIdx=i;showPicker(el,"");return}
+  // 打字到一半的文字若不是已知理由，選取選項時以選項取代
+  const last=chosen[chosen.length-1];if(last&&!known.has(last)&&last!==it.v&&it.v.toLowerCase().includes(last.toLowerCase()))chosen.pop();
+  chosen=chosen.includes(it.v)?chosen.filter(x=>x!==it.v):[...chosen,it.v];
+  commitValue(el,chosen.join(SEP));pickIdx=i;showPicker(el,"");
+}
+picker.addEventListener("mousedown",e=>e.preventDefault());
+picker.addEventListener("click",e=>{
+  const d=e.target.closest("[data-odel]");
+  if(d){e.stopPropagation();const p=cur();p.reasons=customReasons().filter(x=>x!==d.dataset.odel);save();toast("已從常用理由移除");if(pickFor)showPicker(pickFor,"");return}
+  const o=e.target.closest("[data-i]");if(o)pickAt(+o.dataset.i)});
+const PICKABLE="[data-owner],[data-reason]";
+document.addEventListener("focusin",e=>{const el=e.target;if(el.matches&&el.matches(PICKABLE)&&!el.disabled){pickIdx=-1;showPicker(el,"")}});
+document.addEventListener("click",e=>{const el=e.target;if(el.matches&&el.matches(PICKABLE)&&!el.disabled&&picker.hidden)showPicker(el,"")});
+document.addEventListener("input",e=>{if(e.target===pickFor&&e.isTrusted){pickIdx=-1;showPicker(pickFor,pickFor.value)}});
+document.addEventListener("focusout",e=>{if(e.target===pickFor)setTimeout(()=>{if(document.activeElement!==pickFor)hidePicker()},120)});
+document.addEventListener("keydown",e=>{
+  if(!pickFor||e.target!==pickFor||picker.hidden){if(pickFor&&e.target===pickFor&&e.key==="ArrowDown"){showPicker(pickFor,"");e.preventDefault()}return}
+  const sel=pickItems.map((it,i)=>it.head?-1:i).filter(i=>i>=0);
+  if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();if(!sel.length)return;
+    let k=sel.indexOf(pickIdx);k=k<0?(e.key==="ArrowDown"?0:sel.length-1):(k+(e.key==="ArrowDown"?1:-1)+sel.length)%sel.length;pickIdx=sel[k];
+    picker.querySelectorAll(".oi").forEach(o=>o.classList.toggle("hl",+o.dataset.i===pickIdx));
+    const hl=picker.querySelector(".hl");if(hl)hl.scrollIntoView({block:"nearest"})}
+  else if(e.key==="Enter"&&pickIdx>=0){e.preventDefault();pickAt(pickIdx)}
+  else if(e.key==="Escape"){e.preventDefault();e.stopPropagation();hidePicker()}
+},true);
+window.addEventListener("scroll",()=>{if(pickFor)placePicker()},true);
+window.addEventListener("resize",()=>{if(pickFor)placePicker()});
+
+/* ================= 圖表點擊清單 ================= */
+let lastList=null;
+const SEG_LABEL=Object.fromEntries(SEGS.map(s=>[s.k,s.label]));
+const SEG_FILTER={s0:"0",s1:"1",s2:"2",s3:"3",undec:"undec",na:"N"};
+function listItems(scope,seg){
+  let base=ANNEX, title="全部控制措施", f={theme:"all",status:SEG_FILTER[seg]||"all",q:""};
+  if(scope.startsWith("theme:")){const t=THEMES.find(x=>x.id===scope.slice(6));base=ANNEX.filter(c=>c.theme===t.id);title=`A.${t.id} ${t.name}`;f.theme=t.id}
+  else if(scope.startsWith("owner:")){const o=scope.slice(6);base=ANNEX.filter(c=>{const v=ctl(c.code);return v.app==="Y"&&(v.owner.trim()||"未指派")===o});title=o;f=o==="未指派"?null:{...f,q:o}}
+  else if(scope==="focus"){base=ANNEX.filter(c=>FM[c.code]);title="產業建議重點";f=null}
+  const items=seg?base.filter(c=>bucket(ctl(c.code))===seg):base;
+  return {items,title:title+(seg?`・${SEG_LABEL[seg]}`:""),filter:f};
+}
+function openList(spec){
+  lastList=spec;
+  let items,title,filter,seg=spec.seg,isClause=false;
+  if(spec.phase){const names={P:"規劃 Plan",D:"執行 Do",C:"檢查 Check",A:"改善 Act"};
+    items=CLAUSES.filter(c=>c.phase===spec.phase);title="PDCA・"+names[spec.phase];filter=null;isClause=true}
+  else ({items,title,filter}=listItems(spec.scope,seg));
+  const row=c=>{const v=isClause?cls(c.code):ctl(c.code);const b=isClause?"s"+v.status:bucket(v);
+    const lab=isClause?STATUS[v.status].label:(SEG_LABEL[b]);
+    return `<button class="lrow" data-lopen="${c.code}"><span class="dot ${b==="na"?"na":b==="undec"?"undec":""}" style="${b.startsWith("s")?`background:var(--${b})`:""}"></span>
+      <span class="mono">${isClause?"第 "+c.code+" 條":c.code}</span><span class="ln ${FM[c.code]?"fname":""}">${esc(c.name)}</span>
+      <span class="lmeta">${esc(v.owner||"")}${v.owner?"・":""}${lab}</span></button>`};
+  const host=$("#drawerHost");
+  host.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+    <button class="btn x" data-close>關閉</button>
+    <div class="code">${isClause?"管理系統條款":"附錄 A"}・${items.length} 項</div>
+    <h2>${esc(title)}</h2>
+    ${isClause?"":`<p class="note">點任一項可查看詳情並更新狀態。</p>`}
+    ${items.length?`<div class="llist">${items.map(row).join("")}</div>`:`<div class="empty">沒有符合的項目。</div>`}
+    <div class="form" style="margin-top:16px">
+      ${filter?`<button class="btn primary" id="lGo">在附錄 A 中篩選這些項目</button>`:""}
+      ${isClause?`<button class="btn primary" id="lGoCl">前往條款 4–10</button>`:""}
+    </div></aside>`;
+  host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>{lastList=null;closeDrawer()}));
+  host.querySelectorAll("[data-lopen]").forEach(b=>b.addEventListener("click",()=>openDrawer(b.dataset.lopen,true)));
+  const go=$("#lGo");if(go)go.addEventListener("click",()=>{Object.assign(filt,filter);lastList=null;$("#drawerHost").innerHTML="";delete $("#view-annex").dataset.built;tab="annex";render();window.scrollTo(0,0)});
+  const gc=$("#lGoCl");if(gc)gc.addEventListener("click",()=>{lastList=null;$("#drawerHost").innerHTML="";tab="clauses";render();window.scrollTo(0,0)});
+  host.querySelector(".x").focus();
+}
+function chartHit(e){
+  const el=e.target.closest&&e.target.closest("[data-lseg],[data-lphase]");if(!el||!el.closest("#view-overview"))return false;
+  if(el.dataset.lphase)openList({phase:el.dataset.lphase});else openList({scope:el.dataset.lscope||"all",seg:el.dataset.lseg});
+  return true;
+}
+document.addEventListener("click",e=>{chartHit(e)});
+document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&chartHit(e))e.preventDefault()});
+
+/* ================= DRAWER ================= */
+function openDrawer(code,fromList){
+  if(!fromList)lastList=null;
+  const isA=!!ANNEX_MAP[code]; const c=isA?ANNEX_MAP[code]:CLAUSE_MAP[code]; if(!c)return;
+  const v=isA?ctl(code):cls(code);
+  const rel=CASES.filter(x=>x.r.includes(code));
+  const host=$("#drawerHost");
+  host.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${esc(c.name)}">
+    <button class="btn x" data-close>關閉</button>
+    ${lastList?`<button class="btn" id="dBack" style="margin-bottom:10px">← 返回清單</button>`:""}
+    <div class="code">${isA?code:"第 "+code+" 條"}${isA&&c.isNew?' <span class="tag">2022 新增</span>':""}</div>
+    <h2>${esc(c.name)}</h2>
+    <p class="lede" style="margin-bottom:6px">${esc(c.desc)}</p>
+    <p class="note"><b>常見證據：</b>${esc(c.ev)}</p>
+    ${isA?`<div style="margin:10px 0"><button class="btn" data-ftoggle="${code}" style="${FM[code]?"border-color:var(--focus);color:var(--focus)":""}">${FM[code]?"★ 取消重點標示":"☆ 標為重點"}</button></div>`:""}
+    ${isA&&!FM[code]&&(cur()&&(cur().focusOff||[]).includes(code))?`<p class="note">這一項原本是系統建議的重點，已被你取消。</p>`:""}
+    ${isA&&FM[code]?`<div class="why"><b>建議重點</b>：依目前專案的設定<ul>${FM[code].map(f=>`<li>${esc(FEATURE_MAP[f].label)}：${esc(FEATURE_MAP[f].why)}</li>`).join("")}</ul></div>`:""}
+    ${isA&&NAC[code]?`<div class="why" style="background:var(--surface2)"><b style="color:var(--muted)">可能不適用</b>：${esc(NAC[code])}。是否排除仍須依風險評鑑決定。</div>`:""}
+    <dl>
+      ${isA?`<div><dt>適用性</dt><dd><select id="dApp">${APP.map(a=>`<option value="${a.v}" ${a.v===v.app?"selected":""}>${a.label}</option>`).join("")}</select></dd></div>
+      <div><dt>納入／排除理由</dt><dd><input id="dReason" data-reason="${code}" autocomplete="off" placeholder="選擇或輸入理由，可複選" value="${esc(v.reason)}" class="${missingReason(v)?"warn":""}" aria-describedby="dReasonHint"><small id="dReasonHint" class="warnhint" ${missingReason(v)?"":"hidden"}>不適用的項目需要填寫排除理由，SoA 稽核時會檢查。</small></dd></div>`:""}
+      <div><dt>執行狀態</dt><dd><select id="dStatus">${STATUS.map(s=>`<option value="${s.v}" ${s.v===v.status?"selected":""}>${s.label}</option>`).join("")}</select></dd></div>
+      <div><dt>負責人</dt><dd><input id="dOwner" data-owner autocomplete="off" value="${esc(v.owner)}" placeholder="從名單選擇或輸入新名字"></dd></div>
+      <div><dt>證據位置</dt><dd><input id="dEv" value="${esc(v.evidence)}" placeholder="例如：\\\\fileserver\\ISMS\\${esc(code)}"></dd></div>
+    </dl>
+    <h3>修改紀錄</h3>
+    <div id="dHist">${historyHTML(((cur()&&cur().log)||[]).filter(e=>e.c===code).slice(-10).reverse(),false)}</div>
+    <h3 style="margin-top:18px">相關案例（${rel.length}）</h3>
+    <div class="rel">${rel.map(x=>`<button data-case="${esc(x.t)}">${esc(x.t)}</button>`).join("")||`<p class="note">目前沒有內建案例對應到這一項。</p>`}</div>
+  </aside>`;
+  const FIELDS={dApp:"app",dReason:"reason",dStatus:"status",dOwner:"owner",dEv:"evidence"};
+  const refreshHist=()=>{const h=$("#dHist");if(h)h.innerHTML=historyHTML(((cur()&&cur().log)||[]).filter(e=>e.c===code).slice(-10).reverse(),false)};
+  const syncWarn=()=>{const r=$("#dReason");if(!r)return;const miss=missingReason(v);r.classList.toggle("warn",miss);$("#dReasonHint").hidden=!miss};
+  Object.entries(FIELDS).forEach(([id,f])=>{const el=$("#"+id);if(!el)return;
+    const fn=()=>{if(setField(code,f,el.value)){syncWarn();refreshHist()}};
+    el.addEventListener(el.tagName==="SELECT"?"change":"input",fn)});
+  host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>{lastList=null;closeDrawer()}));
+  const back=$("#dBack");if(back)back.addEventListener("click",()=>{renderOverviewQuiet();openList(lastList)});
+  host.querySelectorAll("[data-case]").forEach(b=>b.addEventListener("click",()=>{closeDrawer();searchQ=b.dataset.case;tab="search";
+    const si=$("#sInput"); if(si) si.value=searchQ; render(); if($("#sInput")) $("#sInput").value=searchQ;}));
+  host.querySelector(".x").focus();
+}
+function renderOverviewQuiet(){if(tab==="overview")renderOverview()}
+function closeDrawer(){$("#drawerHost").innerHTML="";if(tab!=="search")render();else renderSearchResult()}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#drawerHost").innerHTML)closeDrawer()});
+document.addEventListener("click",e=>{const o=e.target.closest("[data-open]");if(o){e.preventDefault();openDrawer(o.dataset.open)}});
+
+/* ================= INIT ================= */
+$("#tabs").addEventListener("click",e=>{const b=e.target.closest("[data-tab]");if(!b)return;
+  if(!cur()&&NEEDS_PROJECT.has(b.dataset.tab)){toast("請先建立專案，或從首頁開啟一個範例");return}
+  tab=b.dataset.tab;render();window.scrollTo(0,0)});
+$("#projSel").addEventListener("change",e=>{if(e.target.value)openProject(e.target.value,tab==="home"?"overview":tab)});
+$("#newBtn").addEventListener("click",goNew);
+tab="home";
+try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){storeOK=false}
+render();
+</script>
+</body>
+</html>
