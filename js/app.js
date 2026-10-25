@@ -182,7 +182,19 @@ function newProject(name,org,scope,start,industry,features){
   if(start==="all")ANNEX.forEach(c=>p.controls[c.code]={app:"Y",status:0,owner:"",evidence:"",reason:""});
   S.projects[p.id]=p;S.activeId=p.id;save();resetBuilt();ensurePersist();return p;
 }
-function openProject(id,toTab){copying=false;const sd=SAMPLE_DEFS.find(d=>d.id===id);if(sd)sampleInd=sd.ind;editingId=null;S.activeId=id;pendingDelete=null;save();resetBuilt();tab=toTab||"overview";render();window.scrollTo(0,0)}
+/* 預覽範例前開著的專案，結束預覽時回到這裡 */
+let previewFrom=null;
+function endPreview(){
+  const sid=S.activeId;if(!isSample(sid))return;
+  copying=false;resetSample(sid);
+  const back=previewFrom&&S.projects[previewFrom]?previewFrom:null;previewFrom=null;
+  S.activeId=back;save();resetBuilt();tab=back?"overview":"home";render();window.scrollTo(0,0);
+  toast(back?`已結束預覽，回到「${S.projects[back].name}」`:"已結束預覽");
+}
+function openProject(id,toTab){if(isSample(id)&&!isSample(S.activeId))previewFrom=S.activeId;
+  else if(isSample(id)&&isSample(S.activeId)&&id!==S.activeId)resetSample(S.activeId);
+  else if(!isSample(id))previewFrom=null;
+  copying=false;const sd=SAMPLE_DEFS.find(d=>d.id===id);if(sd)sampleInd=sd.ind;editingId=null;S.activeId=id;pendingDelete=null;save();resetBuilt();tab=toTab||"overview";render();window.scrollTo(0,0)}
 let copying=false;
 function copySample(name){
   const sp=cur(); if(!sp||!sp.sample)return;
@@ -369,7 +381,7 @@ function renderSampleBanner(){
   if(!p||!p.sample||tab==="home"){b.hidden=true;return}
   b.hidden=false;
   b.innerHTML=`<span class="msg">正在預覽範例「${esc(p.org)}」（${esc(p.stage)}）。可以隨意操作，修改不會儲存。</span>
-    <button class="btn primary" id="sbCopy">以此範例建立我的專案</button><button class="btn" id="sbHome">回首頁</button>`;
+    <button class="btn primary" id="sbCopy">以此範例建立我的專案</button><button class="btn" id="sbEnd">結束預覽</button>`;
   if(copying){b.innerHTML=`<span class="msg">為新專案取個名字，範例目前的內容會一起複製過去。</span>
     <input id="sbName" value="${esc(p.org)}（由範例建立）" aria-label="新專案名稱" style="flex:1 1 220px">
     <button class="btn primary" id="sbDo">建立</button><button class="btn" id="sbCancel">取消</button>`;
@@ -379,7 +391,7 @@ function renderSampleBanner(){
     $("#sbCancel").addEventListener("click",()=>{copying=false;renderSampleBanner()});
     const n=$("#sbName");n.focus();n.select();return}
   $("#sbCopy").addEventListener("click",()=>{copying=true;renderSampleBanner()});
-  $("#sbHome").addEventListener("click",()=>{tab="home";render()});
+  $("#sbEnd").addEventListener("click",endPreview);
 }
 function sampleStats(p){
   const vs=ANNEX.map(c=>p.controls[c.code]||{app:""});
@@ -429,7 +441,7 @@ function renderHome(){
         <span class="stage">${esc(d.stage)}</span><h4>${esc(d.name)}</h4><p>${esc(d.desc)}</p>
         ${stackBar(st.t,93)}
         <div class="nums"><span><b>${st.impl}%</b>已實施</span><span><b>${st.undec}</b>未決定</span><span><b>${st.evid}</b>已驗證</span></div>
-        <div class="actions" style="display:flex;gap:8px"><button class="btn ${d.id===S.activeId?"":"primary"}" data-home-open="${d.id}">${d.id===S.activeId?"繼續預覽":"預覽"}</button></div>
+        <div class="actions" style="display:flex;gap:8px"><button class="btn ${d.id===S.activeId?"":"primary"}" data-home-open="${d.id}">${d.id===S.activeId?"繼續預覽":"預覽"}</button>${d.id===S.activeId?`<button class="btn" data-end-preview>結束預覽</button>`:""}</div>
       </article>`}).join("")}</div>
     </section>
   </div>`;
@@ -444,6 +456,7 @@ function renderHome(){
     if(b.dataset.jump==="createPanel")setTimeout(()=>$("#hName").focus({preventScroll:true}),300)}));
   wireIndustry(v,"hInd","hF","hCount");
   v.querySelectorAll("[data-home-open]").forEach(b=>b.addEventListener("click",()=>openProject(b.dataset.homeOpen)));
+  v.querySelectorAll("[data-end-preview]").forEach(b=>b.addEventListener("click",endPreview));
   $("#indSeg").addEventListener("click",e=>{const b=e.target.closest("[data-sind]");if(!b)return;setSampleInd(b.dataset.sind)});
   // 建立表單選了產業時，範例也切到同一個產業
   $("#hInd").addEventListener("change",e=>{if(SAMPLE_COMPANIES[e.target.value]){setSampleInd(e.target.value,true)}});
