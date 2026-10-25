@@ -275,10 +275,12 @@ function showImportReport(p,rep){
   const a=$("#irRisk");if(a)a.addEventListener("click",()=>go("risks"));
   $("#irAnnex").addEventListener("click",()=>go("annex"));
 }
+/* 範本檔的位置；預覽環境不能存放 Office 檔時，建置時改成網站的完整網址 */
+const TPL_BASE="templates/";
 const TEMPLATES=[
-  ["templates/isms-soa-risk-template.xlsx","ISMS_SoA與風險評鑑_空白範本.xlsx","SoA 與風險評鑑空白範本","93 項控制措施已列好，含風險評鑑準則與填寫說明"],
-  ["templates/isms-soa-risk-example.xlsx","ISMS_SoA與風險評鑑_填寫範例.xlsx","SoA 與風險評鑑填寫範例","虛構公司「北辰精密製造」的完整填寫示範"],
-  ["templates/access-forms-template.xlsx","權限申請與定期複審表單_範本.xlsx","權限申請與定期複審表單","權限申請異動單、權限定期複審表"]
+  [TPL_BASE+"isms-soa-risk-template.xlsx","ISMS_SoA與風險評鑑_空白範本.xlsx","SoA 與風險評鑑空白範本","93 項控制措施已列好，含風險評鑑準則與填寫說明"],
+  [TPL_BASE+"isms-soa-risk-example.xlsx","ISMS_SoA與風險評鑑_填寫範例.xlsx","SoA 與風險評鑑填寫範例","虛構公司「北辰精密製造」的完整填寫示範"],
+  [TPL_BASE+"access-forms-template.xlsx","權限申請與定期複審表單_範本.xlsx","權限申請與定期複審表單","權限申請異動單、權限定期複審表"]
 ];
 function templateLinks(){return `<ul class="tpl">${TEMPLATES.map(([href,dl,t,d])=>`<li><a href="${href}" download="${dl}">${t}</a><span>${d}</span></li>`).join("")}</ul>`}
 function exportJSON(){
@@ -300,8 +302,8 @@ function render(){
   renderProjSel(); renderSaved(); renderSampleBanner();
   document.querySelectorAll("#tabs button").forEach(b=>{b.setAttribute("aria-selected",b.dataset.tab===tab);
     b.setAttribute("aria-disabled",!cur()&&NEEDS_PROJECT.has(b.dataset.tab))});
-  ["home","overview","search","risks","annex","clauses","projects"].forEach(v=>$("#view-"+v).hidden=v!==tab);
-  ({home:renderHome,overview:renderOverview,search:renderSearch,risks:renderRisks,annex:renderAnnex,clauses:renderClauses,projects:renderProjects})[tab]();
+  ["home","overview","search","risks","annex","clauses","docs","projects"].forEach(v=>$("#view-"+v).hidden=v!==tab);
+  ({home:renderHome,overview:renderOverview,search:renderSearch,risks:renderRisks,annex:renderAnnex,docs:renderDocs,clauses:renderClauses,projects:renderProjects})[tab]();
 }
 function renderProjSel(){
   const sel=$("#projSel");
@@ -362,6 +364,7 @@ function renderHome(){
     <section class="full panel">
       <div class="secthead"><h3>Excel 範本下載</h3><span class="note">在 Excel 填寫後，用「從 Excel 匯入」建立專案，工具會自動檢查風險評鑑與 SoA 是否一致。也能匯入欄位名稱相近的自訂 SoA 或風險評鑑表。</span></div>
       ${templateLinks()}
+      <p class="note" style="margin:10px 0 0">需要政策、程序與其他表單？<button class="chip" data-goto="docs">查看完整 ISMS 文件範本（${DOCS.filter(d=>d.status!=="planned").length} 份）</button></p>
     </section>
     <section class="full">
       <div class="secthead"><h3>範例專案</h3><span class="note">三個不同階段的虛構公司，點「預覽」切換。範例中的修改不會儲存，也可以複製成自己的專案。</span></div>
@@ -1003,6 +1006,7 @@ function openDrawer(code,fromList){
       <div><dt>負責人</dt><dd><input id="dOwner" data-owner autocomplete="off" value="${esc(v.owner)}" placeholder="從名單選擇或輸入新名字"></dd></div>
       <div><dt>證據位置</dt><dd><input id="dEv" value="${esc(v.evidence)}" placeholder="例如：\\\\fileserver\\ISMS\\${esc(code)}"></dd></div>
     </dl>
+    ${relatedDocsHTML(code)}
     <h3>修改紀錄</h3>
     <div id="dHist">${historyHTML(((cur()&&cur().log)||[]).filter(e=>e.c===code).slice(-10).reverse(),false)}</div>
     <h3 style="margin-top:18px">相關案例（${rel.length}）</h3>
@@ -1257,6 +1261,46 @@ function openCriteriaDrawer(){
     $("#cSave").addEventListener("click",()=>{const c=sanitizeCriteria({levels:lv});if(!c)return;p.criteria=c;touchRisk();closeDrawer();toast("已套用風險準則："+criteriaText(p))});
   };
   draw();
+}
+/* ================= 文件範本 ================= */
+const docHref=d=>TPL_BASE+d.file;
+const docDl=d=>`${d.id} ${d.name}.${d.fmt}`;
+function docLink(d,label){return d.status==="planned"?`<span class="saved">規劃中</span>`:`<a class="dl" href="${docHref(d)}" download="${esc(docDl(d))}">${label||(d.fmt==="docx"?"Word":"Excel")}</a>`}
+let docFilter="all";
+function renderDocs(){
+  const ready=DOCS.filter(d=>d.status!=="planned"),planned=DOCS.length-ready.length;
+  const show=d=>docFilter==="all"||(docFilter==="req"&&d.mandatory)||docFilter===d.layer;
+  const refs=d=>[...d.clauses,...d.controls].map(c=>`<button class="rc" data-open="${c}" data-tip="${c} ${esc((CLAUSE_MAP[c]||ANNEX_MAP[c]||{}).name||"")}">${c}</button>`).join("");
+  $("#view-docs").innerHTML=`<h2>ISMS 文件範本</h2>
+  <p class="lede">依五層文件架構整理的通用範本，涵蓋 ISO/IEC 27001 條款 4–10 要求保存的文件化資訊。黃色標示的【】是需要依組織修改的地方；範本內容自行撰寫，不含標準原文。</p>
+  <div class="filters">
+    <a class="btn primary" href="${TPL_BASE}isms-document-kit.zip" download="ISMS文件範本包.zip">⬇ 下載全部（ZIP）</a>
+    <div class="seg" id="docSeg">${[["all","全部"],["req","標準要求的文件"],...DOC_LAYERS.map(l=>[l.id,l.id+" "+l.name])].map(([k,t])=>`<button data-df="${k}" aria-pressed="${docFilter===k}">${t}</button>`).join("")}</div>
+    <span class="count">已提供 ${ready.length} 份${planned?`，規劃中 ${planned} 份`:""}</span>
+  </div>
+  ${docFilter==="all"||docFilter==="req"?`<div class="panel" style="margin-bottom:18px"><div class="secthead"><h3>條款 4–10 要求保存的文件化資訊</h3><span class="note">驗證稽核一定會查的文件。點條款編號可查看說明。</span></div>
+    <div class="table-wrap" style="border:0"><table class="dreq"><thead><tr><th style="width:70px">條款</th><th>要求保存的內容</th><th>對應範本</th></tr></thead><tbody>
+    ${DOC_REQUIREMENTS.map(r=>`<tr><td class="code"><button data-open="${r.code}">${r.code}</button></td><td>${esc(r.req)}</td><td><div class="dchips">${r.docs.map(id=>{const d=DOC_MAP[id];return `<a class="dchip" href="${docHref(d)}" download="${esc(docDl(d))}" data-tip="${esc(d.name)}"><span class="mono">${d.id}</span> ${esc(d.name)}</a>`}).join("")}</div></td></tr>`).join("")}
+    </tbody></table></div></div>`:""}
+  ${DOC_LAYERS.map(l=>{const list=DOCS.filter(d=>d.layer===l.id&&show(d));if(!list.length)return "";
+    return `<section class="dlayer"><div class="secthead"><h3>${l.id}　${esc(l.name)}</h3><span class="note">${esc(l.desc)}</span></div>
+    <div class="dlist">${list.map(d=>`<article class="ditem ${d.status==="planned"?"planned":""}">
+      <div class="dhead"><span class="mono">${d.id}</span><b>${esc(d.name)}</b>${d.mandatory?`<span class="dtag">標準要求</span>`:""}${d.tool?`<span class="dtag tool">可匯入工具檢查</span>`:""}<span class="dfmt">${d.fmt==="docx"?"Word":"Excel"}</span></div>
+      <p>${esc(d.desc)}</p>
+      <div class="dfoot"><div class="rcodes">${refs(d)}</div>${docLink(d,d.status==="planned"?"":"下載")}</div>
+    </article>`).join("")}</div></section>`}).join("")}
+  <p class="note" style="margin-top:18px">範本以虛構公司「北辰精密製造」撰寫填寫範例；正式使用前請依組織實際情況修改，並經權責主管核准。法規內容整理於 ${RULES_DATE}，請以主管機關公告為準。</p>`;
+  $("#docSeg").addEventListener("click",e=>{const b=e.target.closest("[data-df]");if(!b)return;docFilter=b.dataset.df;renderDocs()});
+}
+/* 控制措施或條款詳細頁中的相關文件 */
+function relatedDocsHTML(code){
+  const list=DOCS.filter(d=>d.clauses.includes(code)||d.controls.includes(code));
+  const req=DOC_REQUIREMENTS.find(r=>r.code===code);
+  if(!list.length&&!req)return "";
+  return `<h3 style="margin-top:18px">相關文件範本</h3>
+    ${req?`<p class="note" style="margin:0 0 8px"><b>本條款要求保存：</b>${esc(req.req)}</p>`:""}
+    <div class="rel">${list.map(d=>d.status==="planned"?`<span class="drel planned"><span class="mono">${d.id}</span> ${esc(d.name)}（規劃中）</span>`:
+      `<a class="drel" href="${docHref(d)}" download="${esc(docDl(d))}"><span class="mono">${d.id}</span> ${esc(d.name)} <span class="saved">${d.fmt==="docx"?"Word":"Excel"}</span></a>`).join("")}</div>`;
 }
 /* ================= INIT ================= */
 $("#tabs").addEventListener("click",e=>{const b=e.target.closest("[data-tab]");if(!b)return;
