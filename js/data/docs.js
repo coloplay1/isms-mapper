@@ -1,6 +1,6 @@
 /* ISMS 條款對照台：ISMS 文件範本清單（五層架構）
    以一般 <script> 載入，頂層宣告與其他檔共用全域範圍。
-   file 為 templates/ 下的檔案；status "planned" 表示規劃中、尚未提供範本。
+   file 為 templates/ 下的檔案；如有 status "planned" 表示規劃中、尚未提供範本。
    範本內容為通用寫法，以【】標示需依組織調整的地方，不含任何真實公司資料。 */
 const DOC_LAYERS=[
   {id:"01",name:"手冊與索引",desc:"說明整個 ISMS 如何運作，以及有哪些文件"},
@@ -43,13 +43,13 @@ const DOCS=[
    clauses:[],controls:["A.5.24","A.5.25","A.5.26","A.5.27","A.5.28","A.6.8"],desc:"事件通報、分級、應變、證據保全、通報主管機關與檢討"},
   {id:"PRO-07",layer:"03",name:"營運持續與 ICT 備援程序",fmt:"docx",file:"docs/PRO-07.docx",mandatory:false,
    clauses:[],controls:["A.5.29","A.5.30","A.8.13","A.8.14"],desc:"營運衝擊分析、復原目標、備份與還原測試、演練"},
-  {id:"PRO-08",layer:"03",name:"供應商資訊安全管理程序",fmt:"docx",file:"",status:"planned",mandatory:false,
+  {id:"PRO-08",layer:"03",name:"供應商資訊安全管理程序",fmt:"docx",file:"docs/PRO-08.docx",mandatory:false,
    clauses:[],controls:["A.5.19","A.5.20","A.5.21","A.5.22","A.5.23"],desc:"供應商評估、契約資安條款、監督與雲端服務"},
-  {id:"PRO-09",layer:"03",name:"變更與組態管理程序",fmt:"docx",file:"",status:"planned",mandatory:false,
+  {id:"PRO-09",layer:"03",name:"變更與組態管理程序",fmt:"docx",file:"docs/PRO-09.docx",mandatory:false,
    clauses:["6.3"],controls:["A.8.9","A.8.32"],desc:"系統變更申請、測試、核准與組態基準"},
-  {id:"PRO-10",layer:"03",name:"實體與環境安全管理辦法",fmt:"docx",file:"",status:"planned",mandatory:false,
+  {id:"PRO-10",layer:"03",name:"實體與環境安全管理辦法",fmt:"docx",file:"docs/PRO-10.docx",mandatory:false,
    clauses:[],controls:["A.7.1","A.7.2","A.7.4","A.7.11"],desc:"門禁、機房、設備與環境監控"},
-  {id:"WI-01",layer:"03",name:"帳號與權限清冊維護作業指引",fmt:"docx",file:"",status:"planned",mandatory:false,
+  {id:"WI-01",layer:"03",name:"帳號與權限清冊維護作業指引",fmt:"docx",file:"docs/WI-01.docx",mandatory:false,
    clauses:[],controls:["A.5.16","A.5.18","A.5.37"],desc:"從 AD、NAS 匯出帳號與權限，更新清冊並核對"},
   // 04 表單範本
   {id:"FRM-01",layer:"04",name:"文件異動申請單",fmt:"xlsx",file:"docs/FRM-01.xlsx",mandatory:false,
@@ -64,7 +64,7 @@ const DOCS=[
    clauses:["9.3"],controls:[],desc:"9.3 要求的輸入事項逐項報告、決議與追蹤"},
   {id:"FRM-06",layer:"04",name:"資安事件通報與處理紀錄",fmt:"xlsx",file:"docs/FRM-06.xlsx",mandatory:false,
    clauses:[],controls:["A.5.24","A.5.25","A.5.26","A.6.8"],desc:"事件通報、分級、處理過程與結案檢討"},
-  {id:"FRM-07",layer:"04",name:"變更申請單",fmt:"xlsx",file:"",status:"planned",mandatory:false,
+  {id:"FRM-07",layer:"04",name:"變更申請單",fmt:"xlsx",file:"docs/FRM-07.xlsx",mandatory:false,
    clauses:["6.3"],controls:["A.8.32"],desc:"系統變更的影響評估、測試與核准"},
   // 05 執行紀錄
   {id:"REC-01",layer:"05",name:"資訊資產清冊",fmt:"xlsx",file:"docs/REC-01.xlsx",mandatory:false,
@@ -77,7 +77,7 @@ const DOCS=[
    clauses:["7.2","7.3"],controls:["A.6.3"],desc:"各職務的能力要求、訓練與成效評估"},
   {id:"REC-05",layer:"05",name:"法令法規與契約要求清冊",fmt:"xlsx",file:"docs/REC-05.xlsx",mandatory:false,
    clauses:["4.2"],controls:["A.5.31","A.5.32","A.5.34"],desc:"適用的法規、契約要求、主管機關與遵循方式"},
-  {id:"REC-06",layer:"05",name:"營運衝擊分析（BIA）",fmt:"xlsx",file:"",status:"planned",mandatory:false,
+  {id:"REC-06",layer:"05",name:"營運衝擊分析（BIA）",fmt:"xlsx",file:"docs/REC-06.xlsx",mandatory:false,
    clauses:[],controls:["A.5.30"],desc:"關鍵業務、可容忍中斷時間與復原優先順序"}
 ];
 /* 條款 4–10 明確要求保存的文件化資訊（用自己的話整理，非標準原文） */
