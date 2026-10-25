@@ -38,12 +38,12 @@ const readFeatures=(root,name)=>[...root.querySelectorAll(`input[name="${name}"]
 const KEY = "isms-mapper-v1";
 let storeOK = true;
 const SAMPLE_DEFS=[
-  {id:"sample:intro",stage:"導入初期",name:"綠葉聯合診所",industry:"health",features:["pii","health","vendor","onprem"],desc:"剛決定導入 ISMS，正在訂定範圍與政策。大部分控制措施還沒判定適用性，負責人也還沒分派。",
+  {id:"sample:intro",ind:"health",stageId:"intro",stage:"導入初期",name:"綠葉聯合診所",industry:"health",features:["pii","health","vendor","onprem"],desc:"剛決定導入 ISMS，正在訂定範圍與政策。大部分控制措施還沒判定適用性，負責人也還沒分派。",
    seed:3,undec:.6,cum:[.72,.95,1,1],owners:["資訊組 黃組長","行政組 吳專員","行政組 吳專員","資訊組 黃組長"],ownerFrom:1,
    na:["A.8.25","A.8.26","A.8.27","A.8.28","A.8.29","A.8.30","A.8.4","A.8.31","A.8.33"],naReason:"診所未自行開發系統，皆採購套裝軟體",
    cl:i=>i<4?1:i===5?2:0,scope:"診所門診與病歷資訊系統",
    risks:[[29,"病歷系統","C",-1,4,5,"",0,0,false,""],[6,"病歷資料庫","A",0,0,0,"",0,0,false,""]]},
-  {id:"sample:build",stage:"建置中",name:"示範科技",industry:"general",features:["cloud","remote","vendor","onprem"],desc:"適用性聲明大致完成，各部門正在落實控制措施，邊做邊整理紀錄與證據。",
+  {id:"sample:build",ind:"general",stageId:"build",stage:"建置中",name:"示範科技",industry:"general",features:["cloud","remote","vendor","onprem"],desc:"適用性聲明大致完成，各部門正在落實控制措施，邊做邊整理紀錄與證據。",
    seed:7,undec:.08,cum:[.18,.4,.73,1],owners:["資訊部 王經理","人資部 林專員","總務部 陳課長","研發部 張主任"],ownerFrom:0,
    na:["A.8.30","A.8.4","A.7.12","A.8.28"],naReason:"範圍內無自行開發系統",
    cl:i=>i<12?3:i<20?2:i<23?1:0,scope:"台北總部資訊機房與核心營運系統",
@@ -54,7 +54,7 @@ const SAMPLE_DEFS=[
      [14,"業務筆電","C",0,3,3,"mitigate",1,3,true,"全面啟用 BitLocker 與遠端抹除"],
      [24,"Microsoft 365","CIA",0,2,4,"mitigate",2,2,true,"啟用條件式存取與稽核紀錄"],
      [19,"台北機房","A",2,2,2,"accept",0,0,false,""]]},
-  {id:"sample:audit",stage:"驗證稽核前",name:"北辰精密製造",industry:"mfg",features:["ot","onprem","vendor","remote"],desc:"內部稽核與管理審查已完成，正在補齊最後幾項證據，準備迎接第三方驗證稽核。",
+  {id:"sample:audit",ind:"mfg",stageId:"audit",stage:"驗證稽核前",name:"北辰精密製造",industry:"mfg",features:["ot","onprem","vendor","remote"],desc:"內部稽核與管理審查已完成，正在補齊最後幾項證據，準備迎接第三方驗證稽核。",
    seed:11,undec:0,cum:[0,.04,.3,1],owners:["資訊處 周處長","人資處 許經理","廠務課 蔡課長","研發處 鄭經理","稽核室 何稽核"],ownerFrom:0,
    na:["A.8.30","A.7.12","A.8.11"],naReason:"經風險評鑑判定不適用",
    cl:i=>i===24?2:3,scope:"台中廠區生產管理系統與總部 IT",criteria:"three",
@@ -68,6 +68,64 @@ const SAMPLE_DEFS=[
      [27,"研發測試環境","C",3,3,4,"mitigate",1,4,true,"測試資料去識別化"],
      [16,"報廢設備","C",2,2,2,"accept",0,0,true,""]]}
 ];
+/* ---------- 依產業產生其餘範例：每個產業三家虛構公司，對應三個導入階段 ---------- */
+const SAMPLE_STAGES={
+  intro:{stage:"導入初期",seed:3,undec:.6,cum:[.72,.95,1,1],ownerFrom:1,cl:i=>i<4?1:i===5?2:0,criteria:"four",
+    desc:"剛決定導入 ISMS，正在訂定範圍與政策。大部分控制措施還沒判定適用性，風險評鑑剛開始。",
+    risks:[[4,5,"",0,0,false,-1],[0,0,"",0,0,false,0]]},
+  build:{stage:"建置中",seed:7,undec:.08,cum:[.18,.4,.73,1],ownerFrom:0,cl:i=>i<12?3:i<20?2:i<23?1:0,criteria:"four",
+    desc:"適用性聲明大致完成，各部門正在落實控制措施，風險處理計畫還有幾項待完成。",
+    risks:[[4,3,"mitigate",2,3,false],[3,5,"mitigate",2,4,true],[3,4,"mitigate",0,0,false],[3,3,"mitigate",1,3,true],[2,4,"mitigate",2,2,true],[2,2,"accept",0,0,false]]},
+  audit:{stage:"驗證稽核前",seed:11,undec:0,cum:[0,.04,.3,1],ownerFrom:0,cl:i=>i===24?2:3,criteria:"three",
+    desc:"內部稽核與管理審查已完成，風險都已處理並經擁有者核准，正在準備第三方驗證稽核。",
+    risks:[[3,5,"mitigate",1,4,true],[4,4,"mitigate",2,3,true],[4,3,"mitigate",2,3,true],[3,3,"mitigate",1,3,true],[2,4,"mitigate",1,4,true],[2,5,"mitigate",1,5,true],[3,4,"mitigate",1,4,true],[2,2,"accept",0,0,true]]}
+};
+/* 公司名稱皆為虛構；[導入初期, 建置中, 驗證稽核前]，已有的三家沿用原本的範例 */
+const SAMPLE_COMPANIES={
+  general:{cos:["晨光商務顧問",null,"遠揚國際貿易"],scope:"總部辦公室與資訊系統",depts:["資訊組","人資部","總務部","業務部","稽核室"]},
+  ecom:{cos:["好物選物網","樂購生活電商","星禾購物"],scope:"電商平台、會員資料與訂單作業",depts:["技術部","人資部","營運部","產品開發部","稽核室"]},
+  saas:{cos:["雲橋軟體","青嵐雲端服務","數衡科技"],scope:"雲端服務平台與研發環境",depts:["維運部","人資部","行政部","研發部","資安室"]},
+  finance:{cos:["長青保險經紀","晴川投資顧問","穩泰融資租賃"],scope:"總公司資訊系統與客戶資料作業",depts:["資訊處","人資處","總務處","業務處","稽核處"]},
+  health:{cos:[null,"康寧復健科診所","和光醫院"],scope:"門診、病歷與醫療資訊系統",depts:["資訊室","人事室","總務室","醫務室","品管室"]},
+  mfg:{cos:["宏鈞精密模具","鋒群電子",null],scope:"廠區生產管理系統與總部 IT",depts:["資訊課","人資課","廠務課","研發部","稽核室"]},
+  gov:{cos:["青松資訊服務","市立示範圖書館","濱海水務"],scope:"受委託維運之資訊系統與機房",depts:["資訊科","人事室","秘書室","系統開發科","政風室"]},
+  edu:{cos:["晨曦補習班","啟明實驗高中","示範大學推廣教育部"],scope:"學員資料、線上課程與行政系統",depts:["資訊組","人事室","總務處","教務處","稽核室"]}
+};
+const SAMPLE_NAMES=["王","林","陳","張","黃"],SAMPLE_TITLES=["主任","專員","組長","經理","稽核"];
+/* 依業務特性挑選風險情境：[案例標題, 資產, CIA] */
+const SAMPLE_RISK_POOLS={
+  pii:[["客戶個資外洩","客戶／會員個資","C"],["郵件誤寄給錯誤的收件人","客戶資料郵件","C"]],
+  payment:[["網站被入侵或首頁遭置換","官網與交易系統","CIA"],["網站遭 DDoS 阻斷服務攻擊","線上交易服務","A"]],
+  dev:[["程式上線與系統變更","正式系統","IA"],["API 金鑰或密碼被上傳到 GitHub","雲端服務金鑰","C"]],
+  cloud:[["導入雲端服務","雲端服務","CIA"],["雲端分享連結設為「任何人可檢視」","雲端文件","C"]],
+  remote:[["在家遠距工作","遠端存取環境","C"],["遠端桌面直接開放到網際網路","對外伺服器","CIA"]],
+  vendor:[["委外廠商遠端維護系統","委外維護的系統","CIA"],["定期評估供應商資安","主要供應商","CIA"]],
+  ci:[["發生資安事件要通報","資安事件通報作業","I"],["法規遵循（資通安全管理法、個資法）","法規遵循","I"]],
+  health:[["客戶個資外洩","病歷與病患資料","C"]],
+  finance:[["假冒主管或廠商要求變更匯款帳戶","付款作業","I"],["帳號遭暴力破解攻擊","客戶線上帳戶","C"]],
+  ot:[["駭客入侵內網並橫向移動","產線與 OT 網路","IA"],["設備送修或廠商到場維修","產線設備","C"]],
+  onprem:[["機房漏水或火災","機房","A"],["系統容量不足或硬碟空間爆滿","伺服器儲存空間","A"]],
+  base:[["員工離職，帳號未即時停用","各系統帳號","C"],["電腦遭勒索軟體加密","檔案伺服器與核心系統","IA"],["員工點擊釣魚郵件","全體員工信箱","CI"],
+    ["筆電遺失或遭竊","行動筆電","C"],["備份還原測試","核心資料備份","A"],["機房停電、UPS 與空調","機房與網路設備","A"]]
+};
+function genSampleDef(ind,stageId,name){
+  const st=SAMPLE_STAGES[stageId],co=SAMPLE_COMPANIES[ind],feats=INDUSTRY_MAP[ind].features;
+  const owners=co.depts.map((d,k)=>`${d} ${SAMPLE_NAMES[k]}${SAMPLE_TITLES[k]}`);
+  const na=feats.includes("dev")?[]:[...DEV_ONLY,...(feats.includes("vendor")?[]:["A.8.30"])];
+  if(!feats.includes("onprem")&&!feats.includes("ot"))na.push("A.7.12");
+  const pool=[],seen=new Set();
+  [...feats.flatMap(f=>SAMPLE_RISK_POOLS[f]||[]),...SAMPLE_RISK_POOLS.base].forEach(x=>{if(!seen.has(x[0])&&CASES.some(c=>c.t===x[0])){seen.add(x[0]);pool.push(x)}});
+  const risks=st.risks.map((r,k)=>{const [title,asset,cia]=pool[k%pool.length];const [l,i,treat,rl,ri,acc,ow]=r;
+    return [CASES.findIndex(c=>c.t===title),asset,cia,ow===undefined?k%owners.length:ow,l,i,treat,rl,ri,acc,treat==="mitigate"?"依選定的控制措施落實，並於下次風險評鑑確認成效":""]});
+  return {id:`sample:${ind}:${stageId}`,ind,stageId,stage:st.stage,name,industry:ind,features:[...feats],desc:st.desc,seed:st.seed+name.length,undec:st.undec,cum:st.cum,
+    owners,ownerFrom:st.ownerFrom,na,naReason:feats.includes("dev")?"經風險評鑑判定不適用":"範圍內沒有自行開發系統",cl:st.cl,scope:co.scope,criteria:st.criteria,risks,
+    doc:stageId==="audit"?{no:"ISMS-D-01",ver:"1.0",date:"2026/10/01",author:owners[0],reviewer:owners[4],approver:"總經理",approvedAt:"2026/10/05",status:"已核准"}:undefined};
+}
+Object.entries(SAMPLE_COMPANIES).forEach(([ind,co])=>["intro","build","audit"].forEach((sid,k)=>{if(co.cos[k])SAMPLE_DEFS.push(genSampleDef(ind,sid,co.cos[k]))}));
+const SAMPLE_INDS=Object.keys(SAMPLE_COMPANIES);
+const STAGE_ORDER={intro:0,build:1,audit:2};
+const samplesOf=ind=>SAMPLE_DEFS.filter(d=>d.ind===ind).sort((a,b)=>STAGE_ORDER[a.stageId]-STAGE_ORDER[b.stageId]);
+let sampleInd="general";
 const SAMPLES={};
 function buildSample(d){
   const p={id:d.id,sample:true,stage:d.stage,name:`範例｜${d.stage}：${d.name}`,org:d.name,scope:d.scope,industry:d.industry,features:[...d.features],created:0,updated:0,controls:{},clauses:{}};
@@ -124,7 +182,7 @@ function newProject(name,org,scope,start,industry,features){
   if(start==="all")ANNEX.forEach(c=>p.controls[c.code]={app:"Y",status:0,owner:"",evidence:"",reason:""});
   S.projects[p.id]=p;S.activeId=p.id;save();resetBuilt();ensurePersist();return p;
 }
-function openProject(id,toTab){copying=false;editingId=null;S.activeId=id;pendingDelete=null;save();resetBuilt();tab=toTab||"overview";render();window.scrollTo(0,0)}
+function openProject(id,toTab){copying=false;const sd=SAMPLE_DEFS.find(d=>d.id===id);if(sd)sampleInd=sd.ind;editingId=null;S.activeId=id;pendingDelete=null;save();resetBuilt();tab=toTab||"overview";render();window.scrollTo(0,0)}
 let copying=false;
 function copySample(name){
   const sp=cur(); if(!sp||!sp.sample)return;
@@ -304,7 +362,7 @@ function renderProjSel(){
   const mine=Object.values(S.projects).sort((a,b)=>b.updated-a.updated);
   sel.innerHTML=(cur()?"":`<option value="" selected>尚未開啟專案</option>`)+
     (mine.length?`<optgroup label="我的專案">${mine.map(p=>`<option value="${p.id}" ${p.id===S.activeId?"selected":""}>${esc(p.name)}</option>`).join("")}</optgroup>`:"")+
-    `<optgroup label="範例（不會儲存）">${SAMPLE_DEFS.map(d=>`<option value="${d.id}" ${d.id===S.activeId?"selected":""}>${esc(d.stage)}：${esc(d.name)}</option>`).join("")}</optgroup>`;
+    `<optgroup label="範例：${esc(INDUSTRY_MAP[sampleInd].label)}（不會儲存）">${[...samplesOf(sampleInd),...SAMPLE_DEFS.filter(d=>d.id===S.activeId&&d.ind!==sampleInd)].map(d=>`<option value="${d.id}" ${d.id===S.activeId?"selected":""}>${esc(d.stage)}：${esc(d.name)}</option>`).join("")}</optgroup>`;
 }
 function renderSampleBanner(){
   const p=cur(), b=$("#sampleBanner");
@@ -365,8 +423,9 @@ function renderHome(){
       </form>
     </section>
     <section id="samplePanel">
-      <div class="secthead"><h3>範例專案</h3><span class="note">範例中的修改不會儲存，也可以複製成自己的專案。</span></div>
-      <div class="samples">${SAMPLE_DEFS.map(d=>{const p=SAMPLES[d.id],st=sampleStats(p);return `<article class="scard ${d.id===S.activeId?"active":""}">
+      <div class="secthead"><h3>範例專案</h3><span class="note">選擇產業，查看同產業的公司在三個導入階段的樣子。範例中的修改不會儲存，也可以複製成自己的專案。</span></div>
+      <div class="seg indseg" id="indSeg" role="tablist" aria-label="範例產業">${SAMPLE_INDS.map(i=>`<button role="tab" data-sind="${i}" aria-pressed="${i===sampleInd}" aria-selected="${i===sampleInd}">${esc(INDUSTRY_MAP[i].label)}</button>`).join("")}</div>
+      <div class="samples" id="sampleCards">${samplesOf(sampleInd).map(d=>{const p=SAMPLES[d.id],st=sampleStats(p);return `<article class="scard ${d.id===S.activeId?"active":""}">
         <span class="stage">${esc(d.stage)}</span><h4>${esc(d.name)}</h4><p>${esc(d.desc)}</p>
         ${stackBar(st.t,93)}
         <div class="nums"><span><b>${st.impl}%</b>已實施</span><span><b>${st.undec}</b>未決定</span><span><b>${st.evid}</b>已驗證</span></div>
@@ -385,6 +444,24 @@ function renderHome(){
     if(b.dataset.jump==="createPanel")setTimeout(()=>$("#hName").focus({preventScroll:true}),300)}));
   wireIndustry(v,"hInd","hF","hCount");
   v.querySelectorAll("[data-home-open]").forEach(b=>b.addEventListener("click",()=>openProject(b.dataset.homeOpen)));
+  $("#indSeg").addEventListener("click",e=>{const b=e.target.closest("[data-sind]");if(!b)return;setSampleInd(b.dataset.sind)});
+  // 建立表單選了產業時，範例也切到同一個產業
+  $("#hInd").addEventListener("change",e=>{if(SAMPLE_COMPANIES[e.target.value]){setSampleInd(e.target.value,true)}});
+}
+function setSampleInd(ind,quiet){
+  if(!SAMPLE_COMPANIES[ind]||ind===sampleInd)return;
+  sampleInd=ind;
+  const keep={name:$("#hName").value,org:$("#hOrg").value,scope:$("#hScope").value,ind:$("#hInd").value,f:readFeatures($("#view-home"),"hF"),
+    start:($("#view-home").querySelector('input[name="hStart"]:checked')||{}).value,open:$(".fopt")&&$(".fopt").open,y:window.scrollY};
+  renderHome();renderProjSel();
+  // 保留使用者已經填寫的建立表單內容
+  $("#hName").value=keep.name;$("#hOrg").value=keep.org;$("#hScope").value=keep.scope;$("#hInd").value=keep.ind;
+  $("#view-home").querySelectorAll('input[name="hF"]').forEach(x=>x.checked=keep.f.includes(x.value));
+  const r=$("#view-home").querySelector(`input[name="hStart"][value="${keep.start}"]`);if(r)r.checked=true;
+  if(keep.open)$(".fopt").open=true;
+  const cb=$("#view-home").querySelector('input[name="hF"]');if(cb)cb.dispatchEvent(new Event("change"));   // 只更新「會標示幾項」的計數
+  window.scrollTo(0,keep.y);
+  if(quiet)toast("下方範例已切換為「"+INDUSTRY_MAP[ind].label+"」");
 }
 function counts(){
   const vs=ANNEX.map(c=>ctl(c.code));

@@ -403,3 +403,7 @@ a.dl.ghost:hover{background:var(--surface2);color:var(--ink)}
 .ctag2{font-size:11px;color:var(--focus);border:1px solid var(--focus);border-radius:3px;padding:0 4px;margin-right:6px;vertical-align:2px;font-weight:400}
 .case.custom{border-color:var(--focus)}
 .caseact{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ===== 範例產業切換 ===== */
+.indseg{flex-wrap:wrap;margin-bottom:12px;width:fit-content;max-width:100%}
+.indseg button{white-space:nowrap;flex:1 1 auto}
