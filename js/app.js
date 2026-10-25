@@ -340,7 +340,6 @@ function renderHome(){
       <div class="starts">
         ${start("","＋","建立新專案","從零開始，逐項判定附錄 A 是否適用",`<button class="btn primary" data-jump="createPanel">開始建立</button>`)}
         ${start("","⇪","匯入既有資料","已有 SoA、風險評鑑表，或之前匯出的專案檔",`<div class="sbtns"><button class="btn" id="hXlsx">從 Excel 匯入</button><button class="btn" id="hImport">匯入專案檔</button></div>`)}
-        ${start("","◎","先看範例","三家不同導入階段的虛構公司，可以隨意操作",`<button class="btn" data-jump="samplePanel">看範例</button>`)}
         ${start("","⬇","下載文件範本",`政策、程序、表單與紀錄共 ${nDocs} 份，依五層架構整理`,`<button class="btn" data-goto="docs">查看範本</button>`)}
       </div>
     </section>
