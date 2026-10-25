@@ -34,7 +34,10 @@
 |---|---|---|
 | ![首頁](docs/home.png) | ![案例搜尋](docs/search.png) | ![附錄 A](docs/annex.png) |
 
-![風險評鑑](docs/risks.png)
+
+| 風險評鑑 | 文件範本 |
+|---|---|
+| ![風險評鑑](docs/risks.png) | ![文件範本](docs/docs.png) |
 
 ## 設計決策
 
@@ -122,6 +125,8 @@ npm test
 | 資料保存 | 資料只存在瀏覽器 localStorage。啟用瀏覽器「持久儲存」降低被自動清除的機率；修改超過 30 筆、或距上次備份超過 7 天時提醒匯出專案檔 |
 | 不追蹤 | 無分析工具、無 Cookie，`Referrer-Policy: no-referrer` |
 
+> `style-src` 保留 `'unsafe-inline'`：畫面上的進度條寬度、狀態顏色等以行內樣式產生（約 110 處）。CSP 已封鎖所有內嵌與外部腳本、並禁止對外連線，即使注入樣式也無法執行程式或傳出資料，因此評估為低風險，暫不為了移除這一項而大幅改寫畫面程式；之後若改為 CSS class 與 CSSOM 設定樣式，即可移除。
+
 > GitHub Pages 無法自訂 HTTP 標頭，因此 CSP 以 `<meta>` 設定，`frame-ancestors` 等只能由標頭設定的項目無法套用。若自行架設，建議改由伺服器送出 CSP 標頭並加上 `frame-ancestors 'none'`。
 
 所有程式都放在獨立的 `.js` 檔，`index.html` 內沒有內嵌程式，因此 CSP 只需要 `script-src 'self'`，修改程式後不必更新 CSP。**請勿在 `index.html` 加入 `<script>…</script>` 或 `onclick=` 這類內嵌程式**，瀏覽器會拒絕執行。
@@ -181,3 +186,5 @@ npm test
 ## 授權
 
 程式碼以 [MIT License](LICENSE) 釋出。
+
+開發歷程見 [CHANGELOG](CHANGELOG.md)。
