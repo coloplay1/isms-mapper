@@ -2,12 +2,14 @@
 <html lang="zh-Hant-TW">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-N+DlUWBk56YIq5FgnduBtPHbWVEqPN403HIWkytrbeo='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="description" content="依 ISO/IEC 27001:2022 架構設計的 ISMS 導入輔助工具：情境案例搜尋、附錄 A 逐項確認、產業建議重點與 SoA Excel 匯出。資料只存在你的瀏覽器。">
 <meta property="og:type" content="website">
 <meta property="og:title" content="ISMS 條款對照台">
 <meta property="og:description" content="依 ISO/IEC 27001:2022 架構設計的 ISMS 導入輔助工具：情境案例搜尋、附錄 A 逐項確認、產業建議重點與 SoA Excel 匯出。資料只存在你的瀏覽器。">
-<meta property="https://coloplay1.github.io/isms-mapper/docs/overview.png" content="docs/overview.png">
+<meta property="og:image" content="https://coloplay1.github.io/isms-mapper/docs/overview.png">
 <meta name="theme-color" content="#0e5a6b">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='none' stroke='%230e5a6b' stroke-width='3'/%3E%3Cpath d='M10 16.5l4 4 8-9' fill='none' stroke='%230e5a6b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <style>
@@ -17,8 +19,7 @@ img{max-width:100%}
 [hidden]{display:none!important}
 </style>
 <title>ISMS 條款對照台</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&family=IBM+Plex+Mono:wght@500&display=swap">
+<meta name="claude:viewport-fit-sides" content="cover">
 <style>
 /* Layout: sticky project bar + tabs; work surface below. Control codes in mono like an audit worksheet. */
 :root{
@@ -26,9 +27,9 @@ img{max-width:100%}
   --bg:#eef2f1; --surface:#ffffff; --surface2:#f6f8f8; --ink:#16232a; --muted:#5a6b72; --line:#d6dedd;
   --accent:#0e5a6b; --accent-ink:#ffffff; --accent-soft:#dcebee; --seal:#b0442c;
   --s0:#e4e9e9; --s1:#efc56d; --s2:#62aaa3; --s3:#1c6e61; --na:#c9cfd0;
-  --font-display:"Noto Serif TC","Songti TC",serif;
-  --font-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
-  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --font-display:"Noto Serif TC","Noto Serif CJK TC","Songti TC","PMingLiU",serif;
+  --font-body:"PingFang TC","Microsoft JhengHei","Noto Sans TC","Noto Sans CJK TC",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
   --r:8px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
@@ -150,6 +151,14 @@ input.warn{border-color:var(--seal);box-shadow:inset 0 0 0 1px var(--seal)}
 .opick .odel{background:none;border:0;color:var(--muted);cursor:pointer;font-size:15px;line-height:1;padding:0 2px}
 .opick .odel:hover{color:var(--seal)}
 .opick .oempty{padding:8px 10px;font-size:13px;color:var(--muted)}
+.bkbanner{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;background:#fff6e0;border:1px solid #e0a800;border-radius:var(--r);padding:10px 14px;margin-bottom:18px;font-size:14px;color:#3b2f17}
+.bkbanner[hidden]{display:none}
+.bkbanner .msg{margin-right:auto;min-width:0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .bkbanner{background:#3a2d16;color:#f3e3c4;border-color:#a77d12}}
+:root[data-theme="dark"] .bkbanner{background:#3a2d16;color:#f3e3c4;border-color:#a77d12}
+.kvlist{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:14px}
+.kvlist li{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding-bottom:6px}
+.kvlist span{color:var(--muted)}
 .tip{position:fixed;z-index:40;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:5px 9px;border-radius:5px;max-width:260px}
 .tabs button[aria-disabled="true"]{opacity:.4}
 .sbanner{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:var(--r);padding:10px 14px;margin-bottom:18px;font-size:14px}
@@ -310,6 +319,7 @@ footer{font-size:12px;color:var(--muted);padding-block:0 30px}
 </header>
 
 <main class="wrap">
+  <div id="backupBanner" class="bkbanner" hidden></div>
   <div id="storeBanner" class="banner" hidden>這個瀏覽器目前無法自動儲存。請在「專案與備份」匯出專案檔，下次再匯入。</div>
   <div id="sampleBanner" class="sbanner" hidden></div>
   <section id="view-home"></section>
@@ -325,7 +335,7 @@ footer{font-size:12px;color:var(--muted);padding-block:0 30px}
 <datalist id="ownerList"></datalist>
 <input type="file" id="importFile" accept=".json,application/json" hidden>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="vendor/write-excel-file.min.js"></script>
 <script>
 "use strict";
 /* ================= DATA ================= */
@@ -723,7 +733,7 @@ function cls(code){const p=cur();if(!p)return {status:0,owner:"",evidence:""};re
 function newProject(name,org,scope,start,industry,features){
   const p=blankProject(name||"未命名專案",org);p.scope=scope||"";p.industry=industry||"";p.features=features||[];p.people=[];
   if(start==="all")ANNEX.forEach(c=>p.controls[c.code]={app:"Y",status:0,owner:"",evidence:"",reason:""});
-  S.projects[p.id]=p;S.activeId=p.id;save();resetBuilt();return p;
+  S.projects[p.id]=p;S.activeId=p.id;save();resetBuilt();ensurePersist();return p;
 }
 function openProject(id,toTab){copying=false;editingId=null;S.activeId=id;pendingDelete=null;save();resetBuilt();tab=toTab||"overview";render();window.scrollTo(0,0)}
 let copying=false;
@@ -773,10 +783,42 @@ function lvlColor(v){return `var(--s${v})`}
 function toast(msg){const t=document.createElement("div");t.className="toast";t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2200)}
 function fmtTime(d){return d.toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"})}
 function fmtDate(ts){return new Date(ts).toLocaleDateString("zh-TW")}
+/* 備份提醒：資料只存在瀏覽器，清除瀏覽資料就會消失 */
+const BACKUP_DAYS=7, BACKUP_CHANGES=30;
+function backupDue(p){
+  if(!p||p.sample)return false;
+  const n=p.changesSinceBackup||0; if(n===0)return false;
+  if(p.backupSnoozeUntil&&Date.now()<p.backupSnoozeUntil)return false;
+  if(!p.lastBackupAt)return n>=10;
+  return n>=BACKUP_CHANGES||(Date.now()-p.lastBackupAt)>BACKUP_DAYS*864e5;
+}
+function renderBackupBanner(){
+  const b=$("#backupBanner"),p=cur();if(!b)return;
+  if(!backupDue(p)){b.hidden=true;return}
+  const last=p.lastBackupAt?`上次備份是 ${fmtDate(p.lastBackupAt)}`:"這個專案還沒有備份過";
+  b.hidden=false;
+  b.innerHTML=`<span class="msg"><b>建議備份</b>：${last}，之後已有 ${p.changesSinceBackup} 筆修改。資料只存在這個瀏覽器，清除瀏覽資料或換電腦就會消失。</span>
+    <button class="btn primary" id="bkNow">匯出專案檔</button><button class="btn" id="bkLater">明天再提醒</button>`;
+  $("#bkNow").addEventListener("click",exportJSON);
+  $("#bkLater").addEventListener("click",()=>{p.backupSnoozeUntil=Date.now()+864e5;save();renderBackupBanner()});
+}
+/* 向瀏覽器申請持久儲存，降低被自動清除的機率 */
+let persistState="unknown";
+async function ensurePersist(){
+  try{ if(!navigator.storage||!navigator.storage.persist)return;
+    persistState=(await navigator.storage.persisted())?"yes":((await navigator.storage.persist())?"yes":"no");
+  }catch(e){persistState="unknown"}
+}
+async function storageInfo(){
+  let usage="";try{ if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();usage=`已使用約 ${(e.usage/1024).toFixed(0)} KB`}}catch(e){}
+  let local=0;try{local=(localStorage.getItem(KEY)||"").length*2}catch(e){}
+  return {usage,local:(local/1024).toFixed(0)};
+}
 function renderSaved(){
   const p=cur();
   $("#savedAt").textContent = p&&p.sample ? "範例：修改不會儲存" : !storeOK ? "無法自動儲存" : !p ? "" : (lastSaved?`已自動儲存 ${fmtTime(lastSaved)}`:"自動儲存已開啟");
   $("#storeBanner").hidden = storeOK;
+  renderBackupBanner();
 }
 function refLabel(code){
   if(ANNEX_MAP[code]) return {code, name:ANNEX_MAP[code].name, kind:"annex"};
@@ -810,35 +852,35 @@ async function saveFile(filename, data, mime){
 function safeName(s){return s.replace(/[\\/:*?"<>|（）()]/g,"").replace(/\s+/g,"_").slice(0,40)||"專案"}
 function exportExcel(){
   refreshFocus();
-  if(typeof XLSX==="undefined"){toast("Excel 元件尚未載入，請稍後再試");return}
+  if(typeof writeXlsxFile!=="function"){toast("Excel 元件沒有載入，請確認 vendor/write-excel-file.min.js 存在");return}
   const p=cur();
-  const soa=[["控制措施編號","主題","控制措施","2022 新增","產業建議重點","適用性","納入或排除理由","執行狀態","負責人","證據位置","常見證據參考"]];
-  ANNEX.forEach(c=>{const v=ctl(c.code);
-    soa.push([c.code,THEMES.find(t=>t.id===c.theme).name,c.name,c.isNew?"是":"",FM[c.code]?FM[c.code].map(f=>FEATURE_MAP[f].label).join("、"):"",APP.find(a=>a.v===v.app).label,v.reason,v.app==="N"?"—":STATUS[v.status].label,v.owner,v.evidence,c.ev])});
-  const cl=[["條款","名稱","PDCA","說明","執行狀態","負責人","證據位置"]];
-  CLAUSES.forEach(c=>{const v=cls(c.code);cl.push([c.code,c.name,c.phase,c.desc,STATUS[v.status].label,v.owner,v.evidence])});
-  const sum=[["專案",p.name],["組織",p.org],["驗證範圍",p.scope||""],["產業",INDUSTRY_MAP[p.industry||""]?INDUSTRY_MAP[p.industry||""].label:""],["業務特性",projFeatures(p).map(f=>FEATURE_MAP[f].label).join("、")],["匯出時間",new Date().toLocaleString("zh-TW")],[],["主題","控制措施數","適用","不適用","未決定","已實施","已有證據"]];
+  const H=t=>({value:String(t),fontWeight:"bold",backgroundColor:"#DCEBEE"});
+  const V=v=>v===null||v===undefined||v===""?null:(typeof v==="number"?{value:v,type:Number}:{value:String(v)});
+  const sheet=(rows,head)=>[head.map(H),...rows.map(r=>r.map(V))];
+  const soaRows=ANNEX.map(c=>{const v=ctl(c.code);
+    return [c.code,THEMES.find(t=>t.id===c.theme).name,c.name,c.isNew?"是":"",FM[c.code]?FM[c.code].map(f=>FEATURE_MAP[f].label).join("、"):"",APP.find(a=>a.v===v.app).label,v.reason,v.app==="N"?"—":STATUS[v.status].label,v.owner,v.evidence,c.ev]});
+  const clRows=CLAUSES.map(c=>{const v=cls(c.code);return [c.code,c.name,c.phase,c.desc,STATUS[v.status].label,v.owner,v.evidence]});
+  const sum=[["專案",p.name],["組織",p.org],["驗證範圍",p.scope||""],["產業",INDUSTRY_MAP[p.industry||""]?INDUSTRY_MAP[p.industry||""].label:""],["業務特性",projFeatures(p).map(f=>FEATURE_MAP[f].label).join("、")],["匯出時間",new Date().toLocaleString("zh-TW",{hour12:false})],[]];
+  const sumData=sum.map(r=>r.map(V));
+  sumData.push(["主題","控制措施數","適用","不適用","未決定","已實施","已有證據"].map(H));
   THEMES.forEach(t=>{const list=ANNEX.filter(c=>c.theme===t.id);const vs=list.map(c=>ctl(c.code));
-    sum.push([t.name,list.length,vs.filter(v=>v.app==="Y").length,vs.filter(v=>v.app==="N").length,vs.filter(v=>v.app==="").length,vs.filter(v=>v.app==="Y"&&v.status===2).length,vs.filter(v=>v.app==="Y"&&v.status===3).length])});
-  sum.push([],["不適用但未填排除理由",ANNEX.filter(c=>missingReason(ctl(c.code))).length]);
-  sum.push([],["說明","控制措施名稱與說明為工具自撰摘要，不含 ISO/IEC 27001 原文。"]);
-  const laws=lawsFor(p); if(laws.length){sum.push([],["相關法規與標準（整理於"+RULES_DATE+"，請以官方公告為準）"]);laws.forEach(l=>sum.push([l.name,l.kind,l.note]))}
-  const wb=XLSX.utils.book_new();
-  const ws1=XLSX.utils.aoa_to_sheet(soa);ws1["!cols"]=[12,10,24,9,22,8,30,10,16,26,30].map(w=>({wch:w}));ws1["!autofilter"]={ref:"A1:K"+soa.length};
-  const ws2=XLSX.utils.aoa_to_sheet(cl);ws2["!cols"]=[8,24,6,40,10,14,26].map(w=>({wch:w}));
-  const ws3=XLSX.utils.aoa_to_sheet(sum);ws3["!cols"]=[14,14,8,8,8,8,10].map(w=>({wch:w}));
-  XLSX.utils.book_append_sheet(wb,ws1,"適用性聲明SoA");
-  XLSX.utils.book_append_sheet(wb,ws2,"條款4-10檢核");
-  XLSX.utils.book_append_sheet(wb,ws3,"統計摘要");
-  const lg=[["時間","編號","名稱","欄位","變更前","變更後"]];
-  (p.log||[]).slice().reverse().forEach(e=>{const c=ANNEX_MAP[e.c]||CLAUSE_MAP[e.c];lg.push([new Date(e.t).toLocaleString("zh-TW",{hour12:false}),e.c,c?c.name:"",FIELD_LABEL[e.f]||e.f,fmtVal(e.f,e.from),fmtVal(e.f,e.to)])});
-  const ws4=XLSX.utils.aoa_to_sheet(lg);ws4["!cols"]=[20,9,24,10,18,18].map(w=>({wch:w}));
-  XLSX.utils.book_append_sheet(wb,ws4,"修改紀錄");
-  const buf=XLSX.write(wb,{bookType:"xlsx",type:"array"});
-  saveFile(`SoA_${safeName(p.name)}_${new Date().toISOString().slice(0,10)}.xlsx`,new Blob([buf]),"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    sumData.push([t.name,list.length,vs.filter(v=>v.app==="Y").length,vs.filter(v=>v.app==="N").length,vs.filter(v=>v.app==="").length,vs.filter(v=>v.app==="Y"&&v.status===2).length,vs.filter(v=>v.app==="Y"&&v.status===3).length].map(V))});
+  sumData.push([],["不適用但未填排除理由",ANNEX.filter(c=>missingReason(ctl(c.code))).length].map(V),[]);
+  sumData.push(["說明","控制措施名稱與說明為工具自撰摘要，不含 ISO/IEC 27001 原文。"].map(V));
+  const laws=lawsFor(p); if(laws.length){sumData.push([],[H("相關法規與標準（整理於"+RULES_DATE+"，請以官方公告為準）")]);laws.forEach(l=>sumData.push([l.name,l.kind,l.note].map(V)))}
+  const lgRows=(p.log||[]).slice().reverse().map(e=>{const c=ANNEX_MAP[e.c]||CLAUSE_MAP[e.c];return [new Date(e.t).toLocaleString("zh-TW",{hour12:false}),e.c,c?c.name:"",FIELD_LABEL[e.f]||e.f,fmtVal(e.f,e.from),fmtVal(e.f,e.to)]});
+  const W=a=>a.map(w=>({width:w}));
+  writeXlsxFile([
+    {sheet:"適用性聲明SoA",data:sheet(soaRows,["控制措施編號","主題","控制措施","2022 新增","產業建議重點","適用性","納入或排除理由","執行狀態","負責人","證據位置","常見證據參考"]),columns:W([12,10,24,9,22,8,30,10,16,26,30]),stickyRowsCount:1},
+    {sheet:"條款4-10檢核",data:sheet(clRows,["條款","名稱","PDCA","說明","執行狀態","負責人","證據位置"]),columns:W([8,24,6,40,10,14,26]),stickyRowsCount:1},
+    {sheet:"統計摘要",data:sumData,columns:W([22,14,10,10,10,10,10])},
+    {sheet:"修改紀錄",data:sheet(lgRows,["時間","編號","名稱","欄位","變更前","變更後"]),columns:W([20,9,24,10,18,18]),stickyRowsCount:1}
+  ]).toBlob().then(blob=>saveFile(`SoA_${safeName(p.name)}_${new Date().toISOString().slice(0,10)}.xlsx`,blob,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+    .catch(err=>{console.error(err);toast("Excel 產生失敗："+(err&&err.message||err))});
 }
 function exportJSON(){
   const p=cur();
+  if(!p.sample){p.lastBackupAt=Date.now();p.changesSinceBackup=0;p.backupSnoozeUntil=0;save();renderBackupBanner()}
   saveFile(`ISMS專案_${safeName(p.name)}.json`,JSON.stringify({app:"isms-mapper",version:1,project:p},null,2),"application/json");
 }
 
@@ -1249,12 +1291,23 @@ function renderProjects(){
     </div>`:""}
     <p class="note" style="margin-top:14px">專案檔可在其他電腦匯入繼續編輯；Excel 包含適用性聲明、條款 4–10 檢核、統計摘要與修改紀錄四個工作表。</p>
   </div></div>
+  ${p&&!p.sample?`<div class="panel" style="margin-top:18px" id="storePanel"><div class="secthead"><h3>備份與儲存狀態</h3></div>
+    <ul class="kvlist">
+      <li><span>上次匯出專案檔</span><b>${p.lastBackupAt?fmtDate(p.lastBackupAt)+" "+fmtTime(new Date(p.lastBackupAt)):"從未"}</b></li>
+      <li><span>之後的修改筆數</span><b>${p.changesSinceBackup||0}</b></li>
+      <li><span>瀏覽器持久儲存</span><b id="persistVal">檢查中</b></li>
+      <li><span>本工具資料大小</span><b id="usageVal">檢查中</b></li>
+    </ul>
+    <p class="note" style="margin-top:10px">修改超過 ${BACKUP_CHANGES} 筆或距上次備份超過 ${BACKUP_DAYS} 天時，頁面上方會提醒備份。「持久儲存」啟用後，瀏覽器在空間不足時較不會自動清除本工具的資料，但手動清除瀏覽資料仍會刪除，請定期匯出。</p>
+  </div>`:""}
   ${p?peoplePanel(p):""}
   ${p?`<div class="panel" style="margin-top:18px"><div class="secthead"><h3>最近修改</h3><span class="note">共 ${(p.log||[]).length} 筆，顯示最近 30 筆。完整紀錄會一併匯出到 Excel。</span></div>
     ${historyHTML((p.log||[]).slice(-30).reverse(),true)}</div>`:""}`;
   const v=$("#view-projects");
   const on=(id,fn)=>{const el=$("#"+id);if(el)el.addEventListener("click",fn)};
   on("pNew",()=>goNew());
+  if($("#storePanel")){ensurePersist().then(()=>{const el=$("#persistVal");if(el)el.textContent={yes:"已啟用",no:"未啟用（瀏覽器未同意）",unknown:"此瀏覽器不支援"}[persistState]});
+    storageInfo().then(i=>{const el=$("#usageVal");if(el)el.textContent=`約 ${i.local} KB（瀏覽器上限通常約 5 MB）`})}
   if($("#indBox")){wireIndustry(v,"pInd","pF","pCount");
     on("indSave",()=>{const p=cur();p.industry=$("#pInd").value;p.features=readFeatures(v,"pF");save();resetBuilt();refreshFocus();toast("已套用：建議重點 "+Object.keys(FM).length+" 項")})}
   on("pCopy",()=>{copying=true;tab="overview";render();window.scrollTo(0,0)});
@@ -1266,15 +1319,44 @@ function renderProjects(){
 }
 function goNew(){tab="home";render();window.scrollTo(0,0);const n=$("#hName");if(n)n.focus()}
 function resetBuilt(){["annex"].forEach(v=>delete $("#view-"+v).dataset.built)}
+/* 匯入專案檔：限制大小、檢查結構、只保留已知欄位並轉成字串，避免格式錯誤或惡意內容寫進資料 */
+const MAX_IMPORT_BYTES=5*1024*1024;
+const str=(v,max=500)=>typeof v==="string"?v.slice(0,max):(typeof v==="number"&&isFinite(v)?String(v):"");
+const isObj=o=>o!==null&&typeof o==="object"&&!Array.isArray(o);
+const CODE_OK=new Set([...ANNEX.map(c=>c.code),...CLAUSES.map(c=>c.code)]);
+function sanitizeProject(raw){
+  if(!isObj(raw)||!isObj(raw.controls))throw new Error("缺少 controls");
+  const p=blankProject(str(raw.name,120)||"匯入專案",str(raw.org,120));
+  p.scope=str(raw.scope,300);
+  p.industry=INDUSTRY_MAP[raw.industry]?raw.industry:"";
+  p.features=Array.isArray(raw.features)?raw.features.filter(x=>FEATURE_MAP[x]&&x!=="manual"):[];
+  p.focusOn=Array.isArray(raw.focusOn)?raw.focusOn.filter(c=>ANNEX_MAP[c]):[];
+  p.focusOff=Array.isArray(raw.focusOff)?raw.focusOff.filter(c=>ANNEX_MAP[c]):[];
+  p.people=Array.isArray(raw.people)?[...new Set(raw.people.map(x=>str(x,60).trim()).filter(Boolean))].slice(0,500):[];
+  p.reasons=Array.isArray(raw.reasons)?[...new Set(raw.reasons.map(x=>str(x,200).trim()).filter(Boolean))].slice(0,200):[];
+  const st=v=>{const n=Number(v);return Number.isInteger(n)&&n>=0&&n<=3?n:0};
+  for(const [code,v] of Object.entries(raw.controls)){ if(!ANNEX_MAP[code]||!isObj(v))continue;
+    p.controls[code]={app:["","Y","N"].includes(v.app)?v.app:"",status:st(v.status),owner:str(v.owner,60),evidence:str(v.evidence,300),reason:str(v.reason,500)} }
+  if(isObj(raw.clauses))for(const [code,v] of Object.entries(raw.clauses)){ if(!CLAUSE_MAP[code]||!isObj(v))continue;
+    p.clauses[code]={status:st(v.status),owner:str(v.owner,60),evidence:str(v.evidence,300)} }
+  p.log=Array.isArray(raw.log)?raw.log.filter(e=>isObj(e)&&CODE_OK.has(e.c)&&FIELD_LABEL[e.f]).slice(-3000)
+    .map(e=>({t:Number(e.t)||0,c:e.c,f:e.f,from:typeof e.from==="number"||typeof e.from==="boolean"?e.from:str(e.from,500),to:typeof e.to==="number"||typeof e.to==="boolean"?e.to:str(e.to,500)})):[];
+  p.lastBackupAt=Date.now();p.changesSinceBackup=0;
+  return p;
+}
 $("#importFile").addEventListener("change",e=>{
-  const f=e.target.files[0];if(!f)return;const rd=new FileReader();
-  rd.onload=()=>{try{const d=JSON.parse(rd.result);const p=d.project||d;
-      if(!p||!p.controls)throw new Error();p.id=uid();p.name=(p.name||"匯入專案");p.clauses=p.clauses||{};delete p.sample;delete p.stage;p.updated=Date.now();
+  const f=e.target.files[0];e.target.value="";if(!f)return;
+  if(f.size>MAX_IMPORT_BYTES){toast("檔案超過 5 MB，不像是本工具匯出的專案檔");return}
+  const rd=new FileReader();
+  rd.onload=()=>{try{
+      const d=JSON.parse(rd.result);
+      if(isObj(d)&&d.app&&d.app!=="isms-mapper")throw new Error("不是本工具的檔案");
+      const p=sanitizeProject(isObj(d)&&d.project?d.project:d);
       S.projects[p.id]=p;S.activeId=p.id;save();resetBuilt();tab="overview";render();toast("已匯入："+p.name)}
-    catch(err){toast("檔案格式不正確，請選擇本工具匯出的專案檔")}
-    e.target.value=""};
+    catch(err){toast("檔案格式不正確，請選擇本工具匯出的專案檔")}};
   rd.readAsText(f);
 });
+
 
 
 /* ================= 變更、復原與修改紀錄 ================= */
@@ -1289,6 +1371,7 @@ function fmtVal(f,v){
 function fmtStamp(t){return new Date(t).toLocaleString("zh-TW",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false})}
 function logChange(code,f,from,to){
   const p=cur();if(!p||from===to)return;
+  if(!p.sample){p.changesSinceBackup=(p.changesSinceBackup||0)+1;if(p.changesSinceBackup%5===0)renderBackupBanner()}
   p.log=p.log||[];const last=p.log[p.log.length-1],now=Date.now();
   // 連續輸入文字時合併成一筆
   if(last&&last.c===code&&last.f===f&&TEXT_FIELDS.has(f)&&now-last.t<60000){last.to=to;last.t=now;if(last.from===last.to)p.log.pop();return}
