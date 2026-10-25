@@ -1,5 +1,7 @@
 # ISMS 條款對照台
 
+[![單元測試](https://github.com/coloplay1/isms-mapper/actions/workflows/test.yml/badge.svg)](https://github.com/coloplay1/isms-mapper/actions/workflows/test.yml)
+
 依 ISO/IEC 27001:2022 架構設計的 ISMS（資訊安全管理系統）導入輔助工具。把日常工作情境對應到條款，逐項完成附錄 A 適用性判定，並匯出適用性聲明（SoA）Excel。
 
 **線上試用：** https://coloplay1.github.io/isms-mapper/
@@ -37,15 +39,51 @@
 
 ## 技術
 
-- 單一 HTML 檔，原生 JavaScript，無框架、無建置步驟
+- 原生 JavaScript，無框架、無建置步驟，上傳即可部署
 - [write-excel-file](https://gitlab.com/catamphetamine/write-excel-file)（MIT）產生 Excel，放在 `vendor/` 自行託管
 - 使用系統字型，不載入任何外部資源
 - 圖表以 SVG 手繪，支援深色模式與鍵盤操作
 - 資料儲存：localStorage（依瀏覽器與網域分開保存）
 
+## 檔案結構
+
+```
+index.html            畫面骨架（不含程式）
+css/app.css           樣式
+js/data/controls.js   附錄 A 93 項控制措施、條款 4–10（自撰摘要）
+js/data/cases.js      情境案例庫與同義詞字典
+js/data/rules.js      產業、業務特性、法規提示、理由選項
+js/core.js            純邏輯：搜尋、建議重點、匯入檢查、備份判斷（單元測試的對象）
+js/app.js             畫面、事件、儲存與匯出
+vendor/               第三方元件（write-excel-file）
+tests/                單元測試
+```
+
+要新增案例、同義詞、產業或法規，只需要改 `js/data/` 內的資料，不必動程式。改完執行測試，可以檢查有沒有引用到不存在的控制措施編號。
+
+程式以一般 `<script>` 載入而不是 ES module，因為 ES module 無法從本機檔案（`file://`）載入，會讓「下載後直接用瀏覽器開啟」失效。各檔的頂層宣告共用同一個全域範圍，載入順序寫在 `index.html`。
+
+## 測試
+
+需要 Node.js 18 以上，不需要安裝任何套件：
+
+```bash
+npm test
+```
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/data.test.js` | 控制措施數量與編號、案例庫／產業規則／法規引用的編號都存在、同義詞不重複 |
+| `tests/search.test.js` | 關鍵字與同義詞搜尋、編號直接搜尋、每個案例都能用關鍵字找到 |
+| `tests/rules.test.js` | 產業建議重點、使用者自行加入／取消、可評估排除提示、建議不會改動判定 |
+| `tests/import.test.js` | 匯入檢查：格式錯誤、未知欄位、不合法的值、原型污染、長度限制 |
+| `tests/backup.test.js` | 備份提醒的觸發條件與「明天再提醒」 |
+
+每次推送到 GitHub 都會由 GitHub Actions 自動執行測試，結果顯示在本頁最上方的徽章。
+
 ## 本機使用與部署
 
-**本機使用：** 下載整個資料夾（需包含 `vendor/`），用瀏覽器開啟 `index.html` 即可。
+**本機使用：** 下載整個資料夾（需包含 `css/`、`js/`、`vendor/`），用瀏覽器開啟 `index.html` 即可。
 
 **部署到 GitHub Pages：**
 1. 將本 repository 推上 GitHub
@@ -61,7 +99,7 @@
 | 項目 | 做法 |
 |---|---|
 | 不依賴外部網站 | 所有程式與元件都放在本 repository，不從 CDN 或字型服務載入任何東西，開啟頁面不會對第三方發出請求 |
-| 內容安全政策（CSP） | `default-src 'none'`、`connect-src 'none'`：頁面無法對外連線，即使資料被注入惡意內容也送不出去。內嵌程式以 SHA-256 雜湊白名單允許，其他內嵌程式與事件屬性一律封鎖 |
+| 內容安全政策（CSP） | `default-src 'none'`、`connect-src 'none'`：頁面無法對外連線，即使資料被注入惡意內容也送不出去。只允許執行本站的 `.js` 檔，內嵌程式與 `onclick=` 等事件屬性一律封鎖 |
 | 元件來源驗證 | `vendor/` 內的元件從 npm 官方套件取出，雜湊值記錄在 `vendor/SHA384SUMS`，更新元件時可比對。元件與頁面同源託管，因此不需要 SRI；若改從 CDN 載入，必須加上 `integrity` |
 | 元件選擇 | 原本使用的 SheetJS 0.18.5（npm 上的最後版本）有原型污染與 ReDoS 弱點（CVE-2023-30533、CVE-2024-22363），因本工具只需要「寫出」Excel，改用僅寫入、`npm audit` 無弱點的 write-excel-file |
 | 匯入檢查 | 匯入的專案檔限制 5 MB，只保留已知欄位、未知的控制措施編號與欄位一律捨棄，文字欄位限制長度；畫面輸出一律經過跳脫處理 |
@@ -70,11 +108,7 @@
 
 > GitHub Pages 無法自訂 HTTP 標頭，因此 CSP 以 `<meta>` 設定，`frame-ancestors` 等只能由標頭設定的項目無法套用。若自行架設，建議改由伺服器送出 CSP 標頭並加上 `frame-ancestors 'none'`。
 
-**更新內嵌程式後：** 修改 `index.html` 內的 `<script>` 後，必須重新計算雜湊並更新 CSP，否則頁面會無法執行：
-
-```bash
-python3 -c "import re,hashlib,base64;s=open('index.html',encoding='utf-8').read();m=re.search(r'<script>(.*?)</script>',s,re.S).group(1);print("'sha256-"+base64.b64encode(hashlib.sha256(m.encode()).digest()).decode()+"'")"
-```
+所有程式都放在獨立的 `.js` 檔，`index.html` 內沒有內嵌程式，因此 CSP 只需要 `script-src 'self'`，修改程式後不必更新 CSP。**請勿在 `index.html` 加入 `<script>…</script>` 或 `onclick=` 這類內嵌程式**，瀏覽器會拒絕執行。
 
 ## 版權與免責聲明
 
@@ -96,7 +130,7 @@ python3 -c "import re,hashlib,base64;s=open('index.html',encoding='utf-8').read(
 - [ ] 修改紀錄加入操作人，支援多人協作
 - [ ] 2013 版與 2022 版控制措施對照
 - [ ] 擴充案例庫與產業規則
-- [ ] 單元測試（搜尋與產業規則）
+- [x] 單元測試（搜尋、產業規則、匯入檢查、備份提醒）
 
 ## 授權
 

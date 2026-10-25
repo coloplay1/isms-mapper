@@ -1,0 +1,968 @@
+/* ISMS 條款對照台：畫面、事件與儲存
+   以一般 <script> 載入（非 ES module），讓使用者直接用瀏覽器開啟本機檔案也能運作。
+   各檔頂層宣告共用同一個全域範圍，載入順序見 index.html。 */
+"use strict";
+
+function toggleFocus(code,silent){
+  const p=cur();if(!p)return;const was=!!FM[code];
+  const on=new Set(p.focusOn||[]),off=new Set(p.focusOff||[]),base=baseFocus(p);
+  if(FM[code]){ if(on.has(code))on.delete(code); else if(base[code])off.add(code); }
+  else { if(off.has(code))off.delete(code); else on.add(code); }
+  p.focusOn=[...on];p.focusOff=[...off];
+  logChange(code,"focus",was,!was);save();refreshFocus();
+  if(!silent)undoToast(FM[code]?`已將 ${code} 標為重點`:`已取消 ${code} 的重點標示`,()=>toggleFocus(code,true));
+  if($("#drawerHost").innerHTML)openDrawer(code,!!lastList);
+  if(tab==="annex")renderAnnexRows();
+  else if(tab==="overview")renderOverview();
+}
+function resetFocus(){const p=cur();if(!p)return;p.focusOn=[];p.focusOff=[];save();refreshFocus();render();toast("已恢復預設建議")}
+document.addEventListener("click",e=>{const t=e.target.closest("[data-ftoggle]");if(t){e.preventDefault();e.stopPropagation();toggleFocus(t.dataset.ftoggle)}
+  if(e.target.closest("[data-freset]"))resetFocus()},true);
+let FM={},NAC={};
+function refreshFocus(){const p=cur();FM=focusMap(p);NAC=naCandidates(p)}
+function featureChips(selected,name){
+  return FEATURES.map(f=>`<label class="fchip"><input type="checkbox" name="${name}" value="${f.id}" ${selected.includes(f.id)?"checked":""}><span>${esc(f.label)}</span></label>`).join("");
+}
+function industryOptions(sel){return INDUSTRIES.map(i=>`<option value="${i.id}" ${i.id===sel?"selected":""}>${esc(i.label)}</option>`).join("")}
+function wireIndustry(root,selId,name,countId){
+  const sel=root.querySelector("#"+selId);
+  const upd=()=>{if(!countId)return;const fs=[...root.querySelectorAll(`input[name="${name}"]:checked`)].map(x=>x.value);
+    const n=Object.keys(focusMap({features:fs})).length;const el=root.querySelector("#"+countId);if(el)el.textContent=n?`會標示 ${n} 項建議重點`:"不選也可以，之後在「專案與備份」修改"};
+  sel.addEventListener("change",()=>{const ind=INDUSTRY_MAP[sel.value];root.querySelectorAll(`input[name="${name}"]`).forEach(cb=>cb.checked=ind.features.includes(cb.value));upd()});
+  root.querySelectorAll(`input[name="${name}"]`).forEach(cb=>cb.addEventListener("change",upd));upd();
+}
+const readFeatures=(root,name)=>[...root.querySelectorAll(`input[name="${name}"]:checked`)].map(x=>x.value);
+
+
+/* ================= STATE & STORAGE ================= */
+const KEY = "isms-mapper-v1";
+let storeOK = true;
+const SAMPLE_DEFS=[
+  {id:"sample:intro",stage:"導入初期",name:"綠葉聯合診所",industry:"health",features:["pii","health","vendor","onprem"],desc:"剛決定導入 ISMS，正在訂定範圍與政策。大部分控制措施還沒判定適用性，負責人也還沒分派。",
+   seed:3,undec:.6,cum:[.72,.95,1,1],owners:["資訊組 黃組長","行政組 吳專員","行政組 吳專員","資訊組 黃組長"],ownerFrom:1,
+   na:["A.8.25","A.8.26","A.8.27","A.8.28","A.8.29","A.8.30","A.8.4","A.8.31","A.8.33"],naReason:"診所未自行開發系統，皆採購套裝軟體",
+   cl:i=>i<4?1:i===5?2:0,scope:"診所門診與病歷資訊系統"},
+  {id:"sample:build",stage:"建置中",name:"示範科技",industry:"general",features:["cloud","remote","vendor","onprem"],desc:"適用性聲明大致完成，各部門正在落實控制措施，邊做邊整理紀錄與證據。",
+   seed:7,undec:.08,cum:[.18,.4,.73,1],owners:["資訊部 王經理","人資部 林專員","總務部 陳課長","研發部 張主任"],ownerFrom:0,
+   na:["A.8.30","A.8.4","A.7.12","A.8.28"],naReason:"範圍內無自行開發系統",
+   cl:i=>i<12?3:i<20?2:i<23?1:0,scope:"台北總部資訊機房與核心營運系統"},
+  {id:"sample:audit",stage:"驗證稽核前",name:"北辰精密製造",industry:"mfg",features:["ot","onprem","vendor","remote"],desc:"內部稽核與管理審查已完成，正在補齊最後幾項證據，準備迎接第三方驗證稽核。",
+   seed:11,undec:0,cum:[0,.04,.3,1],owners:["資訊處 周處長","人資處 許經理","廠務課 蔡課長","研發處 鄭經理","稽核室 何稽核"],ownerFrom:0,
+   na:["A.8.30","A.7.12","A.8.11"],naReason:"經風險評鑑判定不適用",
+   cl:i=>i===24?2:3,scope:"台中廠區生產管理系統與總部 IT"}
+];
+const SAMPLES={};
+function buildSample(d){
+  const p={id:d.id,sample:true,stage:d.stage,name:`範例｜${d.stage}：${d.name}`,org:d.name,scope:d.scope,industry:d.industry,features:[...d.features],created:0,updated:0,controls:{},clauses:{}};
+  let seed=d.seed; const rnd=()=>{seed=(seed*9301+49297)%233280;return seed/233280};
+  const na=new Set(d.na);
+  ANNEX.forEach(c=>{
+    if(na.has(c.code)){p.controls[c.code]={app:"N",status:0,owner:"",evidence:"",reason:d.naReason};return}
+    if(rnd()<d.undec){p.controls[c.code]={app:"",status:0,owner:"",evidence:"",reason:""};return}
+    const r=rnd(); const st=d.cum.findIndex(x=>r<x);
+    const ow=d.owners[c.theme==="6"?1:c.theme==="7"?2:c.code.startsWith("A.8.2")&&d.owners[3]?3:c.code==="A.5.35"&&d.owners[4]?4:0];
+    p.controls[c.code]={app:"Y",status:st<0?3:st,owner:st>=d.ownerFrom?ow:"",evidence:st>=2?c.ev.split("、")[0]:"",reason:REASONS_IN[0]};
+  });
+  CLAUSES.forEach((c,i)=>{const st=d.cl(i);p.clauses[c.code]={status:st,owner:st?"資安小組":"",evidence:st>=2?c.ev:""}});
+  return p;
+}
+function resetSample(id){const d=SAMPLE_DEFS.find(x=>x.id===id);if(d)SAMPLES[id]=buildSample(d)}
+SAMPLE_DEFS.forEach(d=>resetSample(d.id));
+const isSample=id=>typeof id==="string"&&id.startsWith("sample:");
+const OLD_SAMPLE_NAME="範例：示範科技股份有限公司（示範資料）";
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(raw){const s=JSON.parse(raw);
+      if(s&&s.projects){
+        // 舊版自動產生的範例改由內建範例提供，不再放在「我的專案」
+        Object.values(s.projects).forEach(p=>{if(p.name===OLD_SAMPLE_NAME)delete s.projects[p.id]});
+        return {activeId:s.activeId&&s.projects[s.activeId]?s.activeId:null,projects:s.projects};
+      }}
+  }catch(e){storeOK=false}
+  return {activeId:null,projects:{}};
+}
+let S = load();
+let lastSaved = null;
+function save(){
+  const p = cur(); if(p&&!p.sample) p.updated = Date.now();
+  try{localStorage.setItem(KEY,JSON.stringify(S));lastSaved=new Date();storeOK=true}
+  catch(e){storeOK=false}
+  renderSaved();
+}
+let saveTimer=null;
+function saveSoon(){clearTimeout(saveTimer);saveTimer=setTimeout(save,300)}
+function cur(){return isSample(S.activeId)?SAMPLES[S.activeId]:(S.projects[S.activeId]||null)}
+function ctl(code){const p=cur();if(!p)return {app:"",status:0,owner:"",evidence:"",reason:""};return p.controls[code]||(p.controls[code]={app:"",status:0,owner:"",evidence:"",reason:""})}
+function cls(code){const p=cur();if(!p)return {status:0,owner:"",evidence:""};return p.clauses[code]||(p.clauses[code]={status:0,owner:"",evidence:""})}
+function newProject(name,org,scope,start,industry,features){
+  const p=blankProject(name||"未命名專案",org);p.scope=scope||"";p.industry=industry||"";p.features=features||[];p.people=[];
+  if(start==="all")ANNEX.forEach(c=>p.controls[c.code]={app:"Y",status:0,owner:"",evidence:"",reason:""});
+  S.projects[p.id]=p;S.activeId=p.id;save();resetBuilt();ensurePersist();return p;
+}
+function openProject(id,toTab){copying=false;editingId=null;S.activeId=id;pendingDelete=null;save();resetBuilt();tab=toTab||"overview";render();window.scrollTo(0,0)}
+let copying=false;
+function copySample(name){
+  const sp=cur(); if(!sp||!sp.sample)return;
+  copying=false;
+  const p=JSON.parse(JSON.stringify(sp)); p.id=uid(); delete p.sample; delete p.stage; p.log=[];
+  p.name=(typeof name==="string"&&name.trim())||sp.org+"（由範例建立）"; p.created=p.updated=Date.now();
+  S.projects[p.id]=p; S.activeId=p.id; save(); resetSample(sp.id); resetBuilt(); render(); toast("已建立專案："+p.name);
+}
+
+/* 專案清單列：開啟、重新命名、刪除（首頁與專案頁共用） */
+let editingId=null;
+function projRows(list,ctx){
+  return `<div class="plist" data-plist="${ctx}">${list.map(p=>{
+    const st=sampleStats(p), isCur=p.id===S.activeId;
+    const meta=editingId===p.id
+      ?`<div class="meta" style="display:flex;gap:6px;flex-wrap:wrap;flex:1"><input data-rename-in="${p.id}" value="${esc(p.name)}" aria-label="專案名稱" style="flex:1 1 180px"><button class="btn primary" data-pact="rsave" data-id="${p.id}">儲存</button><button class="btn" data-pact="rcancel">取消</button></div>`
+      :`<div class="meta"><b>${esc(p.name)}</b><small>${p.org?esc(p.org)+"・":""}最後修改 ${fmtDate(p.updated)}・已實施 ${st.impl}%${isCur?"・目前專案":""}</small></div>`;
+    const acts=editingId===p.id?"":pendingDelete===p.id
+      ?`<span class="saved">刪除後無法復原</span><button class="btn danger" data-pact="del2" data-id="${p.id}">確認刪除</button><button class="btn" data-pact="dcancel">取消</button>`
+      :`<button class="btn ${isCur&&ctx==="home"?"primary":""}" data-pact="open" data-id="${p.id}">${isCur?"繼續":"開啟"}</button><button class="btn" data-pact="rename" data-id="${p.id}">重新命名</button><button class="btn" data-pact="del" data-id="${p.id}">刪除</button>`;
+    return `<div class="prow ${isCur?"active":""}">${meta}${acts?`<div class="pacts">${acts}</div>`:""}</div>`}).join("")}</div>`;
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-pact]"); if(!b)return;
+  const a=b.dataset.pact, id=b.dataset.id;
+  if(a==="open"){editingId=null;openProject(id);return}
+  if(a==="rename"){editingId=id;pendingDelete=null}
+  if(a==="rcancel"||a==="dcancel"){editingId=null;pendingDelete=null}
+  if(a==="rsave"){const inp=document.querySelector(`[data-rename-in="${id}"]`);const n=inp&&inp.value.trim();
+    if(!n){toast("專案名稱不能空白");return}
+    S.projects[id].name=n;S.projects[id].updated=Date.now();editingId=null;save();toast("已重新命名")}
+  if(a==="del"){pendingDelete=id;editingId=null}
+  if(a==="del2"){const n=S.projects[id]&&S.projects[id].name;delete S.projects[id];pendingDelete=null;if(S.activeId===id)S.activeId=null;save();resetBuilt();toast("已刪除："+n)}
+  render();
+  if(a==="rename"){const inp=document.querySelector(`[data-rename-in="${id}"]`);if(inp){inp.focus();inp.select()}}
+});
+document.addEventListener("keydown",e=>{const inp=e.target.closest&&e.target.closest("[data-rename-in]");if(!inp)return;
+  if(e.key==="Enter"){e.preventDefault();inp.parentElement.querySelector('[data-pact="rsave"]').click()}
+  if(e.key==="Escape"){e.stopPropagation();editingId=null;render()}});
+
+/* ================= HELPERS ================= */
+const $=(s,r=document)=>r.querySelector(s);
+function lvlColor(v){return `var(--s${v})`}
+function toast(msg){const t=document.createElement("div");t.className="toast";t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2200)}
+function fmtTime(d){return d.toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"})}
+function fmtDate(ts){return new Date(ts).toLocaleDateString("zh-TW")}
+function renderBackupBanner(){
+  const b=$("#backupBanner"),p=cur();if(!b)return;
+  if(!backupDue(p)){b.hidden=true;return}
+  const last=p.lastBackupAt?`上次備份是 ${fmtDate(p.lastBackupAt)}`:"這個專案還沒有備份過";
+  b.hidden=false;
+  b.innerHTML=`<span class="msg"><b>建議備份</b>：${last}，之後已有 ${p.changesSinceBackup} 筆修改。資料只存在這個瀏覽器，清除瀏覽資料或換電腦就會消失。</span>
+    <button class="btn primary" id="bkNow">匯出專案檔</button><button class="btn" id="bkLater">明天再提醒</button>`;
+  $("#bkNow").addEventListener("click",exportJSON);
+  $("#bkLater").addEventListener("click",()=>{p.backupSnoozeUntil=Date.now()+864e5;save();renderBackupBanner()});
+}
+/* 向瀏覽器申請持久儲存，降低被自動清除的機率 */
+let persistState="unknown";
+async function ensurePersist(){
+  try{ if(!navigator.storage||!navigator.storage.persist)return;
+    persistState=(await navigator.storage.persisted())?"yes":((await navigator.storage.persist())?"yes":"no");
+  }catch(e){persistState="unknown"}
+}
+async function storageInfo(){
+  let usage="";try{ if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();usage=`已使用約 ${(e.usage/1024).toFixed(0)} KB`}}catch(e){}
+  let local=0;try{local=(localStorage.getItem(KEY)||"").length*2}catch(e){}
+  return {usage,local:(local/1024).toFixed(0)};
+}
+function renderSaved(){
+  const p=cur();
+  $("#savedAt").textContent = p&&p.sample ? "範例：修改不會儲存" : !storeOK ? "無法自動儲存" : !p ? "" : (lastSaved?`已自動儲存 ${fmtTime(lastSaved)}`:"自動儲存已開啟");
+  $("#storeBanner").hidden = storeOK;
+  renderBackupBanner();
+}
+function refLabel(code){
+  if(ANNEX_MAP[code]) return {code, name:ANNEX_MAP[code].name, kind:"annex"};
+  if(CLAUSE_MAP[code]) return {code:"第 "+code+" 條", raw:code, name:CLAUSE_MAP[code].name, kind:"clause"};
+  return {code,name:"",kind:"?"};
+}
+function refStatus(code){
+  if(ANNEX_MAP[code]){const c=ctl(code);return c.app==="N"?"na":c.status}
+  if(CLAUSE_MAP[code]) return cls(code).status;
+  return 0;
+}
+function refChip(code){
+  const r=refLabel(code), st=refStatus(code);
+  const dot = st==="na"?`<span class="dot na"></span>`:`<span class="dot" style="background:${lvlColor(st)}"></span>`;
+  return `<button class="ref" data-open="${esc(code)}">${dot}<span class="mono">${esc(r.code)}</span>${esc(r.name)}</button>`;
+}
+
+/* ================= DOWNLOADS ================= */
+const dlReady = (window.claude && typeof window.claude.use==="function") ? window.claude.use("downloads").catch(()=>null) : Promise.resolve(null);
+async function saveFile(filename, data, mime){
+  const dl = await dlReady;
+  if(dl){
+    try{await dl.save({filename,data});toast("已匯出 "+filename);}
+    catch(e){toast(e&&e.code==="declined"?"已取消匯出":"這個檢視中無法匯出檔案");}
+    return;
+  }
+  const blob = data instanceof Blob?data:new Blob([data],{type:mime});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);toast("已匯出 "+filename);
+}
+function exportExcel(){
+  refreshFocus();
+  if(typeof writeXlsxFile!=="function"){toast("Excel 元件沒有載入，請確認 vendor/write-excel-file.min.js 存在");return}
+  const p=cur();
+  const H=t=>({value:String(t),fontWeight:"bold",backgroundColor:"#DCEBEE"});
+  const V=v=>v===null||v===undefined||v===""?null:(typeof v==="number"?{value:v,type:Number}:{value:String(v)});
+  const sheet=(rows,head)=>[head.map(H),...rows.map(r=>r.map(V))];
+  const soaRows=ANNEX.map(c=>{const v=ctl(c.code);
+    return [c.code,THEMES.find(t=>t.id===c.theme).name,c.name,c.isNew?"是":"",FM[c.code]?FM[c.code].map(f=>FEATURE_MAP[f].label).join("、"):"",APP.find(a=>a.v===v.app).label,v.reason,v.app==="N"?"—":STATUS[v.status].label,v.owner,v.evidence,c.ev]});
+  const clRows=CLAUSES.map(c=>{const v=cls(c.code);return [c.code,c.name,c.phase,c.desc,STATUS[v.status].label,v.owner,v.evidence]});
+  const sum=[["專案",p.name],["組織",p.org],["驗證範圍",p.scope||""],["產業",INDUSTRY_MAP[p.industry||""]?INDUSTRY_MAP[p.industry||""].label:""],["業務特性",projFeatures(p).map(f=>FEATURE_MAP[f].label).join("、")],["匯出時間",new Date().toLocaleString("zh-TW",{hour12:false})],[]];
+  const sumData=sum.map(r=>r.map(V));
+  sumData.push(["主題","控制措施數","適用","不適用","未決定","已實施","已有證據"].map(H));
+  THEMES.forEach(t=>{const list=ANNEX.filter(c=>c.theme===t.id);const vs=list.map(c=>ctl(c.code));
+    sumData.push([t.name,list.length,vs.filter(v=>v.app==="Y").length,vs.filter(v=>v.app==="N").length,vs.filter(v=>v.app==="").length,vs.filter(v=>v.app==="Y"&&v.status===2).length,vs.filter(v=>v.app==="Y"&&v.status===3).length].map(V))});
+  sumData.push([],["不適用但未填排除理由",ANNEX.filter(c=>missingReason(ctl(c.code))).length].map(V),[]);
+  sumData.push(["說明","控制措施名稱與說明為工具自撰摘要，不含 ISO/IEC 27001 原文。"].map(V));
+  const laws=lawsFor(p); if(laws.length){sumData.push([],[H("相關法規與標準（整理於"+RULES_DATE+"，請以官方公告為準）")]);laws.forEach(l=>sumData.push([l.name,l.kind,l.note].map(V)))}
+  const lgRows=(p.log||[]).slice().reverse().map(e=>{const c=ANNEX_MAP[e.c]||CLAUSE_MAP[e.c];return [new Date(e.t).toLocaleString("zh-TW",{hour12:false}),e.c,c?c.name:"",FIELD_LABEL[e.f]||e.f,fmtVal(e.f,e.from),fmtVal(e.f,e.to)]});
+  const W=a=>a.map(w=>({width:w}));
+  writeXlsxFile([
+    {sheet:"適用性聲明SoA",data:sheet(soaRows,["控制措施編號","主題","控制措施","2022 新增","產業建議重點","適用性","納入或排除理由","執行狀態","負責人","證據位置","常見證據參考"]),columns:W([12,10,24,9,22,8,30,10,16,26,30]),stickyRowsCount:1},
+    {sheet:"條款4-10檢核",data:sheet(clRows,["條款","名稱","PDCA","說明","執行狀態","負責人","證據位置"]),columns:W([8,24,6,40,10,14,26]),stickyRowsCount:1},
+    {sheet:"統計摘要",data:sumData,columns:W([22,14,10,10,10,10,10])},
+    {sheet:"修改紀錄",data:sheet(lgRows,["時間","編號","名稱","欄位","變更前","變更後"]),columns:W([20,9,24,10,18,18]),stickyRowsCount:1}
+  ]).toBlob().then(blob=>saveFile(`SoA_${safeName(p.name)}_${new Date().toISOString().slice(0,10)}.xlsx`,blob,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+    .catch(err=>{console.error(err);toast("Excel 產生失敗："+(err&&err.message||err))});
+}
+function exportJSON(){
+  const p=cur();
+  if(!p.sample){p.lastBackupAt=Date.now();p.changesSinceBackup=0;p.backupSnoozeUntil=0;save();renderBackupBanner()}
+  saveFile(`ISMS專案_${safeName(p.name)}.json`,JSON.stringify({app:"isms-mapper",version:1,project:p},null,2),"application/json");
+}
+
+
+/* ================= VIEWS ================= */
+let tab="overview";
+const filt={theme:"all",status:"all",q:""};
+let searchQ="";
+
+const NEEDS_PROJECT=new Set(["overview","annex","clauses"]);
+function render(){
+  if(!cur()&&NEEDS_PROJECT.has(tab))tab="home";
+  refreshFocus();refreshOwnerList();personEdit=personDel=null;
+  renderProjSel(); renderSaved(); renderSampleBanner();
+  document.querySelectorAll("#tabs button").forEach(b=>{b.setAttribute("aria-selected",b.dataset.tab===tab);
+    b.setAttribute("aria-disabled",!cur()&&NEEDS_PROJECT.has(b.dataset.tab))});
+  ["home","overview","search","annex","clauses","projects"].forEach(v=>$("#view-"+v).hidden=v!==tab);
+  ({home:renderHome,overview:renderOverview,search:renderSearch,annex:renderAnnex,clauses:renderClauses,projects:renderProjects})[tab]();
+}
+function renderProjSel(){
+  const sel=$("#projSel");
+  const mine=Object.values(S.projects).sort((a,b)=>b.updated-a.updated);
+  sel.innerHTML=(cur()?"":`<option value="" selected>尚未開啟專案</option>`)+
+    (mine.length?`<optgroup label="我的專案">${mine.map(p=>`<option value="${p.id}" ${p.id===S.activeId?"selected":""}>${esc(p.name)}</option>`).join("")}</optgroup>`:"")+
+    `<optgroup label="範例（不會儲存）">${SAMPLE_DEFS.map(d=>`<option value="${d.id}" ${d.id===S.activeId?"selected":""}>${esc(d.stage)}：${esc(d.name)}</option>`).join("")}</optgroup>`;
+}
+function renderSampleBanner(){
+  const p=cur(), b=$("#sampleBanner");
+  if(!p||!p.sample||tab==="home"){b.hidden=true;return}
+  b.hidden=false;
+  b.innerHTML=`<span class="msg">正在預覽範例「${esc(p.org)}」（${esc(p.stage)}）。可以隨意操作，修改不會儲存。</span>
+    <button class="btn primary" id="sbCopy">以此範例建立我的專案</button><button class="btn" id="sbHome">回首頁</button>`;
+  if(copying){b.innerHTML=`<span class="msg">為新專案取個名字，範例目前的內容會一起複製過去。</span>
+    <input id="sbName" value="${esc(p.org)}（由範例建立）" aria-label="新專案名稱" style="flex:1 1 220px">
+    <button class="btn primary" id="sbDo">建立</button><button class="btn" id="sbCancel">取消</button>`;
+    const go=()=>copySample($("#sbName").value);
+    $("#sbDo").addEventListener("click",go);
+    $("#sbName").addEventListener("keydown",e=>{if(e.key==="Enter")go();if(e.key==="Escape"){copying=false;renderSampleBanner()}});
+    $("#sbCancel").addEventListener("click",()=>{copying=false;renderSampleBanner()});
+    const n=$("#sbName");n.focus();n.select();return}
+  $("#sbCopy").addEventListener("click",()=>{copying=true;renderSampleBanner()});
+  $("#sbHome").addEventListener("click",()=>{tab="home";render()});
+}
+function sampleStats(p){
+  const vs=ANNEX.map(c=>p.controls[c.code]||{app:""});
+  const app=vs.filter(v=>v.app==="Y");
+  const t={s0:0,s1:0,s2:0,s3:0,undec:0,na:0};vs.forEach(v=>t[v.app==="N"?"na":v.app===""?"undec":"s"+v.status]++);
+  return {t,undec:t.undec,impl:app.length?Math.round(app.filter(v=>v.status>=2).length/app.length*100):0,evid:t.s3};
+}
+function renderHome(){
+  const mine=Object.values(S.projects).sort((a,b)=>b.updated-a.updated);
+  $("#view-home").innerHTML=`<div class="home">
+    <section class="panel">
+      <h2>建立新專案</h2>
+      <p class="lede" style="margin-bottom:8px">一個專案代表一家公司或一次稽核。建立後會進入附錄 A 逐項確認，所有修改自動儲存在這個瀏覽器。</p>
+      <form id="homeForm" class="cform">
+        <label>專案名稱<input id="hName" required placeholder="例如：2027 年度 ISMS 驗證"></label>
+        <label>組織名稱<input id="hOrg" placeholder="選填"></label>
+        <label class="wide">驗證範圍<input id="hScope" placeholder="選填，例如：台北總部資訊機房與核心系統"></label>
+        <label>產業<select id="hInd">${industryOptions("")}</select></label>
+        <div class="wide" style="display:grid;gap:6px"><span style="font-size:13px;color:var(--muted)">業務特性　<span class="fcount" id="hCount"></span></span>
+          <div class="fchips">${featureChips([],"hF")}</div>
+          <span class="note" style="font-size:12px">選產業會帶入常見特性，可再自行增減。系統只會標示建議重點，不會替你判定適用性。</span></div>
+        <fieldset class="wide"><legend>附錄 A 起始狀態</legend>
+          <label class="radio"><input type="radio" name="hStart" value="blank" checked><span>全部未決定<small>逐項判定是否適用，適合第一次導入</small></span></label>
+          <label class="radio"><input type="radio" name="hStart" value="all"><span>預設全部適用<small>再挑出要排除的項目並寫理由</small></span></label>
+        </fieldset>
+        <div class="wide actions"><button class="btn primary">建立專案</button><button type="button" class="btn" id="hImport">匯入專案檔</button></div>
+      </form>
+    </section>
+    <section>
+      <div class="secthead"><h3>我的專案</h3>${mine.length?`<span class="note">${mine.length} 個</span>`:""}</div>
+      ${mine.length?projRows(mine,"home")
+        :`<div class="pempty">還沒有自己的專案。<br>在左側建立第一個，或先從下方範例看看完成後的樣子。</div>`}
+    </section>
+    <section class="full">
+      <div class="secthead"><h3>範例專案</h3><span class="note">三個不同階段的虛構公司，點「預覽」切換。範例中的修改不會儲存，也可以複製成自己的專案。</span></div>
+      <div class="samples">${SAMPLE_DEFS.map(d=>{const p=SAMPLES[d.id],st=sampleStats(p);return `<article class="scard ${d.id===S.activeId?"active":""}">
+        <span class="stage">${esc(d.stage)}</span><h4>${esc(d.name)}</h4><p>${esc(d.desc)}</p>
+        ${stackBar(st.t,93)}
+        <div class="nums"><span><b>${st.impl}%</b>已實施</span><span><b>${st.undec}</b>未決定</span><span><b>${st.evid}</b>有證據</span></div>
+        <div class="actions" style="display:flex;gap:8px"><button class="btn ${d.id===S.activeId?"":"primary"}" data-home-open="${d.id}">${d.id===S.activeId?"繼續預覽":"預覽"}</button></div>
+      </article>`}).join("")}</div>
+    </section>
+  </div>`;
+  const v=$("#view-home");
+  $("#homeForm").addEventListener("submit",e=>{e.preventDefault();
+    const p=newProject($("#hName").value.trim(),$("#hOrg").value.trim(),$("#hScope").value.trim(),v.querySelector('input[name="hStart"]:checked').value,$("#hInd").value,readFeatures(v,"hF"));
+    tab="annex";render();window.scrollTo(0,0);toast("已建立專案："+p.name)});
+  $("#hImport").addEventListener("click",()=>$("#importFile").click());
+  wireIndustry(v,"hInd","hF","hCount");
+  v.querySelectorAll("[data-home-open]").forEach(b=>b.addEventListener("click",()=>openProject(b.dataset.homeOpen)));
+}
+function counts(){
+  const vs=ANNEX.map(c=>ctl(c.code));
+  const app=vs.filter(v=>v.app==="Y");
+  return {total:93,app:app.length,na:vs.filter(v=>v.app==="N").length,undec:vs.filter(v=>v.app==="").length,
+    impl:app.filter(v=>v.status>=2).length,evid:app.filter(v=>v.status===3).length,building:app.filter(v=>v.status===1).length,none:app.filter(v=>v.status===0).length};
+}
+/* ---------- chart helpers ---------- */
+const SEGS=[
+  {k:"s3",label:"已有證據",fill:"var(--s3)"},{k:"s2",label:"已實施",fill:"var(--s2)"},
+  {k:"s1",label:"建置中",fill:"var(--s1)"},{k:"s0",label:"未開始",fill:"var(--s0)"},
+  {k:"undec",label:"未決定",fill:"var(--surface2)",dash:true},{k:"na",label:"不適用",fill:"url(#hatch)"}
+];
+function bucket(v){return v.app==="N"?"na":v.app===""?"undec":"s"+v.status}
+function tally(list){const t={s0:0,s1:0,s2:0,s3:0,undec:0,na:0};list.forEach(c=>t[bucket(ctl(c.code))]++);return t}
+const HATCH=`<defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="var(--surface)"/><rect width="3" height="6" fill="var(--na)"/></pattern></defs>`;
+function polar(cx,cy,r,deg){const a=(deg-90)*Math.PI/180;return [cx+r*Math.cos(a),cy+r*Math.sin(a)]}
+function arc(cx,cy,r0,r1,a0,a1){
+  const big=a1-a0>180?1:0;
+  const [x0,y0]=polar(cx,cy,r1,a0),[x1,y1]=polar(cx,cy,r1,a1),[x2,y2]=polar(cx,cy,r0,a1),[x3,y3]=polar(cx,cy,r0,a0);
+  return `M${x0.toFixed(2)} ${y0.toFixed(2)}A${r1} ${r1} 0 ${big} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}L${x2.toFixed(2)} ${y2.toFixed(2)}A${r0} ${r0} 0 ${big} 0 ${x3.toFixed(2)} ${y3.toFixed(2)}Z`;
+}
+function donut(t,total,centerBig,centerSmall){
+  let a=0; const paths=SEGS.filter(s=>t[s.k]>0).map(s=>{
+    const span=t[s.k]/total*360; const a0=a,a1=a+span; a=a1;
+    const d=span>=359.99?arc(100,100,62,90,0,359.99):arc(100,100,62,90,a0,a1);
+    return `<path d="${d}" fill="${s.fill}" stroke="var(--surface)" stroke-width="2" ${s.dash?'stroke-dasharray="3 3" style="stroke:var(--muted)"':""} data-tip="${s.label}：${t[s.k]} 項（${Math.round(t[s.k]/total*100)}%）・點擊查看" data-lseg="${s.k}" data-lscope="all" tabindex="0" role="button" aria-label="${s.label} ${t[s.k]} 項"></path>`}).join("");
+  return `<svg viewBox="0 0 200 200" class="donut" role="img" aria-label="附錄 A 狀態分布">${HATCH}${paths}
+    <text x="100" y="98" text-anchor="middle" class="big">${centerBig}</text>
+    <text x="100" y="120" text-anchor="middle" class="small">${centerSmall}</text></svg>`;
+}
+function stackBar(t,total,scope){
+  const sc=scope?` data-lscope="${esc(scope)}" tabindex="0" role="button"`:"";
+  return `<div class="stack ${scope?"live":""}">${SEGS.filter(s=>t[s.k]>0).map(s=>`<span class="${s.k==="na"?"na":s.k==="undec"?"undec":""}" style="flex:${t[s.k]};${s.k.startsWith("s")?`background:var(--${s.k})`:""}" data-tip="${s.label}：${t[s.k]} 項${scope?"・點擊查看":""}"${scope?` data-lseg="${s.k}"`:""}${sc}></span>`).join("")}</div>`;
+}
+function legendHTML(t){
+  return `<ul class="lg">${SEGS.map(s=>`<li data-lseg="${s.k}" data-lscope="all" tabindex="0" role="button" data-tip="點擊查看「${s.label}」的項目"><i class="${s.k==="na"?"na":s.k==="undec"?"undec":""}" style="${s.k.startsWith("s")?`background:var(--${s.k})`:""}"></i>${s.label}<b>${t?t[s.k]:""}</b></li>`).join("")}</ul>`;
+}
+function pdcaRing(){
+  const ph=[["P","規劃"],["D","執行"],["C","檢查"],["A","改善"]];
+  let svg="", all=0, done=0;
+  ph.forEach(([k,n],i)=>{
+    const l=CLAUSES.filter(x=>x.phase===k), d=l.filter(x=>cls(x.code).status>=2).length; all+=l.length; done+=d;
+    const a0=i*90+3, a1=i*90+87, ap=a0+(a1-a0)*(d/l.length);
+    svg+=`<path d="${arc(140,140,64,84,a0,a1)}" fill="var(--s0)" data-tip="${k} ${n}：${d}/${l.length} 條完成・點擊查看" data-lphase="${k}" tabindex="0" role="button" aria-label="${n} 階段條款"></path>`;
+    if(d>0) svg+=`<path d="${arc(140,140,64,84,a0,ap)}" fill="var(--s3)" pointer-events="none"></path>`;
+    const [hx,hy]=polar(140,140,74,a1+1.5);
+    svg+=`<path d="M0 -6 L6 0 L0 6 Z" transform="translate(${hx.toFixed(1)} ${hy.toFixed(1)}) rotate(${a1+1.5})" fill="var(--muted)" pointer-events="none"></path>`;
+    const mid=i*90+45, [lx,ly]=polar(140,140,110,mid), anchor=mid<180?"start":"end";
+    svg+=`<text x="${lx.toFixed(1)}" y="${(ly-4).toFixed(1)}" text-anchor="${anchor}" class="ph">${k} ${n}</text>
+      <text x="${lx.toFixed(1)}" y="${(ly+13).toFixed(1)}" text-anchor="${anchor}" class="small">${d}/${l.length} 條</text>`;
+  });
+  return `<svg viewBox="0 0 280 280" class="ring" role="img" aria-label="PDCA 各階段完成度">${svg}
+    <text x="140" y="138" text-anchor="middle" class="big">${Math.round(done/all*100)}%</text>
+    <text x="140" y="158" text-anchor="middle" class="small">條款 4–10 完成</text></svg>`;
+}
+
+function focusPanel(p){
+  const fs=projFeatures(p), ind=INDUSTRY_MAP[p.industry||""];
+  if(!fs.length&&!p.industry&&!Object.keys(FM).length) return `<div class="panel fpanel"><h3>產業建議重點</h3><p class="note" style="margin:0 0 10px">選擇產業與業務特性後，會在附錄 A 用紫色底線標出建議優先關注的控制措施，並列出相關法規提示。也可以在附錄 A 點 ☆ 自行標示重點。只做標示，不會改變你的判定。</p><button class="btn" data-goto="projects">設定產業與業務特性</button></div>`;
+  const nOn=(p.focusOn||[]).filter(c=>FM[c]).length,nOff=(p.focusOff||[]).length;
+  const codes=Object.keys(FM).sort((a,b)=>ANNEX.findIndex(x=>x.code===a)-ANNEX.findIndex(x=>x.code===b));
+  const list=codes.map(c=>ANNEX_MAP[c]);const tt=tally(list);
+  const pending=list.filter(c=>{const v=ctl(c.code);return v.app===""||(v.app==="Y"&&v.status<2)});
+  const laws=lawsFor(p);
+  return `<div class="panel fpanel">
+    <div class="secthead"><h3>產業建議重點</h3><span class="note">${esc(ind?ind.label:"")}${ind&&ind.id?"・":""}${fs.map(f=>esc(FEATURE_MAP[f].label)).join("、")}</span><button class="btn" data-goto="projects" style="margin-left:auto">調整</button></div>
+    <div class="fgrid">
+      <div>
+        ${nOn||nOff?`<div class="note" style="margin:0 0 10px;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center">已自行調整：加入 ${nOn} 項、取消 ${nOff} 項<button class="chip" data-freset>恢復預設建議</button></div>`:""}
+        <div class="blab"><span>建議重點 ${codes.length} 項</span><span class="mono">${tt.s2+tt.s3}/${codes.length} 已實施</span></div>
+        ${stackBar(tt,codes.length,"focus")}
+        <h3 style="margin-top:16px">尚未完成的重點（${pending.length}）</h3>
+        ${pending.length?`<div style="display:flex;flex-wrap:wrap;gap:6px">${pending.slice(0,12).map(c=>refChip(c.code)).join("")}${pending.length>12?`<button class="chip" data-goto="annex" data-focusfilter="1">查看全部</button>`:""}</div>`:`<p class="note">建議重點都已實施。</p>`}
+        <p class="note" style="margin-top:14px">建議依業務特性產生，只供參考。可在附錄 A 或項目詳情點 ★／☆ 自行加入或取消重點；適用性仍須依風險評鑑結果決定。</p>
+      </div>
+      <div><h3>相關法規與標準</h3>
+        ${laws.length?`<div class="laws">${laws.map(l=>`<div class="law"><h4>${esc(l.name)}<small>${esc(l.kind)}</small></h4><p>${esc(l.note)}</p>
+          <ul>${l.todo.map(t=>`<li>${esc(t)}</li>`).join("")}</ul>
+          <div class="refs">${l.codes.map(refChip).join("")}<a href="${l.link}" target="_blank" rel="noopener">查看原文 ↗</a></div></div>`).join("")}</div>
+          <p class="note" style="margin-top:10px">法規摘要整理於${RULES_DATE}，修法後內容可能變動，請以官方公告為準。</p>`
+        :`<p class="note">目前勾選的特性沒有對應的法規提示。</p>`}
+      </div>
+    </div></div>`;
+}
+document.addEventListener("click",e=>{const g=e.target.closest("[data-goto]");if(!g)return;
+  if(g.dataset.focusfilter){filt.status="focus";filt.theme="all";delete $("#view-annex").dataset.built}
+  if(g.dataset.gofilter){filt.status=g.dataset.gofilter;filt.theme="all";filt.q="";delete $("#view-annex").dataset.built}
+  tab=g.dataset.goto;render();window.scrollTo(0,0);
+  if(g.dataset.anchor){const a=document.getElementById(g.dataset.anchor);if(a)a.scrollIntoView({block:"start"})}});
+function renderOverview(){
+  const c=counts(), p=cur();
+  const pct=c.app?Math.round(c.impl/c.app*100):0;
+  const tAll=tally(ANNEX);
+  const themeBars=THEMES.map(t=>{const list=ANNEX.filter(x=>x.theme===t.id);const tt=tally(list);const apl=list.length-tt.na-tt.undec;
+    return `<div class="brow"><div class="blab"><span>A.${t.id} ${t.name}</span><span class="mono">${tt.s2+tt.s3}/${apl}</span></div>${stackBar(tt,list.length,"theme:"+t.id)}</div>`}).join("");
+  // owners
+  const om={};
+  ANNEX.forEach(x=>{const v=ctl(x.code);if(v.app!=="Y")return;const o=v.owner.trim()||"未指派";(om[o]=om[o]||[]).push(x)});
+  const owners=Object.entries(om).sort((a,b)=>(a[0]==="未指派")-(b[0]==="未指派")||b[1].length-a[1].length).slice(0,7);
+  const omax=Math.max(1,...owners.map(o=>o[1].length));
+  const ownerBars=owners.map(([o,list])=>{const tt=tally(list);
+    return `<div class="brow"><div class="blab"><span>${esc(o)}</span><span class="mono">${list.length} 項</span></div><div style="width:${Math.max(8,list.length/omax*100)}%">${stackBar(tt,list.length,"owner:"+o)}</div></div>`}).join("");
+  const rows=THEMES.map(t=>{
+    const list=ANNEX.filter(x=>x.theme===t.id);
+    return `<div class="heat-row"><div class="lab"><span>A.${t.id}　${t.name}（${list.length} 項）</span></div><div class="cells">${
+      list.map(x=>{const v=ctl(x.code);const k=v.app==="N"?"na":v.app===""?"undec":"";
+        return `<button class="cell ${k} ${x.isNew?"new":""} ${FM[x.code]?"focus":""} ${v.app==="Y"&&v.status===3?"lvl3":""}" style="background:${v.app==="Y"?lvlColor(v.status):""}" data-open="${x.code}" data-tip="${x.code} ${esc(x.name)}｜${v.app==="N"?"不適用":v.app===""?"未決定":STATUS[v.status].label}${FM[x.code]?"｜建議重點":""}" aria-label="${x.code} ${esc(x.name)}">${x.code.split(".")[2]}</button>`}).join("")}</div></div>`}).join("");
+  const todo=ANNEX.filter(x=>{const v=ctl(x.code);return v.app===""||(v.app==="Y"&&v.status===0)}).slice(0,8);
+  const noReason=ANNEX.filter(x=>missingReason(ctl(x.code))).length;
+  $("#view-overview").innerHTML=`
+    <h2>${esc(p.name)}</h2>
+    <p class="lede">${p.scope?`驗證範圍：${esc(p.scope)}。`:""}附錄 A 共 93 項控制措施的適用與執行狀況。滑過圖表可看數字，點熱圖方格可查看說明並更新狀態。</p>
+    <div class="stats">
+      <div class="stat"><b>${c.app}</b><span>適用控制措施</span></div>
+      <div class="stat"><b>${c.na}</b><span>不適用</span></div>
+      <div class="stat"><b>${c.undec}</b><span>尚未決定</span></div>
+      <div class="stat"><b>${pct}%</b><span>適用項目已實施</span></div>
+      <div class="stat"><b>${c.evid}</b><span>已備妥證據</span></div>
+    </div>
+    <div class="charts">
+      <div class="panel"><h3>整體狀態分布</h3><div class="donutwrap">${donut(tAll,93,pct+"%","適用項目已實施")}${legendHTML(tAll)}</div></div>
+      <div class="panel"><h3>各主題進度</h3><p class="note" style="margin:-4px 0 12px">右側數字為已實施／適用項目</p>${themeBars}</div>
+      <div class="panel"><h3>PDCA 循環</h3>${pdcaRing()}</div>
+    </div>
+    ${focusPanel(p)}
+    <div class="grid2" style="margin-top:18px">
+      <div class="panel">
+        <h3>附錄 A 覆蓋熱圖</h3>
+        ${rows}
+        <div class="legend">
+          ${STATUS.map(s=>`<span><i style="background:${lvlColor(s.v)}"></i>${s.label}</span>`).join("")}
+          <span><i class="na"></i>不適用</span><span><i class="undec"></i>未決定</span>
+          <span><i style="background:var(--seal);border-radius:50%;width:6px;height:6px"></i>2022 新增</span>
+          ${Object.keys(FM).length?`<span><i style="background:transparent;box-shadow:inset 0 -3px 0 var(--focus)"></i>產業建議重點</span>`:""}
+        </div>
+      </div>
+      <div style="display:grid;gap:18px;align-content:start">
+        <div class="panel"><div class="secthead"><h3>負責人工作量</h3><button class="chip" data-goto="projects" data-anchor="pplPanel" style="margin-left:auto">管理名單</button></div>${ownerBars||`<p class="note">尚未指派負責人。</p>`}</div>
+        <div class="panel"><h3>待處理</h3>${noReason?`<button class="alertrow" data-goto="annex" data-gofilter="noreason"><b>${noReason} 項</b>標為不適用但未填排除理由<span>前往補填 →</span></button>`:""}${todo.length?`<ul class="todo">${todo.map(x=>{const v=ctl(x.code);return `<li><span class="mono">${x.code}</span><button data-open="${x.code}">${esc(x.name)}</button><span class="saved" style="margin-left:auto">${v.app===""?"未決定適用性":"未開始"}</span></li>`}).join("")}</ul>`:`<p class="note">所有適用項目都已開始處理。</p>`}</div>
+      </div>
+    </div>`;
+}
+/* tooltip */
+(function(){
+  const tip=document.createElement("div");tip.className="tip";tip.hidden=true;document.body.appendChild(tip);
+  const show=(el,x,y)=>{tip.textContent=el.dataset.tip;tip.hidden=false;
+    const w=tip.offsetWidth,h=tip.offsetHeight;let L=x+12,T=y-h-10;
+    if(L+w>innerWidth-8)L=x-w-12; if(T<8)T=y+14; tip.style.left=L+"px";tip.style.top=T+"px"};
+  document.addEventListener("pointermove",e=>{const el=e.target.closest&&e.target.closest("[data-tip]");if(el)show(el,e.clientX,e.clientY);else tip.hidden=true});
+  document.addEventListener("pointerleave",()=>tip.hidden=true);
+  document.addEventListener("focusin",e=>{const el=e.target.closest("[data-tip]");if(el){const r=el.getBoundingClientRect();show(el,r.left+r.width/2,r.top)}});
+  document.addEventListener("focusout",()=>tip.hidden=true);
+})();
+
+const HINTS=["員工離職","勒索軟體","廠商遠端維護","筆電遺失","備份","雲端","個資外洩","USB","內稽","A.8.13"];
+function renderSearch(){
+  const v=$("#view-search");
+  if(!v.dataset.built){
+    v.innerHTML=`<h2>案例搜尋</h2><p class="lede">輸入日常工作或發生的狀況，例如「同事離職」「中毒」「廠商要連進來」，系統會比對 ${CASES.length} 個內建案例並列出相關條款。也可以直接輸入條款編號。</p>
+      <form class="searchbox" id="sForm"><input id="sInput" type="search" placeholder="描述一個情境或關鍵字…" autocomplete="off"><button class="btn primary">搜尋</button></form>
+      <div class="hints">試試：${HINTS.map(h=>`<button class="chip" data-hint="${esc(h)}">${esc(h)}</button>`).join("")}</div>
+      <div id="sResult"></div>`;
+    v.dataset.built="1";
+    $("#sForm").addEventListener("submit",e=>{e.preventDefault();searchQ=$("#sInput").value;renderSearchResult()});
+    $("#sInput").addEventListener("input",e=>{searchQ=e.target.value;renderSearchResult()});
+    v.addEventListener("click",e=>{const h=e.target.closest("[data-hint]");if(h){$("#sInput").value=h.dataset.hint;searchQ=h.dataset.hint;renderSearchResult()}});
+    if(!searchQ){searchQ="員工離職";$("#sInput").value=searchQ}
+  }
+  renderSearchResult();
+}
+function renderSearchResult(){
+  const box=$("#sResult"); const q=searchQ.trim();
+  if(!q){box.innerHTML=`<div class="empty">輸入關鍵字開始搜尋。</div>`;return}
+  const r=search(q);
+  if(!r.cases.length&&!r.direct.length){box.innerHTML=`<div class="empty">找不到「${esc(q)}」相關的案例。換個說法試試，例如用動作描述「帳號沒關」或設備名稱「防火牆」。</div>`;return}
+  box.innerHTML=`<div class="grid2">
+    <div><h3>相關案例（${r.cases.length}）</h3><div class="cases">${r.cases.map(x=>`
+      <article class="case"><h4>${esc(x.c.t)}</h4><p>${esc(x.c.s)}</p>
+      <div class="refs">${x.c.r.map(refChip).join("")}</div>
+      <div class="rec"><b>為什麼</b>${esc(x.c.w)}</div>
+      <div class="rec"><b>應留紀錄</b>${esc(x.c.e)}</div>
+      ${x.hit.length?`<div class="rec saved">符合關鍵字：${x.hit.map(esc).join("、")}</div>`:""}
+      </article>`).join("")||`<div class="empty">沒有相符案例，可參考右側直接相符的條款。</div>`}</div></div>
+    <div style="display:grid;gap:18px;align-content:start">
+      ${r.refs.length?`<div class="panel"><h3>建議對應條款</h3><ul class="rank">${r.refs.map(x=>`<li>${refChip(x.code)}<span class="w">${x.pct}%</span></li>`).join("")}</ul><p class="note" style="margin:12px 0 0">依相符案例的關聯程度排序，圓點顏色為本專案目前狀態。</p></div>`:""}
+      ${r.direct.length?`<div class="panel"><h3>名稱或編號直接相符</h3><div style="display:flex;flex-wrap:wrap;gap:6px">${r.direct.map(refChip).join("")}</div></div>`:""}
+    </div></div>`;
+}
+function renderAnnex(){
+  const v=$("#view-annex");
+  if(!v.dataset.built){
+    v.innerHTML=`<h2>附錄 A 逐項確認</h2><p class="lede">逐項決定是否適用、填寫理由與執行狀態。內容會自動儲存，可隨時匯出為適用性聲明（SoA）Excel。</p>
+      <div class="filters">
+        <div class="seg" id="themeSeg"><button data-th="all" aria-pressed="true">全部</button>${THEMES.map(t=>`<button data-th="${t.id}" aria-pressed="false">A.${t.id} ${t.name}</button>`).join("")}</div>
+        <select id="stFilter" aria-label="狀態篩選"><option value="all">所有狀態</option><option value="undec">未決定適用性</option><option value="N">不適用</option>${STATUS.map(s=>`<option value="${s.v}">${s.label}</option>`).join("")}<option value="new">2022 新增</option><option value="noreason">不適用但未填理由</option><option value="focus">產業建議重點</option><option value="nacand">可能不適用候選</option></select>
+        <input id="qFilter" class="grow" type="search" placeholder="篩選編號、名稱或負責人">
+        <button class="btn primary" id="xlsBtn">匯出 SoA Excel</button>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>編號</th><th>控制措施</th><th style="width:96px">適用性</th><th>納入／排除理由</th><th style="width:118px">執行狀態</th><th style="width:140px">負責人</th><th>證據位置</th></tr></thead><tbody id="annexBody"></tbody></table></div>
+      <div class="filters" style="margin-top:8px"><span class="count" id="annexCount"></span></div>`;
+    v.dataset.built="1";
+    $("#themeSeg").addEventListener("click",e=>{const b=e.target.closest("[data-th]");if(!b)return;filt.theme=b.dataset.th;
+      $("#themeSeg").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));renderAnnexRows()});
+    $("#stFilter").addEventListener("change",e=>{filt.status=e.target.value;renderAnnexRows()});
+    $("#qFilter").addEventListener("input",e=>{filt.q=e.target.value;renderAnnexRows()});
+    $("#xlsBtn").addEventListener("click",exportExcel);
+    $("#annexBody").addEventListener("change",onAnnexEdit);
+    $("#annexBody").addEventListener("input",e=>{if(e.target.matches("input"))onAnnexEdit(e)});
+  }
+  const sf=$("#stFilter");if(sf)sf.value=filt.status;
+  renderAnnexRows();
+}
+function annexRow(c){
+  const v=ctl(c.code);
+  return `<tr data-code="${c.code}" class="${v.app==="N"?"isna":""} ${FM[c.code]?"focus":""}">
+    <td class="code keep"><button data-open="${c.code}">${c.code}</button></td>
+    <td class="name keep"><button class="fstar ${FM[c.code]?"on":""}" data-ftoggle="${c.code}" aria-pressed="${!!FM[c.code]}" aria-label="${FM[c.code]?"取消重點":"標為重點"}：${c.code}" data-tip="${FM[c.code]?"取消重點標示":"標為重點"}">${FM[c.code]?"★":"☆"}</button><span class="${FM[c.code]?"fname":""}">${esc(c.name)}</span>${c.isNew?'<span class="tag">2022 新增</span>':""}${FM[c.code]?`<span class="ftag" data-tip="${esc(FM[c.code].map(f=>FEATURE_MAP[f].label).join("、"))}">建議重點</span>`:""}${NAC[c.code]&&!v.app?`<span class="ctag" data-tip="${esc(NAC[c.code])}">可能不適用</span>`:""}<div class="saved">${esc(c.desc)}</div></td>
+    <td class="keep"><select data-f="app" aria-label="${c.code} 適用性">${APP.map(a=>`<option value="${a.v}" ${a.v===v.app?"selected":""}>${a.label}</option>`).join("")}</select></td>
+    <td class="keep"><input data-f="reason" data-reason="${c.code}" autocomplete="off" class="${missingReason(v)?"warn":""}" aria-invalid="${missingReason(v)}" value="${esc(v.reason)}" placeholder="${v.app==="N"?"選擇排除理由（必填）":"選擇或輸入理由"}" aria-label="${c.code} 理由" ${missingReason(v)?'data-tip="不適用的項目需要排除理由，稽核時會檢查"':""}></td>
+    <td><select data-f="status" class="stsel" style="border-left-color:${lvlColor(v.status)}" ${v.app==="N"?"disabled":""} aria-label="${c.code} 狀態">${STATUS.map(s=>`<option value="${s.v}" ${s.v===v.status?"selected":""}>${s.label}</option>`).join("")}</select></td>
+    <td><input data-f="owner" data-owner autocomplete="off" value="${esc(v.owner)}" placeholder="選擇或輸入" ${v.app==="N"?"disabled":""} aria-label="${c.code} 負責人"></td>
+    <td><input data-f="evidence" value="${esc(v.evidence)}" placeholder="${esc(c.ev.split("、")[0])}" ${v.app==="N"?"disabled":""} aria-label="${c.code} 證據"></td></tr>`;
+}
+function renderAnnexRows(){
+  const q=norm(filt.q);
+  const list=ANNEX.filter(c=>{const v=ctl(c.code);
+    if(filt.theme!=="all"&&c.theme!==filt.theme)return false;
+    if(filt.status==="undec"&&v.app!=="")return false;
+    if(filt.status==="N"&&v.app!=="N")return false;
+    if(filt.status==="new"&&!c.isNew)return false;
+    if(filt.status==="focus"&&!FM[c.code])return false;
+    if(filt.status==="noreason"&&!missingReason(v))return false;
+    if(filt.status==="nacand"&&!NAC[c.code])return false;
+    if(/^\d$/.test(filt.status)&&(v.app!=="Y"||v.status!==+filt.status))return false;
+    if(q&&!norm(c.code+" "+c.name+" "+c.desc+" "+v.owner).includes(q))return false;
+    return true});
+  $("#annexBody").innerHTML=list.map(annexRow).join("")||`<tr><td colspan="7"><div class="empty">沒有符合篩選條件的控制措施。</div></td></tr>`;
+  $("#annexCount").textContent=`顯示 ${list.length} / 93 項`;
+}
+function onAnnexEdit(e){
+  const el=e.target, tr=el.closest("tr[data-code]"); if(!tr||!el.dataset.f)return;
+  const code=tr.dataset.code, f=el.dataset.f;
+  if(!setField(code,f,el.value))return;
+  if(f==="app"||f==="status"){const nr=document.createElement("tbody");nr.innerHTML=annexRow(ANNEX_MAP[code]);tr.replaceWith(nr.firstElementChild)}
+  else if(f==="reason"){const miss=missingReason(ctl(code));el.classList.toggle("warn",miss);el.setAttribute("aria-invalid",miss)}
+}
+function renderClauses(){
+  const groups=[["4","組織前後環境"],["5","領導"],["6","規劃"],["7","支援"],["8","運作"],["9","績效評估"],["10","改善"]];
+  $("#view-clauses").innerHTML=`<h2>管理系統條款 4–10</h2><p class="lede">本文條款不能排除，全部都要符合。逐條追蹤執行狀態與證據，驗證稽核時最先檢查的就是這些文件與紀錄。</p>
+  <div class="table-wrap"><table style="min-width:820px"><thead><tr><th>條款</th><th>名稱與說明</th><th style="width:60px">PDCA</th><th style="width:118px">執行狀態</th><th style="width:140px">負責人</th><th>證據位置</th></tr></thead><tbody id="clBody">
+  ${groups.map(([ch,n])=>`<tr><td colspan="6" style="background:var(--surface2);font-weight:700;font-size:13px">第 ${ch} 章　${n}</td></tr>`+
+    CLAUSES.filter(c=>c.code.split(".")[0]===ch).map(c=>{const v=cls(c.code);return `<tr data-cl="${c.code}">
+    <td class="code"><button data-open="${c.code}">${c.code}</button></td>
+    <td class="name">${esc(c.name)}<div class="saved">${esc(c.desc)}</div></td>
+    <td class="mono">${c.phase}</td>
+    <td><select data-f="status" class="stsel" style="border-left-color:${lvlColor(v.status)}" aria-label="${c.code} 狀態">${STATUS.map(s=>`<option value="${s.v}" ${s.v===v.status?"selected":""}>${s.label}</option>`).join("")}</select></td>
+    <td><input data-f="owner" data-owner autocomplete="off" value="${esc(v.owner)}" placeholder="選擇或輸入" aria-label="${c.code} 負責人"></td>
+    <td><input data-f="evidence" value="${esc(v.evidence)}" placeholder="${esc(c.ev)}" aria-label="${c.code} 證據"></td></tr>`}).join("")).join("")}
+  </tbody></table></div>`;
+  const body=$("#clBody");
+  const h=e=>{const el=e.target,tr=el.closest("tr[data-cl]");if(!tr||!el.dataset.f)return;
+    if(setField(tr.dataset.cl,el.dataset.f,el.value)&&el.dataset.f==="status")el.style.borderLeftColor=lvlColor(cls(tr.dataset.cl).status)};
+  body.addEventListener("change",h);body.addEventListener("input",e=>{if(e.target.matches("input"))h(e)});
+}
+let pendingDelete=null;
+function renderProjects(){
+  const list=Object.values(S.projects).sort((a,b)=>b.updated-a.updated);
+  const p=cur();
+  $("#view-projects").innerHTML=`<h2>專案與備份</h2><p class="lede">資料自動儲存在這個瀏覽器。換電腦或清除瀏覽資料前，請先匯出專案檔備份。</p>
+  <div class="grid2"><div>
+    <div class="secthead"><h3>我的專案</h3><button class="btn" id="pNew">＋ 新專案</button></div>
+    ${list.length?projRows(list,"projects"):`<div class="pempty">還沒有自己的專案。</div>`}
+  </div>
+  <div class="panel"><h3>目前專案</h3>
+    ${!p?`<p class="note">尚未開啟專案。可以匯入之前匯出的專案檔。</p><div class="form"><button class="btn" id="jsonIn">匯入專案檔</button></div>`:
+    p.sample?`<p class="note">目前是範例專案，不能重新命名或匯出專案檔。想保留內容，請先複製成自己的專案。</p>
+      <div class="form"><button class="btn primary" id="pCopy">以此範例建立我的專案</button><button class="btn" id="xls2">匯出 SoA Excel</button><button class="btn" id="jsonIn">匯入專案檔</button></div>`:
+    `<div class="form" style="margin-top:0"><input id="renameIn" value="${esc(p.name)}" aria-label="專案名稱"><button class="btn" id="renameBtn">重新命名</button></div>
+    <div class="form"><input id="scopeIn" value="${esc(p.scope||"")}" placeholder="驗證範圍" aria-label="驗證範圍"><button class="btn" id="scopeBtn">更新範圍</button></div>
+    <div class="form"><button class="btn primary" id="xls2">匯出 SoA Excel</button><button class="btn" id="jsonOut">匯出專案檔（JSON）</button><button class="btn" id="jsonIn">匯入專案檔</button></div>`}
+    ${p?`<div style="border-top:1px solid var(--line);margin-top:16px;padding-top:14px;display:grid;gap:8px" id="indBox">
+      <h3 style="margin:0">產業與業務特性</h3>
+      <label style="display:grid;gap:4px;font-size:13px;color:var(--muted)">產業<select id="pInd">${industryOptions(p.industry||"")}</select></label>
+      <div class="fchips">${featureChips(projFeatures(p),"pF")}</div>
+      <div class="form" style="margin-top:4px;align-items:center"><button class="btn primary" id="indSave">套用</button><span class="fcount" id="pCount"></span></div>
+      ${p.sample?`<p class="note" style="margin:0">範例中的調整不會儲存。</p>`:""}
+    </div>`:""}
+    <p class="note" style="margin-top:14px">專案檔可在其他電腦匯入繼續編輯；Excel 包含適用性聲明、條款 4–10 檢核、統計摘要與修改紀錄四個工作表。</p>
+  </div></div>
+  ${p&&!p.sample?`<div class="panel" style="margin-top:18px" id="storePanel"><div class="secthead"><h3>備份與儲存狀態</h3></div>
+    <ul class="kvlist">
+      <li><span>上次匯出專案檔</span><b>${p.lastBackupAt?fmtDate(p.lastBackupAt)+" "+fmtTime(new Date(p.lastBackupAt)):"從未"}</b></li>
+      <li><span>之後的修改筆數</span><b>${p.changesSinceBackup||0}</b></li>
+      <li><span>瀏覽器持久儲存</span><b id="persistVal">檢查中</b></li>
+      <li><span>本工具資料大小</span><b id="usageVal">檢查中</b></li>
+    </ul>
+    <p class="note" style="margin-top:10px">修改超過 ${BACKUP_CHANGES} 筆或距上次備份超過 ${BACKUP_DAYS} 天時，頁面上方會提醒備份。「持久儲存」啟用後，瀏覽器在空間不足時較不會自動清除本工具的資料，但手動清除瀏覽資料仍會刪除，請定期匯出。</p>
+  </div>`:""}
+  ${p?peoplePanel(p):""}
+  ${p?`<div class="panel" style="margin-top:18px"><div class="secthead"><h3>最近修改</h3><span class="note">共 ${(p.log||[]).length} 筆，顯示最近 30 筆。完整紀錄會一併匯出到 Excel。</span></div>
+    ${historyHTML((p.log||[]).slice(-30).reverse(),true)}</div>`:""}`;
+  const v=$("#view-projects");
+  const on=(id,fn)=>{const el=$("#"+id);if(el)el.addEventListener("click",fn)};
+  on("pNew",()=>goNew());
+  if($("#storePanel")){ensurePersist().then(()=>{const el=$("#persistVal");if(el)el.textContent={yes:"已啟用",no:"未啟用（瀏覽器未同意）",unknown:"此瀏覽器不支援"}[persistState]});
+    storageInfo().then(i=>{const el=$("#usageVal");if(el)el.textContent=`約 ${i.local} KB（瀏覽器上限通常約 5 MB）`})}
+  if($("#indBox")){wireIndustry(v,"pInd","pF","pCount");
+    on("indSave",()=>{const p=cur();p.industry=$("#pInd").value;p.features=readFeatures(v,"pF");save();resetBuilt();refreshFocus();toast("已套用：建議重點 "+Object.keys(FM).length+" 項")})}
+  on("pCopy",()=>{copying=true;tab="overview";render();window.scrollTo(0,0)});
+  on("renameBtn",()=>{const n=$("#renameIn").value.trim();if(n){cur().name=n;save();render();toast("已重新命名")}});
+  on("scopeBtn",()=>{cur().scope=$("#scopeIn").value.trim();save();toast("已更新驗證範圍")});
+  on("xls2",exportExcel);
+  on("jsonOut",exportJSON);
+  on("jsonIn",()=>$("#importFile").click());
+}
+function goNew(){tab="home";render();window.scrollTo(0,0);const n=$("#hName");if(n)n.focus()}
+function resetBuilt(){["annex"].forEach(v=>delete $("#view-"+v).dataset.built)}
+$("#importFile").addEventListener("change",e=>{
+  const f=e.target.files[0];e.target.value="";if(!f)return;
+  if(f.size>MAX_IMPORT_BYTES){toast("檔案超過 5 MB，不像是本工具匯出的專案檔");return}
+  const rd=new FileReader();
+  rd.onload=()=>{try{
+      const d=JSON.parse(rd.result);
+      if(isObj(d)&&d.app&&d.app!=="isms-mapper")throw new Error("不是本工具的檔案");
+      const p=sanitizeProject(isObj(d)&&d.project?d.project:d);
+      S.projects[p.id]=p;S.activeId=p.id;save();resetBuilt();tab="overview";render();toast("已匯入："+p.name)}
+    catch(err){toast("檔案格式不正確，請選擇本工具匯出的專案檔")}};
+  rd.readAsText(f);
+});
+
+
+
+/* ================= 變更、復原與修改紀錄 ================= */
+const TEXT_FIELDS=new Set(["reason","owner","evidence"]);
+function fmtVal(f,v){
+  if(f==="app")return (APP.find(a=>a.v===v)||{label:v}).label;
+  if(f==="status")return STATUS[v]?STATUS[v].label:String(v);
+  if(f==="focus")return v?"重點":"非重點";
+  return v===""||v==null?"（空白）":String(v);
+}
+function fmtStamp(t){return new Date(t).toLocaleString("zh-TW",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false})}
+function logChange(code,f,from,to){
+  const p=cur();if(!p||from===to)return;
+  if(!p.sample){p.changesSinceBackup=(p.changesSinceBackup||0)+1;if(p.changesSinceBackup%5===0)renderBackupBanner()}
+  p.log=p.log||[];const last=p.log[p.log.length-1],now=Date.now();
+  // 連續輸入文字時合併成一筆
+  if(last&&last.c===code&&last.f===f&&TEXT_FIELDS.has(f)&&now-last.t<60000){last.to=to;last.t=now;if(last.from===last.to)p.log.pop();return}
+  p.log.push({t:now,c:code,f,from,to});
+  if(p.log.length>3000)p.log.splice(0,p.log.length-3000);
+}
+function setField(code,f,val,opts={}){
+  const isA=!!ANNEX_MAP[code];const v=isA?ctl(code):cls(code);
+  if(f==="status")val=+val;
+  const from=v[f];if(from===val)return false;
+  v[f]=val;logChange(code,f,from,val);saveSoon();
+  if(!opts.silent&&(f==="app"||f==="status"))
+    undoToast(`${code} ${FIELD_LABEL[f]}：${fmtVal(f,from)} → ${fmtVal(f,val)}`,()=>{setField(code,f,from,{silent:true});rerenderAfterUndo(code)});
+  return true;
+}
+let undoEl=null,undoTimer=null;
+function undoToast(msg,fn){
+  if(undoEl)undoEl.remove();clearTimeout(undoTimer);
+  const t=document.createElement("div");t.className="toast utoast";t.setAttribute("role","status");
+  t.innerHTML=`<span></span><button type="button">復原</button>`;t.firstChild.textContent=msg;
+  t.querySelector("button").addEventListener("click",()=>{clearTimeout(undoTimer);t.remove();undoEl=null;fn();toast("已復原")});
+  document.body.appendChild(t);undoEl=t;
+  undoTimer=setTimeout(()=>{t.remove();if(undoEl===t)undoEl=null},6000);
+}
+function rerenderAfterUndo(code){
+  const host=$("#drawerHost");
+  if(host.innerHTML){ if(host.querySelector("#dStatus"))openDrawer(code,!!lastList); else if(lastList)openList(lastList); }
+  if(tab==="annex")renderAnnexRows();else if(tab==="clauses")renderClauses();else if(tab==="overview")renderOverview();
+}
+function historyHTML(entries,withCode){
+  if(!entries.length)return `<p class="note">還沒有修改紀錄。</p>`;
+  return `<ol class="hist">${entries.map(e=>`<li><time>${fmtStamp(e.t)}</time>${withCode?`<button class="hcode mono" data-open="${e.c}">${ANNEX_MAP[e.c]?e.c:"第 "+e.c+" 條"}</button>`:""}<span>${esc(FIELD_LABEL[e.f]||e.f)}：<s>${esc(fmtVal(e.f,e.from))}</s> → <b>${esc(fmtVal(e.f,e.to))}</b></span></li>`).join("")}</ol>`;
+}
+
+
+/* ================= 負責人名單 ================= */
+function people(p){
+  if(!p)return [];
+  if(!Array.isArray(p.people)){ // 舊專案：從已填的負責人整理出名單
+    const set=new Set();Object.values(p.controls||{}).concat(Object.values(p.clauses||{})).forEach(v=>{const o=String(v.owner||"").trim();if(o)set.add(o)});
+    p.people=[...set];
+  }
+  return p.people;
+}
+function refreshOwnerList(){const dl=$("#ownerList");if(dl)dl.innerHTML=people(cur()).map(n=>`<option value="${esc(n)}"></option>`).join("")}
+function addPerson(name,quiet){
+  const p=cur();name=String(name||"").trim();if(!p||!name)return false;
+  const ps=people(p);if(ps.includes(name))return false;
+  ps.push(name);save();refreshOwnerList();
+  if(!quiet)toast(`已將「${name}」加入負責人名單`);
+  return true;
+}
+function assignedTo(name){
+  const out=[];
+  ANNEX.forEach(c=>{const v=ctl(c.code);if(v.owner.trim()===name)out.push(c.code)});
+  CLAUSES.forEach(c=>{const v=cls(c.code);if(String(v.owner).trim()===name)out.push(c.code)});
+  return out;
+}
+function renamePerson(oldN,newN){
+  const p=cur();newN=String(newN||"").trim();if(!p||!newN||newN===oldN)return;
+  assignedTo(oldN).forEach(code=>setField(code,"owner",newN,{silent:true}));
+  const ps=people(p);p.people=ps.includes(newN)?ps.filter(n=>n!==oldN):ps.map(n=>n===oldN?newN:n);
+  save();refreshOwnerList();toast(`已將「${oldN}」改為「${newN}」`);
+}
+function removePerson(name){
+  const p=cur();if(!p)return;
+  const codes=assignedTo(name);codes.forEach(code=>setField(code,"owner","",{silent:true}));
+  p.people=people(p).filter(n=>n!==name);save();refreshOwnerList();
+  toast(codes.length?`已刪除「${name}」，${codes.length} 項改為未指派`:`已刪除「${name}」`);
+}
+// 在任何負責人欄位輸入完成後，新名字自動加入名單
+document.addEventListener("change",e=>{const el=e.target;if(el.matches&&el.matches("[data-owner]"))addPerson(el.value)});
+let personEdit=null,personDel=null;
+function peoplePanel(p){
+  const ps=people(p);
+  const rows=ps.map(n=>{const k=assignedTo(n).length;
+    if(personEdit===n)return `<li><input id="pplRename" value="${esc(n)}" aria-label="新名稱" style="flex:1 1 160px"><button class="btn primary" data-ppl="rsave" data-name="${esc(n)}">儲存</button><button class="btn" data-ppl="cancel">取消</button></li>`;
+    if(personDel===n)return `<li><span class="pn">${esc(n)}</span><span class="saved">${k?`${k} 項會改為未指派`:"沒有指派任何項目"}</span><button class="btn danger" data-ppl="del2" data-name="${esc(n)}">確認刪除</button><button class="btn" data-ppl="cancel">取消</button></li>`;
+    return `<li><span class="pn">${esc(n)}</span><button class="chip" data-ppl="show" data-name="${esc(n)}" ${k?"":"disabled"}>${k} 項</button><span class="pacts"><button class="btn" data-ppl="rename" data-name="${esc(n)}">重新命名</button><button class="btn" data-ppl="del" data-name="${esc(n)}">刪除</button></span></li>`}).join("");
+  return `<div class="panel" style="margin-top:18px" id="pplPanel"><div class="secthead"><h3>負責人名單</h3><span class="note">在附錄 A、條款與詳情中輸入負責人時可直接選用。改名會同步更新所有已指派的項目。</span></div>
+    ${ps.length?`<ul class="ppl">${rows}</ul>`:`<p class="note">名單是空的。新增後，負責人欄位就能直接選擇。</p>`}
+    <form class="form" id="pplAdd"><input id="pplNew" placeholder="例如：資訊部 王經理" aria-label="新增負責人" style="flex:1 1 200px"><button class="btn primary">新增負責人</button></form></div>`;
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-ppl]");if(!b)return;
+  const a=b.dataset.ppl,n=b.dataset.name;
+  if(a==="rename"){personEdit=n;personDel=null}
+  if(a==="del"){personDel=n;personEdit=null}
+  if(a==="cancel"){personEdit=personDel=null}
+  if(a==="rsave"){const v=$("#pplRename").value.trim();if(!v){toast("名稱不能空白");return}renamePerson(n,v);personEdit=null}
+  if(a==="del2"){removePerson(n);personDel=null}
+  if(a==="show"){openList({scope:"owner:"+n});return}
+  renderProjects();
+  if(a==="rename"){const i=$("#pplRename");if(i){i.focus();i.select()}}
+});
+document.addEventListener("submit",e=>{if(e.target.id!=="pplAdd")return;e.preventDefault();
+  const v=$("#pplNew").value.trim();if(!v)return;
+  if(!addPerson(v,true)){toast(`「${v}」已在名單中`);return}
+  toast(`已新增「${v}」`);renderProjects();const i=$("#pplNew");if(i)i.focus()});
+document.addEventListener("keydown",e=>{if(e.target.id==="pplRename"){
+  if(e.key==="Enter"){e.preventDefault();document.querySelector('[data-ppl="rsave"]').click()}
+  if(e.key==="Escape"){e.stopPropagation();personEdit=null;renderProjects()}}});
+
+
+/* 下拉選單：負責人（單選）與納入／排除理由（可複選）。點進欄位顯示完整選項，打字時才過濾 */
+const picker=document.createElement("div");picker.className="opick";picker.hidden=true;picker.setAttribute("role","listbox");document.body.appendChild(picker);
+let pickFor=null,pickIdx=-1,pickItems=[],pickKind="";
+const SEP="；";
+function customReasons(){const p=cur();if(!p)return [];if(!Array.isArray(p.reasons))p.reasons=[];return p.reasons}
+function placePicker(){if(!pickFor)return;const r=pickFor.getBoundingClientRect();
+  const w=Math.max(r.width,pickKind==="reason"?320:220),left=Math.min(r.left,innerWidth-w-8);
+  picker.style.width=Math.min(w,innerWidth-16)+"px";picker.style.left=Math.max(8,left)+"px";
+  const below=innerHeight-r.bottom;picker.style.maxHeight=Math.max(160,Math.min(340,(below>220?below:r.top)-16))+"px";
+  if(below>220||below>r.top){picker.style.top=(r.bottom+4)+"px";picker.style.bottom=""}else{picker.style.top="";picker.style.bottom=(innerHeight-r.top+4)+"px"}}
+function ownerItems(el,q){
+  const ps=people(cur()),cur0=el.value.trim(),items=[];
+  (q?ps.filter(n=>n.toLowerCase().includes(q)):ps).forEach(n=>items.push({v:n,label:n,on:n===cur0}));
+  if(q&&!ps.some(n=>n.toLowerCase()===q))items.push({v:el.value.trim(),label:`＋ 新增「${el.value.trim()}」`,add:true});
+  if(cur0)items.push({v:"",label:"清除負責人",clear:true});
+  return items;
+}
+function reasonItems(el,q){
+  const code=el.dataset.reason,v=ctl(code),chosen=splitReasons(el.value),items=[];
+  const has=x=>chosen.includes(x),match=x=>!q||x.toLowerCase().includes(q);
+  const group=(title,list,extra={})=>{const l=list.filter(match);if(!l.length)return;items.push({head:title});l.forEach(x=>items.push({v:x,label:x,on:has(x),...extra}))};
+  if(v.app!=="N")group("納入理由",REASONS_IN);
+  if(v.app!=="Y"){
+    const sug=NAC[code]?[code==="A.8.30"?"組織沒有委外開發活動":"組織沒有自行開發系統或程式"]:[];
+    if(sug.length)group("依業務特性的建議",sug);
+    group("排除理由",REASONS_OUT);
+  }
+  group("我的常用理由",customReasons(),{custom:true});
+  const known=new Set([...REASONS_IN,...REASONS_OUT,...customReasons()]);
+  const last=chosen[chosen.length-1];
+  if(q&&last&&!known.has(last))items.push({v:last,label:`＋ 存為常用理由「${last}」`,save:true});
+  if(chosen.length)items.push({v:"",label:"清除理由",clear:true});
+  return items;
+}
+function showPicker(el,filterText){
+  pickFor=el;pickKind=el.matches("[data-reason]")?"reason":"owner";
+  let q=(filterText||"").trim();
+  if(pickKind==="reason"){const parts=splitReasons(filterText);q=parts.length?parts[parts.length-1]:"";if(!filterText)q=""}
+  q=q.toLowerCase();
+  pickItems=pickKind==="reason"?reasonItems(el,q):ownerItems(el,q);
+  if(pickIdx<0||pickIdx>=pickItems.length||pickItems[pickIdx].head)pickIdx=pickItems.findIndex(i=>i.on);
+  picker.innerHTML=pickItems.length?pickItems.map((it,i)=>it.head?`<div class="oh">${esc(it.head)}</div>`:
+    `<div class="oi ${it.on?"on":""} ${it.clear?"clr":""} ${it.add||it.save?"add":""} ${i===pickIdx?"hl":""}" role="option" aria-selected="${!!it.on}" data-i="${i}">
+      <span class="ck">${pickKind==="reason"&&!it.clear&&!it.save?(it.on?"☑":"☐"):(it.on?"✓":"")}</span><span class="ol">${esc(it.label)}</span>${it.custom?`<button class="odel" data-odel="${esc(it.v)}" aria-label="從常用理由移除" title="從常用理由移除">×</button>`:""}</div>`).join("")
+    :`<div class="oempty">${pickKind==="owner"?"名單是空的，直接輸入名字即可新增":"沒有符合的理由，直接輸入即可"}</div>`;
+  if(pickKind==="reason")picker.insertAdjacentHTML("afterbegin",`<div class="ohint">可複選，選取的理由會以「；」分隔</div>`);
+  picker.hidden=false;placePicker();
+  const hl=picker.querySelector(".hl");if(hl)hl.scrollIntoView({block:"nearest"});
+}
+function hidePicker(){picker.hidden=true;pickFor=null;pickIdx=-1}
+function commitValue(el,val){el.value=val;el.dispatchEvent(new Event("input",{bubbles:true}));el.dispatchEvent(new Event("change",{bubbles:true}))}
+function pickAt(i){
+  const it=pickItems[i],el=pickFor;if(!it||it.head||!el)return;
+  if(pickKind==="owner"){commitValue(el,it.v);hidePicker();return}
+  if(it.clear){commitValue(el,"");showPicker(el,"");return}
+  let chosen=splitReasons(el.value);
+  const known=new Set([...REASONS_IN,...REASONS_OUT,...customReasons()]);
+  if(it.save){const list=customReasons();if(!list.includes(it.v)){list.push(it.v);save()}toast(`已存為常用理由`);commitValue(el,chosen.join(SEP));pickIdx=i;showPicker(el,"");return}
+  // 打字到一半的文字若不是已知理由，選取選項時以選項取代
+  const last=chosen[chosen.length-1];if(last&&!known.has(last)&&last!==it.v&&it.v.toLowerCase().includes(last.toLowerCase()))chosen.pop();
+  chosen=chosen.includes(it.v)?chosen.filter(x=>x!==it.v):[...chosen,it.v];
+  commitValue(el,chosen.join(SEP));pickIdx=i;showPicker(el,"");
+}
+picker.addEventListener("mousedown",e=>e.preventDefault());
+picker.addEventListener("click",e=>{
+  const d=e.target.closest("[data-odel]");
+  if(d){e.stopPropagation();const p=cur();p.reasons=customReasons().filter(x=>x!==d.dataset.odel);save();toast("已從常用理由移除");if(pickFor)showPicker(pickFor,"");return}
+  const o=e.target.closest("[data-i]");if(o)pickAt(+o.dataset.i)});
+const PICKABLE="[data-owner],[data-reason]";
+document.addEventListener("focusin",e=>{const el=e.target;if(el.matches&&el.matches(PICKABLE)&&!el.disabled){pickIdx=-1;showPicker(el,"")}});
+document.addEventListener("click",e=>{const el=e.target;if(el.matches&&el.matches(PICKABLE)&&!el.disabled&&picker.hidden)showPicker(el,"")});
+document.addEventListener("input",e=>{if(e.target===pickFor&&e.isTrusted){pickIdx=-1;showPicker(pickFor,pickFor.value)}});
+document.addEventListener("focusout",e=>{if(e.target===pickFor)setTimeout(()=>{if(document.activeElement!==pickFor)hidePicker()},120)});
+document.addEventListener("keydown",e=>{
+  if(!pickFor||e.target!==pickFor||picker.hidden){if(pickFor&&e.target===pickFor&&e.key==="ArrowDown"){showPicker(pickFor,"");e.preventDefault()}return}
+  const sel=pickItems.map((it,i)=>it.head?-1:i).filter(i=>i>=0);
+  if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();if(!sel.length)return;
+    let k=sel.indexOf(pickIdx);k=k<0?(e.key==="ArrowDown"?0:sel.length-1):(k+(e.key==="ArrowDown"?1:-1)+sel.length)%sel.length;pickIdx=sel[k];
+    picker.querySelectorAll(".oi").forEach(o=>o.classList.toggle("hl",+o.dataset.i===pickIdx));
+    const hl=picker.querySelector(".hl");if(hl)hl.scrollIntoView({block:"nearest"})}
+  else if(e.key==="Enter"&&pickIdx>=0){e.preventDefault();pickAt(pickIdx)}
+  else if(e.key==="Escape"){e.preventDefault();e.stopPropagation();hidePicker()}
+},true);
+window.addEventListener("scroll",()=>{if(pickFor)placePicker()},true);
+window.addEventListener("resize",()=>{if(pickFor)placePicker()});
+
+/* ================= 圖表點擊清單 ================= */
+let lastList=null;
+const SEG_LABEL=Object.fromEntries(SEGS.map(s=>[s.k,s.label]));
+const SEG_FILTER={s0:"0",s1:"1",s2:"2",s3:"3",undec:"undec",na:"N"};
+function listItems(scope,seg){
+  let base=ANNEX, title="全部控制措施", f={theme:"all",status:SEG_FILTER[seg]||"all",q:""};
+  if(scope.startsWith("theme:")){const t=THEMES.find(x=>x.id===scope.slice(6));base=ANNEX.filter(c=>c.theme===t.id);title=`A.${t.id} ${t.name}`;f.theme=t.id}
+  else if(scope.startsWith("owner:")){const o=scope.slice(6);base=ANNEX.filter(c=>{const v=ctl(c.code);return v.app==="Y"&&(v.owner.trim()||"未指派")===o});title=o;f=o==="未指派"?null:{...f,q:o}}
+  else if(scope==="focus"){base=ANNEX.filter(c=>FM[c.code]);title="產業建議重點";f=null}
+  const items=seg?base.filter(c=>bucket(ctl(c.code))===seg):base;
+  return {items,title:title+(seg?`・${SEG_LABEL[seg]}`:""),filter:f};
+}
+function openList(spec){
+  lastList=spec;
+  let items,title,filter,seg=spec.seg,isClause=false;
+  if(spec.phase){const names={P:"規劃 Plan",D:"執行 Do",C:"檢查 Check",A:"改善 Act"};
+    items=CLAUSES.filter(c=>c.phase===spec.phase);title="PDCA・"+names[spec.phase];filter=null;isClause=true}
+  else ({items,title,filter}=listItems(spec.scope,seg));
+  const row=c=>{const v=isClause?cls(c.code):ctl(c.code);const b=isClause?"s"+v.status:bucket(v);
+    const lab=isClause?STATUS[v.status].label:(SEG_LABEL[b]);
+    return `<button class="lrow" data-lopen="${c.code}"><span class="dot ${b==="na"?"na":b==="undec"?"undec":""}" style="${b.startsWith("s")?`background:var(--${b})`:""}"></span>
+      <span class="mono">${isClause?"第 "+c.code+" 條":c.code}</span><span class="ln ${FM[c.code]?"fname":""}">${esc(c.name)}</span>
+      <span class="lmeta">${esc(v.owner||"")}${v.owner?"・":""}${lab}</span></button>`};
+  const host=$("#drawerHost");
+  host.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+    <button class="btn x" data-close>關閉</button>
+    <div class="code">${isClause?"管理系統條款":"附錄 A"}・${items.length} 項</div>
+    <h2>${esc(title)}</h2>
+    ${isClause?"":`<p class="note">點任一項可查看詳情並更新狀態。</p>`}
+    ${items.length?`<div class="llist">${items.map(row).join("")}</div>`:`<div class="empty">沒有符合的項目。</div>`}
+    <div class="form" style="margin-top:16px">
+      ${filter?`<button class="btn primary" id="lGo">在附錄 A 中篩選這些項目</button>`:""}
+      ${isClause?`<button class="btn primary" id="lGoCl">前往條款 4–10</button>`:""}
+    </div></aside>`;
+  host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>{lastList=null;closeDrawer()}));
+  host.querySelectorAll("[data-lopen]").forEach(b=>b.addEventListener("click",()=>openDrawer(b.dataset.lopen,true)));
+  const go=$("#lGo");if(go)go.addEventListener("click",()=>{Object.assign(filt,filter);lastList=null;$("#drawerHost").innerHTML="";delete $("#view-annex").dataset.built;tab="annex";render();window.scrollTo(0,0)});
+  const gc=$("#lGoCl");if(gc)gc.addEventListener("click",()=>{lastList=null;$("#drawerHost").innerHTML="";tab="clauses";render();window.scrollTo(0,0)});
+  host.querySelector(".x").focus();
+}
+function chartHit(e){
+  const el=e.target.closest&&e.target.closest("[data-lseg],[data-lphase]");if(!el||!el.closest("#view-overview"))return false;
+  if(el.dataset.lphase)openList({phase:el.dataset.lphase});else openList({scope:el.dataset.lscope||"all",seg:el.dataset.lseg});
+  return true;
+}
+document.addEventListener("click",e=>{chartHit(e)});
+document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&chartHit(e))e.preventDefault()});
+
+/* ================= DRAWER ================= */
+function openDrawer(code,fromList){
+  if(!fromList)lastList=null;
+  const isA=!!ANNEX_MAP[code]; const c=isA?ANNEX_MAP[code]:CLAUSE_MAP[code]; if(!c)return;
+  const v=isA?ctl(code):cls(code);
+  const rel=CASES.filter(x=>x.r.includes(code));
+  const host=$("#drawerHost");
+  host.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${esc(c.name)}">
+    <button class="btn x" data-close>關閉</button>
+    ${lastList?`<button class="btn" id="dBack" style="margin-bottom:10px">← 返回清單</button>`:""}
+    <div class="code">${isA?code:"第 "+code+" 條"}${isA&&c.isNew?' <span class="tag">2022 新增</span>':""}</div>
+    <h2>${esc(c.name)}</h2>
+    <p class="lede" style="margin-bottom:6px">${esc(c.desc)}</p>
+    <p class="note"><b>常見證據：</b>${esc(c.ev)}</p>
+    ${isA?`<div style="margin:10px 0"><button class="btn" data-ftoggle="${code}" style="${FM[code]?"border-color:var(--focus);color:var(--focus)":""}">${FM[code]?"★ 取消重點標示":"☆ 標為重點"}</button></div>`:""}
+    ${isA&&!FM[code]&&(cur()&&(cur().focusOff||[]).includes(code))?`<p class="note">這一項原本是系統建議的重點，已被你取消。</p>`:""}
+    ${isA&&FM[code]?`<div class="why"><b>建議重點</b>：依目前專案的設定<ul>${FM[code].map(f=>`<li>${esc(FEATURE_MAP[f].label)}：${esc(FEATURE_MAP[f].why)}</li>`).join("")}</ul></div>`:""}
+    ${isA&&NAC[code]?`<div class="why" style="background:var(--surface2)"><b style="color:var(--muted)">可能不適用</b>：${esc(NAC[code])}。是否排除仍須依風險評鑑決定。</div>`:""}
+    <dl>
+      ${isA?`<div><dt>適用性</dt><dd><select id="dApp">${APP.map(a=>`<option value="${a.v}" ${a.v===v.app?"selected":""}>${a.label}</option>`).join("")}</select></dd></div>
+      <div><dt>納入／排除理由</dt><dd><input id="dReason" data-reason="${code}" autocomplete="off" placeholder="選擇或輸入理由，可複選" value="${esc(v.reason)}" class="${missingReason(v)?"warn":""}" aria-describedby="dReasonHint"><small id="dReasonHint" class="warnhint" ${missingReason(v)?"":"hidden"}>不適用的項目需要填寫排除理由，SoA 稽核時會檢查。</small></dd></div>`:""}
+      <div><dt>執行狀態</dt><dd><select id="dStatus">${STATUS.map(s=>`<option value="${s.v}" ${s.v===v.status?"selected":""}>${s.label}</option>`).join("")}</select></dd></div>
+      <div><dt>負責人</dt><dd><input id="dOwner" data-owner autocomplete="off" value="${esc(v.owner)}" placeholder="從名單選擇或輸入新名字"></dd></div>
+      <div><dt>證據位置</dt><dd><input id="dEv" value="${esc(v.evidence)}" placeholder="例如：\\\\fileserver\\ISMS\\${esc(code)}"></dd></div>
+    </dl>
+    <h3>修改紀錄</h3>
+    <div id="dHist">${historyHTML(((cur()&&cur().log)||[]).filter(e=>e.c===code).slice(-10).reverse(),false)}</div>
+    <h3 style="margin-top:18px">相關案例（${rel.length}）</h3>
+    <div class="rel">${rel.map(x=>`<button data-case="${esc(x.t)}">${esc(x.t)}</button>`).join("")||`<p class="note">目前沒有內建案例對應到這一項。</p>`}</div>
+  </aside>`;
+  const FIELDS={dApp:"app",dReason:"reason",dStatus:"status",dOwner:"owner",dEv:"evidence"};
+  const refreshHist=()=>{const h=$("#dHist");if(h)h.innerHTML=historyHTML(((cur()&&cur().log)||[]).filter(e=>e.c===code).slice(-10).reverse(),false)};
+  const syncWarn=()=>{const r=$("#dReason");if(!r)return;const miss=missingReason(v);r.classList.toggle("warn",miss);$("#dReasonHint").hidden=!miss};
+  Object.entries(FIELDS).forEach(([id,f])=>{const el=$("#"+id);if(!el)return;
+    const fn=()=>{if(setField(code,f,el.value)){syncWarn();refreshHist()}};
+    el.addEventListener(el.tagName==="SELECT"?"change":"input",fn)});
+  host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>{lastList=null;closeDrawer()}));
+  const back=$("#dBack");if(back)back.addEventListener("click",()=>{renderOverviewQuiet();openList(lastList)});
+  host.querySelectorAll("[data-case]").forEach(b=>b.addEventListener("click",()=>{closeDrawer();searchQ=b.dataset.case;tab="search";
+    const si=$("#sInput"); if(si) si.value=searchQ; render(); if($("#sInput")) $("#sInput").value=searchQ;}));
+  host.querySelector(".x").focus();
+}
+function renderOverviewQuiet(){if(tab==="overview")renderOverview()}
+function closeDrawer(){$("#drawerHost").innerHTML="";if(tab!=="search")render();else renderSearchResult()}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#drawerHost").innerHTML)closeDrawer()});
+document.addEventListener("click",e=>{const o=e.target.closest("[data-open]");if(o){e.preventDefault();openDrawer(o.dataset.open)}});
+
+/* ================= INIT ================= */
+$("#tabs").addEventListener("click",e=>{const b=e.target.closest("[data-tab]");if(!b)return;
+  if(!cur()&&NEEDS_PROJECT.has(b.dataset.tab)){toast("請先建立專案，或從首頁開啟一個範例");return}
+  tab=b.dataset.tab;render();window.scrollTo(0,0)});
+$("#projSel").addEventListener("change",e=>{if(e.target.value)openProject(e.target.value,tab==="home"?"overview":tab)});
+$("#newBtn").addEventListener("click",goNew);
+tab="home";
+try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){storeOK=false}
+render();
