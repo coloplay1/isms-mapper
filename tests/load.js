@@ -13,7 +13,7 @@ const NAMES = ['THEMES', 'ANNEX', 'ANNEX_MAP', 'CLAUSES', 'CLAUSE_MAP', 'CASES',
   'nextRiskId', 'risksByControl', 'riskChecks', 'sanitizeRisk', 'POLICIES', 'CRITERIA_PRESETS', 'presetCriteria', 'sanitizeCriteria',
   'riskCriteria', 'policyOf', 'criteriaText', 'STATUS_ALIAS', 'REASON_CODES', 'sanitizeDoc', 'docLine', 'parseDocLine', 'reasonCodes',
   'parseControlCodes', 'buildWorkbook', 'importWorkbook', 'parseCriteria', 'normHead', 'mapColumns', 'IMPORT_COLS',
-  'DOCS', 'DOC_LAYERS', 'DOC_REQUIREMENTS', 'DOC_MAP'];
+  'DOCS', 'DOC_LAYERS', 'DOC_REQUIREMENTS', 'DOC_MAP', 'sanitizeCase', 'nextCaseId', 'parseRefCodes', 'splitKeywords'];
 
 function load() {
   const src = FILES.map(f => `// ---- ${f}\n` + fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');

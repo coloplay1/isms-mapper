@@ -396,3 +396,10 @@ a.dl.ghost:hover{background:var(--surface2);color:var(--ink)}
 /* ===== 深淺色切換按鈕 ===== */
 .themebtn{display:inline-flex;align-items:center;gap:4px}
 @media (max-width:560px){.themebtn .tlabel{display:none}.themebtn{padding:6px 10px}}
+
+/* ===== 自訂案例 ===== */
+.cbar{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin:-6px 0 18px}
+.chip.custom{border-color:var(--focus);color:var(--focus)}
+.ctag2{font-size:11px;color:var(--focus);border:1px solid var(--focus);border-radius:3px;padding:0 4px;margin-right:6px;vertical-align:2px;font-weight:400}
+.case.custom{border-color:var(--focus)}
+.caseact{display:flex;gap:8px;flex-wrap:wrap}

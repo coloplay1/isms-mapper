@@ -541,35 +541,47 @@ function renderOverview(){
   document.addEventListener("focusout",()=>tip.hidden=true);
 })();
 
-const HINTS=["員工離職","勒索軟體","廠商遠端維護","筆電遺失","備份","雲端","個資外洩","USB","內稽","A.8.13"];
+const HINTS=["員工離職","勒索軟體","駭客攻擊","廠商遠端維護","筆電遺失","備份","AI 工具","個資外洩","寄錯人","A.8.13"];
 function renderSearch(){
   const v=$("#view-search");
   if(!v.dataset.built){
     v.innerHTML=`<h2>案例搜尋</h2><p class="lede">輸入日常工作或發生的狀況，例如「同事離職」「中毒」「廠商要連進來」，系統會比對 ${CASES.length} 個內建案例並列出相關條款。也可以直接輸入條款編號。</p>
       <form class="searchbox" id="sForm"><input id="sInput" type="search" placeholder="描述一個情境或關鍵字…" autocomplete="off"><button class="btn primary">搜尋</button></form>
       <div class="hints">試試：${HINTS.map(h=>`<button class="chip" data-hint="${esc(h)}">${esc(h)}</button>`).join("")}</div>
+      <div id="sCustom"></div>
       <div id="sResult"></div>`;
     v.dataset.built="1";
     $("#sForm").addEventListener("submit",e=>{e.preventDefault();searchQ=$("#sInput").value;renderSearchResult()});
     $("#sInput").addEventListener("input",e=>{searchQ=e.target.value;renderSearchResult()});
-    v.addEventListener("click",e=>{const h=e.target.closest("[data-hint]");if(h){$("#sInput").value=h.dataset.hint;searchQ=h.dataset.hint;renderSearchResult()}});
+    v.addEventListener("click",e=>{const h=e.target.closest("[data-hint]");if(h){$("#sInput").value=h.dataset.hint;searchQ=h.dataset.hint;renderSearchResult()}
+      const n=e.target.closest("[data-newcase]");if(n){openCaseDrawer(null)}
+      const ed=e.target.closest("[data-editcase]");if(ed){openCaseDrawer(ed.dataset.editcase)}});
     if(!searchQ){searchQ="員工離職";$("#sInput").value=searchQ}
   }
   renderSearchResult();
 }
+function customCases(){const p=cur();if(!p)return [];if(!Array.isArray(p.cases))p.cases=[];return p.cases}
+function renderCustomBar(){
+  const el=$("#sCustom");if(!el)return;const p=cur(),list=customCases();
+  el.innerHTML=`<div class="cbar">${p?`<button class="btn" data-newcase>＋ 新增自訂案例</button>
+    ${list.length?`<span class="saved">本專案的自訂案例（${list.length}）：</span>${list.slice(0,12).map(c=>`<button class="chip custom" data-hint="${esc(c.t)}">${esc(c.t)}</button>`).join("")}${list.length>12?`<span class="saved">…</span>`:""}`
+      :`<span class="saved">把組織自己的情境加入案例庫，搜尋時會一起比對，並隨專案檔匯出。</span>`}`
+    :`<span class="saved">開啟或建立專案後，可以新增組織自己的情境案例。</span>`}</div>`;
+}
 function renderSearchResult(){
+  renderCustomBar();
   const box=$("#sResult"); const q=searchQ.trim();
   if(!q){box.innerHTML=`<div class="empty">輸入關鍵字開始搜尋。</div>`;return}
-  const r=search(q);
-  if(!r.cases.length&&!r.direct.length){box.innerHTML=`<div class="empty">找不到「${esc(q)}」相關的案例。換個說法試試，例如用動作描述「帳號沒關」或設備名稱「防火牆」。</div>`;return}
+  const r=search(q,customCases());
+  if(!r.cases.length&&!r.direct.length){box.innerHTML=`<div class="empty">找不到「${esc(q)}」相關的案例。換個說法試試，例如用動作描述「帳號沒關」或設備名稱「防火牆」。${cur()?`<div style="margin-top:10px"><button class="btn" data-newcase>把這個情境新增為自訂案例</button></div>`:""}</div>`;return}
   box.innerHTML=`<div class="grid2">
     <div><h3>相關案例（${r.cases.length}）</h3><div class="cases">${r.cases.map(x=>`
-      <article class="case"><h4>${esc(x.c.t)}</h4><p>${esc(x.c.s)}</p>
+      <article class="case ${x.c.custom?"custom":""}"><h4>${x.c.custom?`<span class="ctag2">自訂</span>`:""}${esc(x.c.t)}</h4>${x.c.s?`<p>${esc(x.c.s)}</p>`:""}
       <div class="refs">${x.c.r.map(refChip).join("")}</div>
-      <div class="rec"><b>為什麼</b>${esc(x.c.w)}</div>
-      <div class="rec"><b>應留紀錄</b>${esc(x.c.e)}</div>
+      ${x.c.w?`<div class="rec"><b>為什麼</b>${esc(x.c.w)}</div>`:""}
+      ${x.c.e?`<div class="rec"><b>應留紀錄</b>${esc(x.c.e)}</div>`:""}
       ${x.hit.length?`<div class="rec saved">符合關鍵字：${x.hit.map(esc).join("、")}</div>`:""}
-      ${cur()?`<div class="caseact"><button class="btn" data-newrisk="${CASES.indexOf(x.c)}">＋ 加入風險登錄表</button></div>`:""}
+      ${cur()?`<div class="caseact"><button class="btn" data-newrisk="${x.c.custom?x.c.id:CASES.indexOf(x.c)}">＋ 加入風險登錄表</button>${x.c.custom?`<button class="btn" data-editcase="${x.c.id}">編輯</button>`:""}</div>`:""}
       </article>`).join("")||`<div class="empty">沒有相符案例，可參考右側直接相符的條款。</div>`}</div></div>
     <div style="display:grid;gap:18px;align-content:start">
       ${r.refs.length?`<div class="panel"><h3>建議對應條款</h3><ul class="rank">${r.refs.map(x=>`<li>${refChip(x.code)}<span class="w">${x.pct}%</span></li>`).join("")}</ul><p class="note" style="margin:12px 0 0">依相符案例的關聯程度排序，圓點顏色為本專案目前狀態。</p></div>`:""}
@@ -985,7 +997,7 @@ function openDrawer(code,fromList){
   if(!fromList)lastList=null;
   const isA=!!ANNEX_MAP[code]; const c=isA?ANNEX_MAP[code]:CLAUSE_MAP[code]; if(!c)return;
   const v=isA?ctl(code):cls(code);
-  const rel=CASES.filter(x=>x.r.includes(code));
+  const rel=[...CASES,...customCases()].filter(x=>x.r.includes(code));
   const host=$("#drawerHost");
   host.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${esc(c.name)}">
     <button class="btn x" data-close>關閉</button>
@@ -1011,7 +1023,7 @@ function openDrawer(code,fromList){
     <h3>修改紀錄</h3>
     <div id="dHist">${historyHTML(((cur()&&cur().log)||[]).filter(e=>e.c===code).slice(-10).reverse(),false)}</div>
     <h3 style="margin-top:18px">相關案例（${rel.length}）</h3>
-    <div class="rel">${rel.map(x=>`<button data-case="${esc(x.t)}">${esc(x.t)}</button>`).join("")||`<p class="note">目前沒有內建案例對應到這一項。</p>`}</div>
+    <div class="rel">${rel.map(x=>`<button data-case="${esc(x.t)}">${x.custom?`<span class="ctag2">自訂</span>`:""}${esc(x.t)}</button>`).join("")||`<p class="note">目前沒有內建案例對應到這一項。</p>`}</div>
   </aside>`;
   const FIELDS={dApp:"app",dReason:"reason",dImpl:"impl",dStatus:"status",dOwner:"owner",dEv:"evidence"};
   const refreshHist=()=>{const h=$("#dHist");if(h)h.innerHTML=historyHTML(((cur()&&cur().log)||[]).filter(e=>e.c===code).slice(-10).reverse(),false)};
@@ -1064,7 +1076,7 @@ function deleteRisk(id){
   undoToast(`已刪除 ${r.id}${r.title?" "+r.title:""}`,()=>{list.splice(i,0,r);touchRisk();render()});
 }
 function riskFromCase(idx){
-  const c=CASES[idx];if(!c||!cur())return;
+  const c=/^C-/.test(idx)?customCases().find(x=>x.id===idx):CASES[+idx];if(!c||!cur())return;
   const r=newRisk({title:c.t,threat:c.s,controls:c.r.filter(x=>ANNEX_MAP[x])});
   tab="risks";render();window.scrollTo(0,0);openRiskDrawer(r.id);
   toast(`已建立 ${r.id}，請評估可能性與衝擊`);
@@ -1154,7 +1166,7 @@ function renderRisks(){
 document.addEventListener("click",e=>{
   const a=e.target.closest("[data-apply]");if(a){e.preventDefault();applyRiskToSoA(a.dataset.apply);return}
   const r=e.target.closest("[data-risk]");if(r){e.preventDefault();openRiskDrawer(r.dataset.risk);return}
-  const n=e.target.closest("[data-newrisk]");if(n){e.preventDefault();riskFromCase(+n.dataset.newrisk)}
+  const n=e.target.closest("[data-newrisk]");if(n){e.preventDefault();riskFromCase(n.dataset.newrisk)}
 });
 function levelSelect(id,val,labels){
   return `<select id="${id}">${[0,1,2,3,4,5].map(n=>`<option value="${n}" ${n===+val?"selected":""}>${n?n+"　"+labels[n]:"未評估"}</option>`).join("")}</select>`;
@@ -1320,6 +1332,45 @@ function applyTheme(t){
   $("#themeBtn").addEventListener("click",()=>{const n=currentTheme()==="dark"?"light":"dark";applyTheme(n);try{localStorage.setItem(THEME_KEY,n)}catch(e){}});
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{if(!document.documentElement.dataset.theme)applyTheme(null)});
 })();
+/* 自訂案例的新增與編輯 */
+function openCaseDrawer(id){
+  const p=cur();if(!p)return;
+  const old=id?customCases().find(c=>c.id===id):null;
+  const draft=old?{...old,k:old.k.join("、"),r:old.r.join("、")}:{t:searchQ.trim()&&!search(searchQ,customCases()).cases.length?searchQ.trim():"",s:"",k:"",r:"",w:"",e:""};
+  const host=$("#drawerHost");
+  host.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="自訂案例">
+    <button class="btn x" data-close>關閉</button>
+    <div class="code">${old?old.id+"　":""}自訂案例</div><h2>${old?"編輯自訂案例":"新增自訂案例"}</h2>
+    <p class="note">只存在這個專案，匯出專案檔時會一起帶走。</p>
+    <dl>
+      <div><dt>情境標題（必填）</dt><dd><input id="cT" maxlength="80" value="${esc(draft.t)}" placeholder="例如：產線電腦插入來路不明的 USB"></dd></div>
+      <div><dt>情境描述</dt><dd><textarea id="cS" rows="2" maxlength="300" placeholder="發生了什麼事">${esc(draft.s)}</textarea></dd></div>
+      <div><dt>搜尋關鍵字</dt><dd><input id="cK" value="${esc(draft.k)}" placeholder="以「、」分隔，例如：產線、USB、病毒"></dd></div>
+      <div><dt>對應條款與控制措施（必填）</dt><dd><input id="cR" value="${esc(draft.r)}" placeholder="例如：A.8.7、A.7.10、6.1.2"><div id="cRchk" class="saved" style="margin-top:4px"></div><div id="cSugg"></div></dd></div>
+      <div><dt>為什麼對應這些條款</dt><dd><textarea id="cW" rows="2" maxlength="300">${esc(draft.w)}</textarea></dd></div>
+      <div><dt>應留紀錄</dt><dd><input id="cE" maxlength="300" value="${esc(draft.e)}" placeholder="例如：媒體使用申請、端點管控報表"></dd></div>
+    </dl>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="cSave">${old?"儲存":"新增"}</button><button class="btn" data-close>取消</button>${old?`<button class="btn danger" id="cDel" style="margin-left:auto">刪除</button>`:""}</div>
+  </aside>`;
+  const chk=()=>{const codes=parseRefCodes($("#cR").value);
+    $("#cRchk").innerHTML=codes.length?"已辨識："+codes.map(c=>`<span class="mono">${c}</span> ${esc((ANNEX_MAP[c]||CLAUSE_MAP[c]).name)}`).join("、"):"尚未辨識到有效的編號";
+    const sug=search([$("#cT").value,$("#cS").value,$("#cK").value].join(" ")).refs.map(x=>x.code).filter(c=>!codes.includes(c)).slice(0,6);
+    $("#cSugg").innerHTML=sug.length?`<div class="saved" style="margin:6px 0 4px">依描述建議：</div><div class="hints" style="margin:0">${sug.map(c=>`<button class="chip" data-addref="${c}">＋ ${c} ${esc((ANNEX_MAP[c]||CLAUSE_MAP[c]).name)}</button>`).join("")}</div>`:"";
+    $("#cSave").disabled=!$("#cT").value.trim()||!codes.length};
+  ["cT","cS","cK","cR"].forEach(i=>$("#"+i).addEventListener("input",chk));
+  $("#cSugg").addEventListener("click",e=>{const b=e.target.closest("[data-addref]");if(!b)return;const v=$("#cR").value.trim();$("#cR").value=(v?v+"、":"")+b.dataset.addref;chk()});
+  host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>{host.innerHTML="";renderSearchResult()}));
+  $("#cSave").addEventListener("click",()=>{
+    const c=sanitizeCase({id:old?old.id:nextCaseId(p),t:$("#cT").value,s:$("#cS").value,k:splitKeywords($("#cK").value),r:parseRefCodes($("#cR").value),w:$("#cW").value,e:$("#cE").value});
+    if(!c||!c.r.length)return;
+    if(!c.k.length)c.k=[c.t];
+    const list=customCases(),i=list.findIndex(x=>x.id===c.id);if(i>=0)list[i]=c;else list.push(c);
+    touchRisk();host.innerHTML="";searchQ=c.k[0];const si=$("#sInput");if(si)si.value=searchQ;renderSearchResult();toast(old?"已更新自訂案例":"已新增自訂案例："+c.t)});
+  const del=$("#cDel");if(del)del.addEventListener("click",()=>{const list=customCases(),i=list.findIndex(x=>x.id===old.id);if(i<0)return;
+    list.splice(i,1);touchRisk();host.innerHTML="";renderSearchResult();
+    undoToast("已刪除自訂案例："+old.t,()=>{list.splice(i,0,old);touchRisk();renderSearchResult()})});
+  chk();$("#cT").focus();
+}
 /* ================= INIT ================= */
 $("#tabs").addEventListener("click",e=>{const b=e.target.closest("[data-tab]");if(!b)return;
   if(!cur()&&NEEDS_PROJECT.has(b.dataset.tab)){toast("請先建立專案，或從首頁開啟一個範例");return}

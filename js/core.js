@@ -45,9 +45,11 @@ function expand(q){
   SYN.forEach(g=>{if(g.some(w=>nq.includes(norm(w)))) g.forEach(w=>terms.add(norm(w)))});
   return {nq,terms:[...terms]};
 }
-function search(q){
+/* extra：專案的自訂案例，與內建案例一起計分 */
+function search(q,extra){
   const {nq,terms}=expand(q); if(!nq) return {cases:[],refs:[],direct:[]};
-  const scored=CASES.map(c=>{
+  const pool=Array.isArray(extra)&&extra.length?[...CASES,...extra]:CASES;
+  const scored=pool.map(c=>{
     let sc=0; const hit=new Set();
     c.k.forEach(k=>{const nk=norm(k);
       if(nq.includes(nk)){sc+=4;hit.add(k)}
@@ -92,6 +94,8 @@ function sanitizeProject(raw){
     .map(e=>({t:Number(e.t)||0,c:e.c,f:e.f,from:typeof e.from==="number"||typeof e.from==="boolean"?e.from:str(e.from,500),to:typeof e.to==="number"||typeof e.to==="boolean"?e.to:str(e.to,500)})):[];
   const seen=new Set();
   p.risks=Array.isArray(raw.risks)?raw.risks.slice(0,500).map(sanitizeRisk).filter(r=>r&&!seen.has(r.id)&&seen.add(r.id)):[];
+  const seenCase=new Set();
+  p.cases=Array.isArray(raw.cases)?raw.cases.slice(0,300).map(sanitizeCase).filter(c=>c&&!seenCase.has(c.id)&&seenCase.add(c.id)):[];
   p.criteria=sanitizeCriteria(raw.criteria)||legacyCriteria(raw);
   p.doc=sanitizeDoc(raw.doc);
   p.lastBackupAt=Date.now();p.changesSinceBackup=0;
@@ -207,4 +211,30 @@ function sanitizeRisk(raw){
   r.due=/^\d{4}-\d{2}(-\d{2})?$/.test(raw.due)?raw.due:"";
   r.accepted=raw.accepted===true;
   return r;
+}
+
+
+/* ================= 自訂案例 =================
+   使用者為自己組織新增的情境，存在專案中，與內建案例一起搜尋。 */
+/* 「A.5.18、6.1.2、A.5.16／18」都能拆成編號；只保留存在的附錄 A 與條款 */
+function parseRefCodes(text){
+  const out=[];
+  String(text||"").split(/[、，,；;\s\n]+/).forEach(part=>{
+    const a=part.match(/^A\.(\d)\.(\d+)((?:[／\/]\d+)*)/i);
+    if(a){out.push(`A.${a[1]}.${a[2]}`);a[3].split(/[／\/]/).slice(1).forEach(n=>out.push(`A.${a[1]}.${n}`));return}
+    const c=part.match(/^(?:第)?(\d{1,2}(?:\.\d){1,2})(?:條)?$/);if(c)out.push(c[1]);
+  });
+  return [...new Set(out)].filter(c=>ANNEX_MAP[c]||CLAUSE_MAP[c]);
+}
+function splitKeywords(text){return [...new Set(String(text||"").split(/[、，,；;\n]+/).map(x=>x.trim()).filter(Boolean))]}
+function sanitizeCase(raw){
+  if(!isObj(raw)||!/^C-\d{1,4}$/.test(raw.id))return null;
+  const t=str(raw.t,80).trim();if(!t)return null;
+  const k=(Array.isArray(raw.k)?raw.k:splitKeywords(raw.k)).map(x=>str(x,20).trim()).filter(Boolean).slice(0,15);
+  const r=(Array.isArray(raw.r)?raw.r:parseRefCodes(raw.r)).filter(c=>ANNEX_MAP[c]||CLAUSE_MAP[c]).slice(0,12);
+  return {id:raw.id,t,s:str(raw.s,300),k:[...new Set(k)],r:[...new Set(r)],w:str(raw.w,300),e:str(raw.e,300),custom:true};
+}
+function nextCaseId(p){
+  const n=Math.max(0,...((p&&p.cases)||[]).map(c=>Number(String(c.id).replace(/^C-/,""))||0));
+  return "C-"+String(n+1).padStart(3,"0");
 }
