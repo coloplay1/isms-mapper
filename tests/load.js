@@ -8,7 +8,9 @@ const FILES = ['js/data/controls.js', 'js/data/cases.js', 'js/data/rules.js', 'j
 const NAMES = ['THEMES', 'ANNEX', 'ANNEX_MAP', 'CLAUSES', 'CLAUSE_MAP', 'CASES', 'SYN', 'FEATURES', 'FEATURE_MAP',
   'INDUSTRIES', 'INDUSTRY_MAP', 'LAWS', 'DEV_ONLY', 'STATUS', 'APP', 'FIELD_LABEL', 'BACKUP_DAYS', 'BACKUP_CHANGES',
   'MAX_IMPORT_BYTES', 'search', 'expand', 'norm', 'baseFocus', 'focusMap', 'naCandidates', 'lawsFor',
-  'sanitizeProject', 'backupDue', 'missingReason', 'splitReasons', 'esc', 'safeName', 'blankProject'];
+  'sanitizeProject', 'backupDue', 'missingReason', 'splitReasons', 'esc', 'safeName', 'blankProject',
+  'RISK_LEVELS', 'RISK_REASON', 'riskScore', 'riskLevel', 'riskAccept', 'inherentScore', 'residualScore', 'blankRisk',
+  'nextRiskId', 'risksByControl', 'riskChecks', 'sanitizeRisk'];
 
 function load() {
   const src = FILES.map(f => `// ---- ${f}\n` + fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');

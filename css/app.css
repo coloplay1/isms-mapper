@@ -276,3 +276,63 @@ tr.isna td:not(.keep){opacity:.55}
 footer{font-size:12px;color:var(--muted);padding-block:0 30px}
 @media (max-width:560px){.bar{padding-block:10px 4px}.brand{font-size:17px}.proj select{max-width:52vw}}
 @media (prefers-reduced-motion:no-preference){.drawer{animation:slide .18s ease-out}@keyframes slide{from{transform:translateX(24px);opacity:.6}}}
+
+/* ===== 風險評鑑 ===== */
+:root{--rk-low:#d7efe3;--rk-mid:#f7e5a8;--rk-high:#f4bf93;--rk-crit:#e9998b;--rk-ink:#1d2a2e}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--rk-low:#1f4033;--rk-mid:#4d421b;--rk-high:#5c3a20;--rk-crit:#6a2c26;--rk-ink:#eef3f2}}
+:root[data-theme="dark"]{--rk-low:#1f4033;--rk-mid:#4d421b;--rk-high:#5c3a20;--rk-crit:#6a2c26;--rk-ink:#eef3f2}
+.rk{display:inline-block;font-size:12px;font-family:var(--font-mono);padding:1px 7px;border-radius:4px;color:var(--rk-ink);white-space:nowrap;margin-right:6px}
+.rk-low{background:var(--rk-low)}.rk-mid{background:var(--rk-mid)}.rk-high{background:var(--rk-high)}.rk-crit{background:var(--rk-crit)}
+.rk-none{background:var(--surface2);color:var(--muted);box-shadow:inset 0 0 0 1px var(--line);font-family:inherit}
+.mxwrap{display:grid;grid-template-columns:auto 1fr;grid-template-rows:1fr auto;gap:4px 8px;max-width:420px}
+.mx-ylab{writing-mode:vertical-rl;font-size:12px;color:var(--muted);text-align:center;align-self:center}
+.mx-xlab{grid-column:2;text-align:center;font-size:12px;color:var(--muted)}
+.matrix{display:grid;grid-template-columns:20px repeat(5,1fr);gap:4px}
+.mx-y,.mx-x{font-size:12px;color:var(--muted);display:grid;place-items:center;font-family:var(--font-mono)}
+.mx{aspect-ratio:1.4;border:0;border-radius:5px;font:inherit;font-family:var(--font-mono);font-size:15px;font-weight:700;color:var(--rk-ink);cursor:pointer;min-height:34px}
+.mx[disabled]{cursor:default;opacity:.55}
+.mx.acc{box-shadow:inset 0 0 0 2px var(--accent)}
+.mx.sel{outline:3px solid var(--ink);outline-offset:1px}
+.cklist{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.ck{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;border:1px solid var(--line);border-left:4px solid var(--s1);border-radius:6px;padding:6px 10px;font-size:14px;background:var(--surface)}
+.ck.err{border-left-color:var(--seal)}
+.ck.info{border-left-color:var(--line)}
+.ck .ckmsg{flex:1 1 220px;min-width:0}
+.ck .ckact{display:flex;gap:6px;flex-wrap:wrap}
+.ck .btn{padding:2px 8px;font-size:13px}
+.ckinfo{margin-top:12px;font-size:14px}
+.ckinfo summary{cursor:pointer;color:var(--muted)}
+.ckinfo .cklist{margin-top:8px}
+.rtable{min-width:900px}
+.rtable td.name .rtitle{background:none;border:0;padding:0;font:inherit;color:var(--ink);cursor:pointer;text-align:left}
+.rtable td.name .rtitle:hover{color:var(--accent);text-decoration:underline}
+.rcodes{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.rc{font-family:var(--font-mono);font-size:12px;border:1px solid var(--line);background:var(--surface2);border-radius:4px;padding:0 6px;cursor:pointer;color:var(--accent)}
+.rc.undec{border-style:dashed}
+.rc.bad{border-color:var(--seal);color:var(--seal)}
+.rstate{font-size:13px;white-space:nowrap}
+.rstate.ok{color:var(--s3)}
+.rstate.warn{color:var(--seal)}
+.rtag{font-size:11px;color:var(--accent);border:1px solid var(--accent);border-radius:3px;padding:0 4px;margin-left:6px;white-space:nowrap}
+.rtag.bad{color:var(--seal);border-color:var(--seal)}
+.why.rlink.bad{border-color:var(--seal)}
+.caseact{margin-top:10px}
+.drawer textarea{width:100%;resize:vertical}
+.drawer .r2{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;font-size:12px;color:var(--muted)}
+.drawer .r2 label{display:grid;gap:2px}
+.drawer .rscore{grid-column:1/-1;display:flex;align-items:center;gap:4px;min-height:24px}
+.ciabox{display:flex;gap:14px;flex-wrap:wrap;font-size:14px}
+.ciabox label{display:flex;align-items:center;gap:4px}
+.ciabox input{width:auto}
+.rsel{display:grid;gap:6px}
+.rpick{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.rpick.bad .ref{border-color:var(--seal)}
+.rpick .rx{border:0;background:none;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;padding:0 4px}
+.rpick .rx:hover{color:var(--seal)}
+.rappr{display:flex;gap:8px;align-items:flex-start;margin-top:12px;font-size:14px}
+.rappr input{margin-top:4px}
+.why.rlink{background:var(--accent-soft)}
+.why.rlink b{color:var(--accent)}
+.why.rlink.bad{background:var(--surface2);border:1px solid var(--seal)}
+.why.rlink.bad b{color:var(--seal)}
+.drawer dd.ciabox input,.drawer .rappr input{width:auto;flex:none}

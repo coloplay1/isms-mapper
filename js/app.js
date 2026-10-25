@@ -18,8 +18,8 @@ function toggleFocus(code,silent){
 function resetFocus(){const p=cur();if(!p)return;p.focusOn=[];p.focusOff=[];save();refreshFocus();render();toast("已恢復預設建議")}
 document.addEventListener("click",e=>{const t=e.target.closest("[data-ftoggle]");if(t){e.preventDefault();e.stopPropagation();toggleFocus(t.dataset.ftoggle)}
   if(e.target.closest("[data-freset]"))resetFocus()},true);
-let FM={},NAC={};
-function refreshFocus(){const p=cur();FM=focusMap(p);NAC=naCandidates(p)}
+let FM={},NAC={},RBC={};   // 建議重點、可能不適用、控制措施 → 風險編號（render 時更新）
+function refreshFocus(){const p=cur();FM=focusMap(p);NAC=naCandidates(p);RBC=risksByControl(p)}
 function featureChips(selected,name){
   return FEATURES.map(f=>`<label class="fchip"><input type="checkbox" name="${name}" value="${f.id}" ${selected.includes(f.id)?"checked":""}><span>${esc(f.label)}</span></label>`).join("");
 }
@@ -41,15 +41,31 @@ const SAMPLE_DEFS=[
   {id:"sample:intro",stage:"導入初期",name:"綠葉聯合診所",industry:"health",features:["pii","health","vendor","onprem"],desc:"剛決定導入 ISMS，正在訂定範圍與政策。大部分控制措施還沒判定適用性，負責人也還沒分派。",
    seed:3,undec:.6,cum:[.72,.95,1,1],owners:["資訊組 黃組長","行政組 吳專員","行政組 吳專員","資訊組 黃組長"],ownerFrom:1,
    na:["A.8.25","A.8.26","A.8.27","A.8.28","A.8.29","A.8.30","A.8.4","A.8.31","A.8.33"],naReason:"診所未自行開發系統，皆採購套裝軟體",
-   cl:i=>i<4?1:i===5?2:0,scope:"診所門診與病歷資訊系統"},
+   cl:i=>i<4?1:i===5?2:0,scope:"診所門診與病歷資訊系統",
+   risks:[[29,"病歷系統","C",-1,4,5,"",0,0,false,""],[6,"病歷資料庫","A",0,0,0,"",0,0,false,""]]},
   {id:"sample:build",stage:"建置中",name:"示範科技",industry:"general",features:["cloud","remote","vendor","onprem"],desc:"適用性聲明大致完成，各部門正在落實控制措施，邊做邊整理紀錄與證據。",
    seed:7,undec:.08,cum:[.18,.4,.73,1],owners:["資訊部 王經理","人資部 林專員","總務部 陳課長","研發部 張主任"],ownerFrom:0,
    na:["A.8.30","A.8.4","A.7.12","A.8.28"],naReason:"範圍內無自行開發系統",
-   cl:i=>i<12?3:i<20?2:i<23?1:0,scope:"台北總部資訊機房與核心營運系統"},
+   cl:i=>i<12?3:i<20?2:i<23?1:0,scope:"台北總部資訊機房與核心營運系統",
+   // [案例編號, 資產, CIA, 擁有者, 可能性, 衝擊, 處理, 殘餘可能性, 殘餘衝擊, 已核准, 處理計畫]
+   risks:[[0,"CRM 與 AD 帳號","C",1,4,3,"mitigate",2,3,false,"人資離職單串接資訊部，最後工作日停用帳號"],
+     [10,"檔案伺服器與 ERP","IA",0,3,5,"mitigate",2,4,true,"導入離線備份與 EDR，每季還原演練"],
+     [23,"ERP 系統","CIA",0,3,4,"mitigate",0,0,false,"廠商遠端連線改經跳板機並全程錄影"],
+     [14,"業務筆電","C",0,3,3,"mitigate",1,3,true,"全面啟用 BitLocker 與遠端抹除"],
+     [24,"Microsoft 365","CIA",0,2,4,"mitigate",2,2,true,"啟用條件式存取與稽核紀錄"],
+     [19,"台北機房","A",2,2,2,"accept",0,0,false,""]]},
   {id:"sample:audit",stage:"驗證稽核前",name:"北辰精密製造",industry:"mfg",features:["ot","onprem","vendor","remote"],desc:"內部稽核與管理審查已完成，正在補齊最後幾項證據，準備迎接第三方驗證稽核。",
    seed:11,undec:0,cum:[0,.04,.3,1],owners:["資訊處 周處長","人資處 許經理","廠務課 蔡課長","研發處 鄭經理","稽核室 何稽核"],ownerFrom:0,
    na:["A.8.30","A.7.12","A.8.11"],naReason:"經風險評鑑判定不適用",
-   cl:i=>i===24?2:3,scope:"台中廠區生產管理系統與總部 IT"}
+   cl:i=>i===24?2:3,scope:"台中廠區生產管理系統與總部 IT",
+   risks:[[10,"生產管理系統與檔案伺服器","IA",0,3,5,"mitigate",1,4,true,"OT 與 IT 網段隔離、離線備份、EDR"],
+     [23,"產線設備與 MES","CIA",2,4,4,"mitigate",2,3,true,"設備商遠端維護改用一次性帳號並錄影"],
+     [11,"全體員工信箱","CI",1,4,3,"mitigate",2,3,true,"每季社交工程演練與郵件過濾"],
+     [0,"AD 與 ERP 帳號","C",1,3,3,"mitigate",1,3,true,"離職流程表單化，每月帳號清查"],
+     [33,"廠區防火牆","IA",0,2,4,"mitigate",1,4,true,"規則變更須申請與覆核"],
+     [19,"台中廠機房","A",2,2,5,"mitigate",1,5,true,"UPS 擴充與發電機每月測試"],
+     [27,"研發測試環境","C",3,3,4,"mitigate",1,4,true,"測試資料去識別化"],
+     [16,"報廢設備","C",2,2,2,"accept",0,0,true,""]]}
 ];
 const SAMPLES={};
 function buildSample(d){
@@ -64,6 +80,13 @@ function buildSample(d){
     p.controls[c.code]={app:"Y",status:st<0?3:st,owner:st>=d.ownerFrom?ow:"",evidence:st>=2?c.ev.split("、")[0]:"",reason:REASONS_IN[0]};
   });
   CLAUSES.forEach((c,i)=>{const st=d.cl(i);p.clauses[c.code]={status:st,owner:st?"資安小組":"",evidence:st>=2?c.ev:""}});
+  p.riskAccept=4;
+  p.risks=(d.risks||[]).map(([ci,asset,cia,ow,l,i,treat,rl,ri,accepted,plan],k)=>{const c=CASES[ci];
+    return {...blankRisk("R-"+String(k+1).padStart(3,"0")),title:c.t,threat:c.s,asset,cia,owner:ow>=0?d.owners[ow]:"",l,i,treat,rl,ri,accepted,plan,
+      controls:treat==="mitigate"?c.r.filter(x=>ANNEX_MAP[x]&&!na.has(x)):[]}});
+  // 納入理由：被風險引用的寫「依風險評鑑結果」，其餘輪流使用其他理由
+  const byC=risksByControl(p);let k=0;
+  ANNEX.forEach(c=>{const v=p.controls[c.code];if(v.app==="Y")v.reason=byC[c.code]?RISK_REASON:REASONS_IN[1+(k++%(REASONS_IN.length-1))]});
   return p;
 }
 function resetSample(id){const d=SAMPLE_DEFS.find(x=>x.id===id);if(d)SAMPLES[id]=buildSample(d)}
@@ -96,7 +119,7 @@ function cur(){return isSample(S.activeId)?SAMPLES[S.activeId]:(S.projects[S.act
 function ctl(code){const p=cur();if(!p)return {app:"",status:0,owner:"",evidence:"",reason:""};return p.controls[code]||(p.controls[code]={app:"",status:0,owner:"",evidence:"",reason:""})}
 function cls(code){const p=cur();if(!p)return {status:0,owner:"",evidence:""};return p.clauses[code]||(p.clauses[code]={status:0,owner:"",evidence:""})}
 function newProject(name,org,scope,start,industry,features){
-  const p=blankProject(name||"未命名專案",org);p.scope=scope||"";p.industry=industry||"";p.features=features||[];p.people=[];
+  const p=blankProject(name||"未命名專案",org);p.scope=scope||"";p.industry=industry||"";p.features=features||[];p.people=[];p.risks=[];p.riskAccept=4;
   if(start==="all")ANNEX.forEach(c=>p.controls[c.code]={app:"Y",status:0,owner:"",evidence:"",reason:""});
   S.projects[p.id]=p;S.activeId=p.id;save();resetBuilt();ensurePersist();return p;
 }
@@ -211,8 +234,19 @@ function exportExcel(){
   const H=t=>({value:String(t),fontWeight:"bold",backgroundColor:"#DCEBEE"});
   const V=v=>v===null||v===undefined||v===""?null:(typeof v==="number"?{value:v,type:Number}:{value:String(v)});
   const sheet=(rows,head)=>[head.map(H),...rows.map(r=>r.map(V))];
+  const rbc=risksByControl(p);
   const soaRows=ANNEX.map(c=>{const v=ctl(c.code);
-    return [c.code,THEMES.find(t=>t.id===c.theme).name,c.name,c.isNew?"是":"",FM[c.code]?FM[c.code].map(f=>FEATURE_MAP[f].label).join("、"):"",APP.find(a=>a.v===v.app).label,v.reason,v.app==="N"?"—":STATUS[v.status].label,v.owner,v.evidence,c.ev]});
+    return [c.code,THEMES.find(t=>t.id===c.theme).name,c.name,c.isNew?"是":"",FM[c.code]?FM[c.code].map(f=>FEATURE_MAP[f].label).join("、"):"",APP.find(a=>a.v===v.app).label,v.reason,(rbc[c.code]||[]).join("、"),v.app==="N"?"—":STATUS[v.status].label,v.owner,v.evidence,c.ev]});
+  const lvTxt=s=>s?`${s}（${riskLevel(s).label}）`:"";
+  const CIA={C:"機密性",I:"完整性",A:"可用性"};
+  const rkRows=(p.risks||[]).map(r=>[r.id,r.title,r.asset,r.threat,[...r.cia].map(x=>CIA[x]).join("、"),r.owner,r.l||"",r.i||"",lvTxt(inherentScore(r)),
+    TREATMENTS.find(t=>t.v===r.treat).label,(r.controls||[]).map(c=>c+" "+ANNEX_MAP[c].name).join("\n"),r.plan,r.due,r.rl||"",r.ri||"",lvTxt(residualScore(r)),r.accepted?"已核准":""]);
+  const acc=riskAccept(p);
+  const crit=[[H("可接受水準"),V(`分數 ≤ ${acc} 可接受；高於此分數需處理，處理後仍高於此分數須由風險擁有者核准`)],[],
+    ["等級","可能性","衝擊"].map(H),...[1,2,3,4,5].map(n=>[V(n),V(LIKELIHOOD[n]),V(IMPACT[n])]),[],
+    ["風險等級","分數範圍"].map(H),...RISK_LEVELS.map(l=>[V(l.label),V(`${l.min}–${l.max}`)]),[],
+    [H("風險分數"),V("可能性 × 衝擊")]];
+  const ckRows=riskChecks(p).map(c=>[{err:"衝突",warn:"待確認",info:"提醒"}[c.sev],c.rid||"",c.code||"",c.msg]);
   const clRows=CLAUSES.map(c=>{const v=cls(c.code);return [c.code,c.name,c.phase,c.desc,STATUS[v.status].label,v.owner,v.evidence]});
   const sum=[["專案",p.name],["組織",p.org],["驗證範圍",p.scope||""],["產業",INDUSTRY_MAP[p.industry||""]?INDUSTRY_MAP[p.industry||""].label:""],["業務特性",projFeatures(p).map(f=>FEATURE_MAP[f].label).join("、")],["匯出時間",new Date().toLocaleString("zh-TW",{hour12:false})],[]];
   const sumData=sum.map(r=>r.map(V));
@@ -225,7 +259,10 @@ function exportExcel(){
   const lgRows=(p.log||[]).slice().reverse().map(e=>{const c=ANNEX_MAP[e.c]||CLAUSE_MAP[e.c];return [new Date(e.t).toLocaleString("zh-TW",{hour12:false}),e.c,c?c.name:"",FIELD_LABEL[e.f]||e.f,fmtVal(e.f,e.from),fmtVal(e.f,e.to)]});
   const W=a=>a.map(w=>({width:w}));
   writeXlsxFile([
-    {sheet:"適用性聲明SoA",data:sheet(soaRows,["控制措施編號","主題","控制措施","2022 新增","產業建議重點","適用性","納入或排除理由","執行狀態","負責人","證據位置","常見證據參考"]),columns:W([12,10,24,9,22,8,30,10,16,26,30]),stickyRowsCount:1},
+    {sheet:"適用性聲明SoA",data:sheet(soaRows,["控制措施編號","主題","控制措施","2022 新增","產業建議重點","適用性","納入或排除理由","關聯風險","執行狀態","負責人","證據位置","常見證據參考"]),columns:W([12,10,24,9,22,8,30,14,10,16,26,30]),stickyRowsCount:1},
+    {sheet:"風險登錄表",data:sheet(rkRows,["風險編號","風險描述","相關資產","威脅與弱點","影響","風險擁有者","可能性","衝擊","固有風險","處理方式","選定控制措施","處理計畫","預計完成","殘餘可能性","殘餘衝擊","殘餘風險","擁有者核准"]),columns:W([9,28,18,30,14,14,7,7,11,8,30,28,11,7,7,11,10]),stickyRowsCount:1},
+    {sheet:"風險評鑑準則",data:crit,columns:W([14,30,20])},
+    {sheet:"連動檢查",data:sheet(ckRows,["類型","風險","控制措施","說明"]),columns:W([8,9,10,70]),stickyRowsCount:1},
     {sheet:"條款4-10檢核",data:sheet(clRows,["條款","名稱","PDCA","說明","執行狀態","負責人","證據位置"]),columns:W([8,24,6,40,10,14,26]),stickyRowsCount:1},
     {sheet:"統計摘要",data:sumData,columns:W([22,14,10,10,10,10,10])},
     {sheet:"修改紀錄",data:sheet(lgRows,["時間","編號","名稱","欄位","變更前","變更後"]),columns:W([20,9,24,10,18,18]),stickyRowsCount:1}
@@ -244,15 +281,15 @@ let tab="overview";
 const filt={theme:"all",status:"all",q:""};
 let searchQ="";
 
-const NEEDS_PROJECT=new Set(["overview","annex","clauses"]);
+const NEEDS_PROJECT=new Set(["overview","risks","annex","clauses"]);
 function render(){
   if(!cur()&&NEEDS_PROJECT.has(tab))tab="home";
   refreshFocus();refreshOwnerList();personEdit=personDel=null;
   renderProjSel(); renderSaved(); renderSampleBanner();
   document.querySelectorAll("#tabs button").forEach(b=>{b.setAttribute("aria-selected",b.dataset.tab===tab);
     b.setAttribute("aria-disabled",!cur()&&NEEDS_PROJECT.has(b.dataset.tab))});
-  ["home","overview","search","annex","clauses","projects"].forEach(v=>$("#view-"+v).hidden=v!==tab);
-  ({home:renderHome,overview:renderOverview,search:renderSearch,annex:renderAnnex,clauses:renderClauses,projects:renderProjects})[tab]();
+  ["home","overview","search","risks","annex","clauses","projects"].forEach(v=>$("#view-"+v).hidden=v!==tab);
+  ({home:renderHome,overview:renderOverview,search:renderSearch,risks:renderRisks,annex:renderAnnex,clauses:renderClauses,projects:renderProjects})[tab]();
 }
 function renderProjSel(){
   const sel=$("#projSel");
@@ -437,6 +474,7 @@ function renderOverview(){
         return `<button class="cell ${k} ${x.isNew?"new":""} ${FM[x.code]?"focus":""} ${v.app==="Y"&&v.status===3?"lvl3":""}" style="background:${v.app==="Y"?lvlColor(v.status):""}" data-open="${x.code}" data-tip="${x.code} ${esc(x.name)}｜${v.app==="N"?"不適用":v.app===""?"未決定":STATUS[v.status].label}${FM[x.code]?"｜建議重點":""}" aria-label="${x.code} ${esc(x.name)}">${x.code.split(".")[2]}</button>`}).join("")}</div></div>`}).join("");
   const todo=ANNEX.filter(x=>{const v=ctl(x.code);return v.app===""||(v.app==="Y"&&v.status===0)}).slice(0,8);
   const noReason=ANNEX.filter(x=>missingReason(ctl(x.code))).length;
+  const riskIssues=riskChecks(p).filter(c=>c.sev!=="info").length;
   $("#view-overview").innerHTML=`
     <h2>${esc(p.name)}</h2>
     <p class="lede">${p.scope?`驗證範圍：${esc(p.scope)}。`:""}附錄 A 共 93 項控制措施的適用與執行狀況。滑過圖表可看數字，點熱圖方格可查看說明並更新狀態。</p>
@@ -466,7 +504,7 @@ function renderOverview(){
       </div>
       <div style="display:grid;gap:18px;align-content:start">
         <div class="panel"><div class="secthead"><h3>負責人工作量</h3><button class="chip" data-goto="projects" data-anchor="pplPanel" style="margin-left:auto">管理名單</button></div>${ownerBars||`<p class="note">尚未指派負責人。</p>`}</div>
-        <div class="panel"><h3>待處理</h3>${noReason?`<button class="alertrow" data-goto="annex" data-gofilter="noreason"><b>${noReason} 項</b>標為不適用但未填排除理由<span>前往補填 →</span></button>`:""}${todo.length?`<ul class="todo">${todo.map(x=>{const v=ctl(x.code);return `<li><span class="mono">${x.code}</span><button data-open="${x.code}">${esc(x.name)}</button><span class="saved" style="margin-left:auto">${v.app===""?"未決定適用性":"未開始"}</span></li>`}).join("")}</ul>`:`<p class="note">所有適用項目都已開始處理。</p>`}</div>
+        <div class="panel"><h3>待處理</h3>${riskIssues?`<button class="alertrow" data-goto="risks"><b>${riskIssues} 項</b>風險評鑑與 SoA 待確認<span>前往風險評鑑 →</span></button>`:""}${noReason?`<button class="alertrow" data-goto="annex" data-gofilter="noreason"><b>${noReason} 項</b>標為不適用但未填排除理由<span>前往補填 →</span></button>`:""}${todo.length?`<ul class="todo">${todo.map(x=>{const v=ctl(x.code);return `<li><span class="mono">${x.code}</span><button data-open="${x.code}">${esc(x.name)}</button><span class="saved" style="margin-left:auto">${v.app===""?"未決定適用性":"未開始"}</span></li>`}).join("")}</ul>`:`<p class="note">所有適用項目都已開始處理。</p>`}</div>
       </div>
     </div>`;
 }
@@ -510,6 +548,7 @@ function renderSearchResult(){
       <div class="rec"><b>為什麼</b>${esc(x.c.w)}</div>
       <div class="rec"><b>應留紀錄</b>${esc(x.c.e)}</div>
       ${x.hit.length?`<div class="rec saved">符合關鍵字：${x.hit.map(esc).join("、")}</div>`:""}
+      ${cur()?`<div class="caseact"><button class="btn" data-newrisk="${CASES.indexOf(x.c)}">＋ 加入風險登錄表</button></div>`:""}
       </article>`).join("")||`<div class="empty">沒有相符案例，可參考右側直接相符的條款。</div>`}</div></div>
     <div style="display:grid;gap:18px;align-content:start">
       ${r.refs.length?`<div class="panel"><h3>建議對應條款</h3><ul class="rank">${r.refs.map(x=>`<li>${refChip(x.code)}<span class="w">${x.pct}%</span></li>`).join("")}</ul><p class="note" style="margin:12px 0 0">依相符案例的關聯程度排序，圓點顏色為本專案目前狀態。</p></div>`:""}
@@ -522,7 +561,7 @@ function renderAnnex(){
     v.innerHTML=`<h2>附錄 A 逐項確認</h2><p class="lede">逐項決定是否適用、填寫理由與執行狀態。內容會自動儲存，可隨時匯出為適用性聲明（SoA）Excel。</p>
       <div class="filters">
         <div class="seg" id="themeSeg"><button data-th="all" aria-pressed="true">全部</button>${THEMES.map(t=>`<button data-th="${t.id}" aria-pressed="false">A.${t.id} ${t.name}</button>`).join("")}</div>
-        <select id="stFilter" aria-label="狀態篩選"><option value="all">所有狀態</option><option value="undec">未決定適用性</option><option value="N">不適用</option>${STATUS.map(s=>`<option value="${s.v}">${s.label}</option>`).join("")}<option value="new">2022 新增</option><option value="noreason">不適用但未填理由</option><option value="focus">產業建議重點</option><option value="nacand">可能不適用候選</option></select>
+        <select id="stFilter" aria-label="狀態篩選"><option value="all">所有狀態</option><option value="undec">未決定適用性</option><option value="N">不適用</option>${STATUS.map(s=>`<option value="${s.v}">${s.label}</option>`).join("")}<option value="new">2022 新增</option><option value="noreason">不適用但未填理由</option><option value="focus">產業建議重點</option><option value="nacand">可能不適用候選</option><option value="risk">有風險引用</option><option value="riskissue">風險連動待確認</option></select>
         <input id="qFilter" class="grow" type="search" placeholder="篩選編號、名稱或負責人">
         <button class="btn primary" id="xlsBtn">匯出 SoA Excel</button>
       </div>
@@ -544,7 +583,7 @@ function annexRow(c){
   const v=ctl(c.code);
   return `<tr data-code="${c.code}" class="${v.app==="N"?"isna":""} ${FM[c.code]?"focus":""}">
     <td class="code keep"><button data-open="${c.code}">${c.code}</button></td>
-    <td class="name keep"><button class="fstar ${FM[c.code]?"on":""}" data-ftoggle="${c.code}" aria-pressed="${!!FM[c.code]}" aria-label="${FM[c.code]?"取消重點":"標為重點"}：${c.code}" data-tip="${FM[c.code]?"取消重點標示":"標為重點"}">${FM[c.code]?"★":"☆"}</button><span class="${FM[c.code]?"fname":""}">${esc(c.name)}</span>${c.isNew?'<span class="tag">2022 新增</span>':""}${FM[c.code]?`<span class="ftag" data-tip="${esc(FM[c.code].map(f=>FEATURE_MAP[f].label).join("、"))}">建議重點</span>`:""}${NAC[c.code]&&!v.app?`<span class="ctag" data-tip="${esc(NAC[c.code])}">可能不適用</span>`:""}<div class="saved">${esc(c.desc)}</div></td>
+    <td class="name keep"><button class="fstar ${FM[c.code]?"on":""}" data-ftoggle="${c.code}" aria-pressed="${!!FM[c.code]}" aria-label="${FM[c.code]?"取消重點":"標為重點"}：${c.code}" data-tip="${FM[c.code]?"取消重點標示":"標為重點"}">${FM[c.code]?"★":"☆"}</button><span class="${FM[c.code]?"fname":""}">${esc(c.name)}</span>${c.isNew?'<span class="tag">2022 新增</span>':""}${FM[c.code]?`<span class="ftag" data-tip="${esc(FM[c.code].map(f=>FEATURE_MAP[f].label).join("、"))}">建議重點</span>`:""}${NAC[c.code]&&!v.app?`<span class="ctag" data-tip="${esc(NAC[c.code])}">可能不適用</span>`:""}${RBC[c.code]?`<span class="rtag ${v.app==="N"?"bad":""}" data-tip="${esc(RBC[c.code].map(id=>{const r=riskById(id);return id+" "+(r&&r.title||"")}).join("、"))}${v.app==="N"?"｜被風險引用卻判為不適用":""}">風險 ${RBC[c.code].length}</span>`:""}<div class="saved">${esc(c.desc)}</div></td>
     <td class="keep"><select data-f="app" aria-label="${c.code} 適用性">${APP.map(a=>`<option value="${a.v}" ${a.v===v.app?"selected":""}>${a.label}</option>`).join("")}</select></td>
     <td class="keep"><input data-f="reason" data-reason="${c.code}" autocomplete="off" class="${missingReason(v)?"warn":""}" aria-invalid="${missingReason(v)}" value="${esc(v.reason)}" placeholder="${v.app==="N"?"選擇排除理由（必填）":"選擇或輸入理由"}" aria-label="${c.code} 理由" ${missingReason(v)?'data-tip="不適用的項目需要排除理由，稽核時會檢查"':""}></td>
     <td><select data-f="status" class="stsel" style="border-left-color:${lvlColor(v.status)}" ${v.app==="N"?"disabled":""} aria-label="${c.code} 狀態">${STATUS.map(s=>`<option value="${s.v}" ${s.v===v.status?"selected":""}>${s.label}</option>`).join("")}</select></td>
@@ -561,6 +600,8 @@ function renderAnnexRows(){
     if(filt.status==="focus"&&!FM[c.code])return false;
     if(filt.status==="noreason"&&!missingReason(v))return false;
     if(filt.status==="nacand"&&!NAC[c.code])return false;
+    if(filt.status==="risk"&&!RBC[c.code])return false;
+    if(filt.status==="riskissue"&&!(RBC[c.code]&&v.app!=="Y"))return false;
     if(/^\d$/.test(filt.status)&&(v.app!=="Y"||v.status!==+filt.status))return false;
     if(q&&!norm(c.code+" "+c.name+" "+c.desc+" "+v.owner).includes(q))return false;
     return true});
@@ -928,6 +969,7 @@ function openDrawer(code,fromList){
     ${isA&&!FM[code]&&(cur()&&(cur().focusOff||[]).includes(code))?`<p class="note">這一項原本是系統建議的重點，已被你取消。</p>`:""}
     ${isA&&FM[code]?`<div class="why"><b>建議重點</b>：依目前專案的設定<ul>${FM[code].map(f=>`<li>${esc(FEATURE_MAP[f].label)}：${esc(FEATURE_MAP[f].why)}</li>`).join("")}</ul></div>`:""}
     ${isA&&NAC[code]?`<div class="why" style="background:var(--surface2)"><b style="color:var(--muted)">可能不適用</b>：${esc(NAC[code])}。是否排除仍須依風險評鑑決定。</div>`:""}
+    ${isA?riskLinkHTML(code,v):""}
     <dl>
       ${isA?`<div><dt>適用性</dt><dd><select id="dApp">${APP.map(a=>`<option value="${a.v}" ${a.v===v.app?"selected":""}>${a.label}</option>`).join("")}</select></dd></div>
       <div><dt>納入／排除理由</dt><dd><input id="dReason" data-reason="${code}" autocomplete="off" placeholder="選擇或輸入理由，可複選" value="${esc(v.reason)}" class="${missingReason(v)?"warn":""}" aria-describedby="dReasonHint"><small id="dReasonHint" class="warnhint" ${missingReason(v)?"":"hidden"}>不適用的項目需要填寫排除理由，SoA 稽核時會檢查。</small></dd></div>`:""}
@@ -952,10 +994,205 @@ function openDrawer(code,fromList){
     const si=$("#sInput"); if(si) si.value=searchQ; render(); if($("#sInput")) $("#sInput").value=searchQ;}));
   host.querySelector(".x").focus();
 }
+function riskLinkHTML(code,v){
+  const ids=RBC[code]||[];
+  if(!ids.length)return String(v.reason||"").includes(RISK_REASON)?`<div class="why" style="background:var(--surface2)"><b style="color:var(--muted)">風險評鑑</b>：納入理由是風險評鑑結果，但目前沒有風險引用這一項。可到「風險評鑑」把它加進對應的風險。</div>`:"";
+  return `<div class="why rlink ${v.app==="N"?"bad":""}"><b>處理以下風險</b>${v.app==="N"?"（但目前判為不適用，請確認）":v.app===""?"（SoA 尚未判定）":""}
+    <div class="rel" style="margin-top:6px">${ids.map(id=>{const r=riskById(id);return `<button data-risk="${id}"><span class="mono">${id}</span> ${esc(r&&r.title||"")} ${r?lvlBadge(inherentScore(r)):""}</button>`}).join("")}</div>
+    ${v.app===""?`<button class="btn" data-apply="${code}" style="margin-top:8px">設為適用，理由填「${RISK_REASON}」</button>`:""}</div>`;
+}
 function renderOverviewQuiet(){if(tab==="overview")renderOverview()}
 function closeDrawer(){$("#drawerHost").innerHTML="";if(tab!=="search")render();else renderSearchResult()}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#drawerHost").innerHTML)closeDrawer()});
 document.addEventListener("click",e=>{const o=e.target.closest("[data-open]");if(o){e.preventDefault();openDrawer(o.dataset.open)}});
+
+/* ================= 風險評鑑與處理 ================= */
+const riskView={mode:"in",cell:null};
+function risks(){const p=cur();if(!p)return [];if(!Array.isArray(p.risks))p.risks=[];return p.risks}
+function riskById(id){return risks().find(r=>r.id===id)}
+function lvlBadge(score){
+  if(!score)return `<span class="rk rk-none">未評估</span>`;
+  const l=riskLevel(score);return `<span class="rk rk-${l.id}">${score} ${l.label}</span>`;
+}
+function riskState(r,checks){
+  const n=checks.filter(c=>c.rid===r.id&&c.sev!=="info").length;
+  if(!inherentScore(r))return `<span class="saved">待評估</span>`;
+  return n?`<span class="rstate warn">待處理 ${n}</span>`:`<span class="rstate ok">✓ 完成</span>`;
+}
+function touchRisk(){const p=cur();if(!p)return;p.updated=Date.now();
+  if(!p.sample){p.changesSinceBackup=(p.changesSinceBackup||0)+1;if(p.changesSinceBackup%5===0)renderBackupBanner()}
+  saveSoon()}
+function newRisk(init){
+  const p=cur();if(!p)return null;
+  const r=Object.assign(blankRisk(nextRiskId(p)),init||{});
+  risks().push(r);touchRisk();return r;
+}
+function deleteRisk(id){
+  const list=risks(),i=list.findIndex(r=>r.id===id);if(i<0)return;
+  const [r]=list.splice(i,1);touchRisk();$("#drawerHost").innerHTML="";render();
+  undoToast(`已刪除 ${r.id}${r.title?" "+r.title:""}`,()=>{list.splice(i,0,r);touchRisk();render()});
+}
+function riskFromCase(idx){
+  const c=CASES[idx];if(!c||!cur())return;
+  const r=newRisk({title:c.t,threat:c.s,controls:c.r.filter(x=>ANNEX_MAP[x])});
+  tab="risks";render();window.scrollTo(0,0);openRiskDrawer(r.id);
+  toast(`已建立 ${r.id}，請評估可能性與衝擊`);
+}
+/* 把風險引用、但 SoA 尚未判定的控制措施設為適用，並補上納入理由（使用者按下才執行） */
+function applyRiskToSoA(code){
+  const v=ctl(code);if(v.app!=="")return;
+  setField(code,"app","Y",{silent:true});
+  if(!splitReasons(v.reason).includes(RISK_REASON))setField(code,"reason",[...splitReasons(v.reason),RISK_REASON].join(SEP),{silent:true});
+  undoToast(`${code} 設為適用，理由：${RISK_REASON}`,()=>{setField(code,"reason","",{silent:true});setField(code,"app","",{silent:true});render()});
+  render();
+}
+function riskMatrix(mode){
+  const pick=mode==="res"?(r=>[r.rl,r.ri]):(r=>[r.l,r.i]);
+  const cnt={};risks().forEach(r=>{const [l,i]=pick(r);if(riskScore(l,i))cnt[l+"-"+i]=(cnt[l+"-"+i]||0)+1});
+  const acc=riskAccept(cur());let cells="";
+  for(let i=5;i>=1;i--){
+    cells+=`<div class="mx-y" title="${IMPACT[i]}">${i}</div>`;
+    for(let l=1;l<=5;l++){const s=l*i,lv=riskLevel(s),n=cnt[l+"-"+i]||0,sel=riskView.cell===l+"-"+i;
+      cells+=`<button class="mx rk-${lv.id} ${s<=acc?"acc":""} ${sel?"sel":""}" data-mx="${l}-${i}" ${n?"":"disabled"} aria-label="可能性 ${l}、衝擊 ${i}，${n} 項" data-tip="可能性 ${l} ${LIKELIHOOD[l]} × 衝擊 ${i} ${IMPACT[i]} = ${s} 分（${lv.label}）${n?"｜"+n+" 項":""}">${n||""}</button>`}
+  }
+  cells+=`<div></div>`+[1,2,3,4,5].map(l=>`<div class="mx-x" title="${LIKELIHOOD[l]}">${l}</div>`).join("");
+  return `<div class="mxwrap"><div class="mx-ylab">衝擊</div><div class="matrix">${cells}</div><div class="mx-xlab">可能性</div></div>`;
+}
+function checkRow(c){
+  const act=c.kind==="undecided"?`<button class="btn" data-apply="${c.code}">設為適用</button>`:
+    c.kind==="conflict"||c.kind==="orphan"?`<button class="btn" data-open="${c.code}">查看 ${c.code}</button>`:"";
+  const open=c.rid?`<button class="btn" data-risk="${c.rid}">開啟 ${c.rid}</button>`:"";
+  return `<li class="ck ${c.sev}"><span class="ckmsg">${esc(c.msg)}</span><span class="ckact">${act}${c.kind!=="orphan"?open:""}</span></li>`;
+}
+let showAllChecks=false;
+function renderRisks(){
+  const p=cur(),list=risks(),acc=riskAccept(p),checks=riskChecks(p);
+  const issues=checks.filter(c=>c.sev!=="info"),info=checks.filter(c=>c.sev==="info");
+  const high=list.filter(r=>inherentScore(r)>=10).length;
+  const pending=checks.filter(c=>c.kind==="needApproval").length;
+  const pickScore=riskView.mode==="res"?residualScore:inherentScore;
+  const shown=riskView.cell?list.filter(r=>{const [l,i]=riskView.mode==="res"?[r.rl,r.ri]:[r.l,r.i];return l+"-"+i===riskView.cell}):list;
+  const ck=showAllChecks?issues:issues.slice(0,6);
+  $("#view-risks").innerHTML=`<h2>風險評鑑與處理</h2>
+  <p class="lede">依條款 6.1.2 識別與評估風險，依 6.1.3 決定處理方式並選定控制措施。風險選定的控制措施會連到附錄 A，作為適用性聲明（SoA）納入理由的依據；這裡只提出不一致的地方，不會自動改變判定。</p>
+  <div class="filters">
+    <button class="btn primary" id="rNew">＋ 新增風險</button>
+    <button class="btn" id="rFromCase">從案例搜尋新增</button>
+    <label class="saved" style="display:flex;align-items:center;gap:6px">可接受水準<select id="rAcc">${ACCEPT_OPTIONS.map(n=>`<option value="${n}" ${n===acc?"selected":""}>分數 ≤ ${n}（${riskLevel(n).label}${n>4?"以下":""}）</option>`).join("")}</select></label>
+    <button class="btn" id="rXls" style="margin-left:auto">匯出 SoA Excel</button>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>${list.length}</b><span>已登錄風險</span></div>
+    <div class="stat"><b>${high}</b><span>固有風險高以上</span></div>
+    <div class="stat"><b>${pending}</b><span>待擁有者核准</span></div>
+    <div class="stat"><b>${issues.length}</b><span>待確認事項</span></div>
+  </div>
+  <div class="grid2">
+    <div class="panel"><div class="secthead"><h3>風險矩陣</h3>
+      <div class="seg" id="mxSeg" style="margin-left:auto"><button data-mode="in" aria-pressed="${riskView.mode==="in"}">固有風險</button><button data-mode="res" aria-pressed="${riskView.mode==="res"}">殘餘風險</button></div></div>
+      ${riskMatrix(riskView.mode)}
+      <p class="note" style="margin:10px 0 0">粗框內為可接受範圍（分數 ≤ ${acc}）。點有數字的格子可篩選下方清單。</p></div>
+    <div class="panel"><h3>連動檢查</h3>
+      ${issues.length?`<ul class="cklist">${ck.map(checkRow).join("")}</ul>${issues.length>6?`<button class="chip" id="ckMore" style="margin-top:8px">${showAllChecks?"收合":"顯示全部 "+issues.length+" 項"}</button>`:""}`:
+        `<p class="note">${list.length?"風險評鑑與 SoA 沒有發現不一致。":"新增風險後，這裡會檢查風險評鑑與 SoA 是否一致。"}</p>`}
+      ${info.length?`<details class="ckinfo"><summary>${info.length} 項控制措施的理由寫「依風險評鑑結果」，但沒有風險引用</summary><ul class="cklist">${info.map(checkRow).join("")}</ul></details>`:""}
+    </div>
+  </div>
+  ${riskView.cell?`<div class="filters" style="margin-top:18px"><span class="count">篩選：${riskView.mode==="res"?"殘餘":"固有"}風險 可能性 ${riskView.cell.split("-")[0]} × 衝擊 ${riskView.cell.split("-")[1]}（${shown.length} 項）</span><button class="chip" id="mxClear">清除篩選</button></div>`:""}
+  <div class="table-wrap" style="margin-top:${riskView.cell?8:18}px"><table class="rtable"><thead><tr><th style="width:70px">編號</th><th>風險</th><th style="width:120px">風險擁有者</th><th style="width:84px">固有</th><th style="width:70px">處理</th><th>控制措施</th><th style="width:84px">殘餘</th><th style="width:96px">狀態</th></tr></thead><tbody>
+  ${shown.map(r=>`<tr>
+    <td class="code"><button data-risk="${r.id}">${r.id}</button></td>
+    <td class="name"><button class="rtitle" data-risk="${r.id}">${esc(r.title||"（未命名風險）")}</button>${r.asset?`<div class="saved">${esc(r.asset)}${r.cia?"｜"+[...r.cia].map(x=>({C:"機密性",I:"完整性",A:"可用性"})[x]).join("、"):""}</div>`:""}</td>
+    <td>${esc(r.owner)||`<span class="saved">未指定</span>`}</td>
+    <td>${lvlBadge(inherentScore(r))}</td>
+    <td>${r.treat?esc(TREATMENTS.find(t=>t.v===r.treat).label):`<span class="saved">未決定</span>`}</td>
+    <td><div class="rcodes">${(r.controls||[]).slice(0,5).map(c=>{const a=ctl(c).app;return `<button class="rc ${a==="N"?"bad":a===""?"undec":""}" data-open="${c}" data-tip="${c} ${esc(ANNEX_MAP[c].name)}｜SoA：${APP.find(x=>x.v===a).label}">${c}</button>`}).join("")}${(r.controls||[]).length>5?`<span class="saved">+${r.controls.length-5}</span>`:""}</div></td>
+    <td>${lvlBadge(residualScore(r))}</td>
+    <td>${riskState(r,checks)}</td></tr>`).join("")||`<tr><td colspan="8"><div class="empty">${list.length?"這一格沒有風險。":"還沒有風險。可以按「新增風險」，或到案例搜尋把情境加入風險登錄表。"}</div></td></tr>`}
+  </tbody></table></div>`;
+  const on=(id,fn)=>{const el=$("#"+id);if(el)el.addEventListener("click",fn)};
+  on("rNew",()=>{const r=newRisk();renderRisks();openRiskDrawer(r.id)});
+  on("rFromCase",()=>{tab="search";render();window.scrollTo(0,0);toast("在案例卡片上按「加入風險登錄表」")});
+  on("rXls",exportExcel);
+  on("ckMore",()=>{showAllChecks=!showAllChecks;renderRisks()});
+  on("mxClear",()=>{riskView.cell=null;renderRisks()});
+  $("#rAcc").addEventListener("change",e=>{p.riskAccept=Number(e.target.value);touchRisk();renderRisks()});
+  $("#mxSeg").addEventListener("click",e=>{const b=e.target.closest("[data-mode]");if(!b)return;riskView.mode=b.dataset.mode;riskView.cell=null;renderRisks()});
+  $("#view-risks").querySelectorAll("[data-mx]").forEach(b=>b.addEventListener("click",()=>{riskView.cell=riskView.cell===b.dataset.mx?null:b.dataset.mx;renderRisks()}));
+}
+document.addEventListener("click",e=>{
+  const a=e.target.closest("[data-apply]");if(a){e.preventDefault();applyRiskToSoA(a.dataset.apply);return}
+  const r=e.target.closest("[data-risk]");if(r){e.preventDefault();openRiskDrawer(r.dataset.risk);return}
+  const n=e.target.closest("[data-newrisk]");if(n){e.preventDefault();riskFromCase(+n.dataset.newrisk)}
+});
+function levelSelect(id,val,labels){
+  return `<select id="${id}">${[0,1,2,3,4,5].map(n=>`<option value="${n}" ${n===+val?"selected":""}>${n?n+"　"+labels[n]:"未評估"}</option>`).join("")}</select>`;
+}
+function openRiskDrawer(id){
+  const r=riskById(id);if(!r)return;
+  const host=$("#drawerHost");
+  host.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${esc(r.id)} 風險">
+    <button class="btn x" data-close>關閉</button>
+    <div class="code">${r.id}　風險登錄</div>
+    <dl>
+      <div><dt>風險描述</dt><dd><input id="rTitle" value="${esc(r.title)}" placeholder="例如：離職員工帳號未停用，資料遭不當存取"></dd></div>
+      <div><dt>相關資產</dt><dd><input id="rAsset" value="${esc(r.asset)}" placeholder="例如：CRM 系統、AD 帳號"></dd></div>
+      <div><dt>威脅與弱點</dt><dd><textarea id="rThreat" rows="2" placeholder="可能發生什麼事、為什麼會發生">${esc(r.threat)}</textarea></dd></div>
+      <div><dt>影響</dt><dd class="ciabox">${[["C","機密性"],["I","完整性"],["A","可用性"]].map(([k,l])=>`<label><input type="checkbox" data-cia="${k}" ${r.cia.includes(k)?"checked":""}> ${l}</label>`).join("")}</dd></div>
+      <div><dt>風險擁有者</dt><dd><input id="rOwner" data-owner autocomplete="off" value="${esc(r.owner)}" placeholder="對這個風險負責、核准處理方式的人"></dd></div>
+    </dl>
+    <h3>評估（6.1.2）</h3>
+    <div class="r2"><label>可能性${levelSelect("rL",r.l,LIKELIHOOD)}</label><label>衝擊${levelSelect("rI",r.i,IMPACT)}</label><div class="rscore" id="rS"></div></div>
+    <h3 style="margin-top:16px">處理（6.1.3）</h3>
+    <dl>
+      <div><dt>處理方式</dt><dd><select id="rTreat">${TREATMENTS.map(t=>`<option value="${t.v}" ${t.v===r.treat?"selected":""}>${t.label}${TREAT_HINT[t.v]?"："+TREAT_HINT[t.v]:""}</option>`).join("")}</select></dd></div>
+      <div><dt>選定的控制措施</dt><dd id="rCtl"></dd></div>
+      <div><dt>處理計畫</dt><dd><textarea id="rPlan" rows="2" placeholder="要做什麼、需要哪些資源">${esc(r.plan)}</textarea></dd></div>
+      <div><dt>預計完成日</dt><dd><input id="rDue" type="date" value="${esc(r.due)}"></dd></div>
+    </dl>
+    <h3>殘餘風險</h3>
+    <div class="r2"><label>可能性${levelSelect("rRL",r.rl,LIKELIHOOD)}</label><label>衝擊${levelSelect("rRI",r.ri,IMPACT)}</label><div class="rscore" id="rRS"></div></div>
+    <label class="rappr"><input type="checkbox" id="rAcc2" ${r.accepted?"checked":""}> 風險擁有者已核准處理計畫與殘餘風險</label>
+    <div id="rChecks"></div>
+    <div style="margin-top:18px;display:flex;gap:8px"><button class="btn danger" id="rDel">刪除這個風險</button></div>
+  </aside>`;
+  const refresh=()=>{
+    const acc=riskAccept(cur()),s=inherentScore(r),rs=residualScore(r);
+    $("#rS").innerHTML=lvlBadge(s)+(s?`<span class="saved">${s<=acc?"在可接受範圍內":"高於可接受水準 "+acc+" 分"}</span>`:"");
+    $("#rRS").innerHTML=lvlBadge(rs)+(rs?`<span class="saved">${rs<=acc?"在可接受範圍內":"仍高於可接受水準"}</span>`:"");
+    const cks=riskChecks(cur()).filter(c=>c.rid===r.id);
+    $("#rChecks").innerHTML=cks.length?`<ul class="cklist" style="margin-top:14px">${cks.map(c=>`<li class="ck ${c.sev}"><span class="ckmsg">${esc(c.msg.replace(r.id+(r.title?"「"+r.title+"」":""),"").trim()||c.msg)}</span><span class="ckact">${c.kind==="undecided"?`<button class="btn" data-apply="${c.code}">設為適用</button>`:""}</span></li>`).join("")}</ul>`:"";
+  };
+  const renderCtl=(q="")=>{
+    const sel=r.controls||[];
+    const sugg=search([r.title,r.threat,r.asset].join(" ")).refs.map(x=>x.code).filter(c=>ANNEX_MAP[c]&&!sel.includes(c)).slice(0,6);
+    const nq=norm(q);
+    const hits=nq?ANNEX.filter(c=>!sel.includes(c.code)&&norm(c.code+" "+c.name).includes(nq.replace(/^a(?=\d)/,"a."))).slice(0,6).map(c=>c.code):[];
+    const addBtn=c=>`<button class="chip" data-addc="${c}">＋ ${c} ${esc(ANNEX_MAP[c].name)}</button>`;
+    $("#rCtl").innerHTML=`<div class="rsel">${sel.map(c=>{const a=ctl(c).app;return `<span class="rpick ${a==="N"?"bad":""}"><button class="ref" data-open="${c}"><span class="mono">${c}</span>${esc(ANNEX_MAP[c].name)}</button><span class="saved">${a==="N"?"SoA 不適用":a===""?"SoA 未判定":""}</span><button class="rx" data-rmc="${c}" aria-label="移除 ${c}">×</button></span>`}).join("")||`<span class="saved">尚未選定</span>`}</div>
+      ${sugg.length?`<div class="saved" style="margin:8px 0 4px">依描述建議：</div><div class="hints" style="margin:0">${sugg.map(addBtn).join("")}</div>`:""}
+      <input id="rcQ" placeholder="輸入編號或名稱加入其他控制措施" value="${esc(q)}" style="width:100%;margin-top:8px" autocomplete="off">
+      ${hits.length?`<div class="hints" style="margin:6px 0 0">${hits.map(addBtn).join("")}</div>`:""}`;
+    const qi=$("#rcQ");qi.addEventListener("input",()=>{const pos=qi.selectionStart;renderCtl(qi.value);const n=$("#rcQ");n.focus();n.setSelectionRange(pos,pos)});
+  };
+  const set=(f,v)=>{if(r[f]===v)return;r[f]=v;touchRisk();refresh()};
+  [["rTitle","title"],["rAsset","asset"],["rThreat","threat"],["rOwner","owner"],["rPlan","plan"],["rDue","due"]].forEach(([id,f])=>$("#"+id).addEventListener("input",e=>set(f,e.target.value)));
+  [["rL","l"],["rI","i"],["rRL","rl"],["rRI","ri"]].forEach(([id,f])=>$("#"+id).addEventListener("change",e=>set(f,Number(e.target.value))));
+  $("#rTreat").addEventListener("change",e=>set("treat",e.target.value));
+  $("#rAcc2").addEventListener("change",e=>set("accepted",e.target.checked));
+  host.querySelectorAll("[data-cia]").forEach(b=>b.addEventListener("change",()=>set("cia",[...host.querySelectorAll("[data-cia]:checked")].map(x=>x.dataset.cia).join(""))));
+  $("#rTitle").addEventListener("change",()=>renderCtl($("#rcQ")?$("#rcQ").value:""));
+  $("#rThreat").addEventListener("change",()=>renderCtl($("#rcQ")?$("#rcQ").value:""));
+  $("#rCtl").addEventListener("click",e=>{
+    const a=e.target.closest("[data-addc]"),x=e.target.closest("[data-rmc]");
+    if(a){r.controls=[...(r.controls||[]),a.dataset.addc];touchRisk();renderCtl("");refresh()}
+    if(x){r.controls=r.controls.filter(c=>c!==x.dataset.rmc);touchRisk();renderCtl($("#rcQ").value);refresh()}
+  });
+  $("#rDel").addEventListener("click",()=>deleteRisk(r.id));
+  host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeDrawer));
+  renderCtl();refresh();
+  if(!r.title)$("#rTitle").focus();else host.querySelector(".x").focus();
+}
 
 /* ================= INIT ================= */
 $("#tabs").addEventListener("click",e=>{const b=e.target.closest("[data-tab]");if(!b)return;
