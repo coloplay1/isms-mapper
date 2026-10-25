@@ -277,12 +277,6 @@ function showImportReport(p,rep){
 }
 /* 範本檔的位置；預覽環境不能存放 Office 檔時，建置時改成網站的完整網址 */
 const TPL_BASE="templates/";
-const TEMPLATES=[
-  [TPL_BASE+"isms-soa-risk-template.xlsx","ISMS_SoA與風險評鑑_空白範本.xlsx","SoA 與風險評鑑空白範本","93 項控制措施已列好，含風險評鑑準則與填寫說明"],
-  [TPL_BASE+"isms-soa-risk-example.xlsx","ISMS_SoA與風險評鑑_填寫範例.xlsx","SoA 與風險評鑑填寫範例","虛構公司「北辰精密製造」的完整填寫示範"],
-  [TPL_BASE+"access-forms-template.xlsx","權限申請與定期複審表單_範本.xlsx","權限申請與定期複審表單","權限申請異動單、權限定期複審表"]
-];
-function templateLinks(){return `<ul class="tpl">${TEMPLATES.map(([href,dl,t,d])=>`<li><a href="${href}" download="${dl}">${t}</a><span>${d}</span></li>`).join("")}</ul>`}
 function exportJSON(){
   const p=cur();
   if(!p.sample){p.lastBackupAt=Date.now();p.changesSinceBackup=0;p.backupSnoozeUntil=0;save();renderBackupBanner()}
@@ -337,37 +331,42 @@ function sampleStats(p){
 }
 function renderHome(){
   const mine=Object.values(S.projects).sort((a,b)=>b.updated-a.updated);
-  $("#view-home").innerHTML=`<div class="home">
-    <section class="panel">
-      <h2>建立新專案</h2>
-      <p class="lede" style="margin-bottom:8px">一個專案代表一家公司或一次稽核。建立後會進入附錄 A 逐項確認，所有修改自動儲存在這個瀏覽器。</p>
+  const nDocs=DOCS.filter(d=>d.status!=="planned").length;
+  const start=(id,icon,t,d,extra="")=>`<div class="start" ${id?`id="${id}"`:""}><span class="sicon" aria-hidden="true">${icon}</span><div><h3>${t}</h3><p>${d}</p>${extra}</div></div>`;
+  $("#view-home").innerHTML=`<div class="home2">
+    <section class="intro">
+      <h2>從哪裡開始？</h2>
+      <p class="lede">依 ISO/IEC 27001:2022 架構，把日常工作對應到條款、評估風險並完成適用性聲明（SoA）。所有資料只存在這個瀏覽器，不會上傳。</p>
+      <div class="starts">
+        ${start("","＋","建立新專案","從零開始，逐項判定附錄 A 是否適用",`<button class="btn primary" data-jump="createPanel">開始建立</button>`)}
+        ${start("","⇪","匯入既有資料","已有 SoA、風險評鑑表，或之前匯出的專案檔",`<div class="sbtns"><button class="btn" id="hXlsx">從 Excel 匯入</button><button class="btn" id="hImport">匯入專案檔</button></div>`)}
+        ${start("","◎","先看範例","三家不同導入階段的虛構公司，可以隨意操作",`<button class="btn" data-jump="samplePanel">看範例</button>`)}
+        ${start("","⬇","下載文件範本",`政策、程序、表單與紀錄共 ${nDocs} 份，依五層架構整理`,`<button class="btn" data-goto="docs">查看範本</button>`)}
+      </div>
+    </section>
+    ${mine.length?`<section><div class="secthead"><h3>我的專案</h3><span class="note">${mine.length} 個，依最近修改排序</span></div>${projRows(mine,"home")}</section>`:""}
+    <section class="panel" id="createPanel">
+      <h3>建立新專案</h3>
+      <p class="note" style="margin:0 0 12px">一個專案代表一家公司或一次稽核。建立後會進入附錄 A 逐項確認，修改會自動儲存。</p>
       <form id="homeForm" class="cform">
         <label>專案名稱<input id="hName" required placeholder="例如：2027 年度 ISMS 驗證"></label>
         <label>組織名稱<input id="hOrg" placeholder="選填"></label>
         <label class="wide">驗證範圍<input id="hScope" placeholder="選填，例如：台北總部資訊機房與核心系統"></label>
-        <label>產業<select id="hInd">${industryOptions("")}</select></label>
-        <div class="wide" style="display:grid;gap:6px"><span style="font-size:13px;color:var(--muted)">業務特性　<span class="fcount" id="hCount"></span></span>
-          <div class="fchips">${featureChips([],"hF")}</div>
-          <span class="note" style="font-size:12px">選產業會帶入常見特性，可再自行增減。系統只會標示建議重點，不會替你判定適用性。</span></div>
+        <details class="wide fopt"><summary>產業與業務特性<span class="note">選填，用來標示建議優先關注的控制措施</span><span class="fcount" id="hCount"></span></summary>
+          <div style="display:grid;gap:10px;margin-top:10px">
+            <label style="max-width:320px">產業<select id="hInd">${industryOptions("")}</select></label>
+            <div class="fchips">${featureChips([],"hF")}</div>
+            <span class="note" style="font-size:12px">選產業會帶入常見特性，可再自行增減。只會標示建議重點，不會替你判定適用性。</span>
+          </div></details>
         <fieldset class="wide"><legend>附錄 A 起始狀態</legend>
           <label class="radio"><input type="radio" name="hStart" value="blank" checked><span>全部未決定<small>逐項判定是否適用，適合第一次導入</small></span></label>
           <label class="radio"><input type="radio" name="hStart" value="all"><span>預設全部適用<small>再挑出要排除的項目並寫理由</small></span></label>
         </fieldset>
-        <div class="wide actions"><button class="btn primary">建立專案</button><button type="button" class="btn" id="hImport">匯入專案檔</button><button type="button" class="btn" id="hXlsx">從 Excel 匯入</button></div>
+        <div class="wide actions"><button class="btn primary">建立專案</button></div>
       </form>
     </section>
-    <section>
-      <div class="secthead"><h3>我的專案</h3>${mine.length?`<span class="note">${mine.length} 個</span>`:""}</div>
-      ${mine.length?projRows(mine,"home")
-        :`<div class="pempty">還沒有自己的專案。<br>在左側建立第一個，或先從下方範例看看完成後的樣子。</div>`}
-    </section>
-    <section class="full panel">
-      <div class="secthead"><h3>Excel 範本下載</h3><span class="note">在 Excel 填寫後，用「從 Excel 匯入」建立專案，工具會自動檢查風險評鑑與 SoA 是否一致。也能匯入欄位名稱相近的自訂 SoA 或風險評鑑表。</span></div>
-      ${templateLinks()}
-      <p class="note" style="margin:10px 0 0">需要政策、程序與其他表單？<button class="chip" data-goto="docs">查看完整 ISMS 文件範本（${DOCS.filter(d=>d.status!=="planned").length} 份）</button></p>
-    </section>
-    <section class="full">
-      <div class="secthead"><h3>範例專案</h3><span class="note">三個不同階段的虛構公司，點「預覽」切換。範例中的修改不會儲存，也可以複製成自己的專案。</span></div>
+    <section id="samplePanel">
+      <div class="secthead"><h3>範例專案</h3><span class="note">範例中的修改不會儲存，也可以複製成自己的專案。</span></div>
       <div class="samples">${SAMPLE_DEFS.map(d=>{const p=SAMPLES[d.id],st=sampleStats(p);return `<article class="scard ${d.id===S.activeId?"active":""}">
         <span class="stage">${esc(d.stage)}</span><h4>${esc(d.name)}</h4><p>${esc(d.desc)}</p>
         ${stackBar(st.t,93)}
@@ -382,6 +381,9 @@ function renderHome(){
     tab="annex";render();window.scrollTo(0,0);toast("已建立專案："+p.name)});
   $("#hImport").addEventListener("click",()=>$("#importFile").click());
   $("#hXlsx").addEventListener("click",()=>$("#xlsxFile").click());
+  v.querySelectorAll("[data-jump]").forEach(b=>b.addEventListener("click",()=>{const t=document.getElementById(b.dataset.jump);if(!t)return;
+    t.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
+    if(b.dataset.jump==="createPanel")setTimeout(()=>$("#hName").focus({preventScroll:true}),300)}));
   wireIndustry(v,"hInd","hF","hCount");
   v.querySelectorAll("[data-home-open]").forEach(b=>b.addEventListener("click",()=>openProject(b.dataset.homeOpen)));
 }
@@ -679,7 +681,7 @@ function renderProjects(){
     <p class="note" style="margin-top:14px">專案檔可在其他電腦匯入繼續編輯。Excel 包含適用性聲明、風險登錄表、風險評鑑準則、連動檢查、條款 4–10 檢核、統計摘要與修改紀錄；「從 Excel 匯入」會建立新專案。</p>
   </div></div>
   ${p?docPanel(p):""}
-  <div class="panel" style="margin-top:18px"><div class="secthead"><h3>Excel 範本</h3><span class="note">可下載後在 Excel 填寫，再用「從 Excel 匯入」建立專案。</span></div>${templateLinks()}</div>
+  <div class="panel" style="margin-top:18px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center"><div style="flex:1 1 280px"><h3 style="margin:0 0 2px">Excel 與文件範本</h3><span class="note">SoA、風險評鑑表與其他 ISMS 文件範本，在 Excel 填好後可用「從 Excel 匯入」檢查。</span></div><button class="btn" data-goto="docs">前往文件範本</button></div>
   ${p&&!p.sample?`<div class="panel" style="margin-top:18px" id="storePanel"><div class="secthead"><h3>備份與儲存狀態</h3></div>
     <ul class="kvlist">
       <li><span>上次匯出專案檔</span><b>${p.lastBackupAt?fmtDate(p.lastBackupAt)+" "+fmtTime(new Date(p.lastBackupAt)):"從未"}</b></li>
@@ -1287,7 +1289,7 @@ function renderDocs(){
     <div class="dlist">${list.map(d=>`<article class="ditem ${d.status==="planned"?"planned":""}">
       <div class="dhead"><span class="mono">${d.id}</span><b>${esc(d.name)}</b>${d.mandatory?`<span class="dtag">標準要求</span>`:""}${d.tool?`<span class="dtag tool">可匯入工具檢查</span>`:""}<span class="dfmt">${d.fmt==="docx"?"Word":"Excel"}</span></div>
       <p>${esc(d.desc)}</p>
-      <div class="dfoot"><div class="rcodes">${refs(d)}</div>${docLink(d,d.status==="planned"?"":"下載")}</div>
+      <div class="dfoot"><div class="rcodes">${refs(d)}</div><div class="dbtns">${d.example?`<a class="dl ghost" href="${TPL_BASE+d.example}" download="${esc(d.id+" "+d.name+"_填寫範例."+d.fmt)}">填寫範例</a>`:""}${docLink(d,d.status==="planned"?"":"下載")}</div></div>
     </article>`).join("")}</div></section>`}).join("")}
   <p class="note" style="margin-top:18px">範本以虛構公司「北辰精密製造」撰寫填寫範例；正式使用前請依組織實際情況修改，並經權責主管核准。法規內容整理於 ${RULES_DATE}，請以主管機關公告為準。</p>`;
   $("#docSeg").addEventListener("click",e=>{const b=e.target.closest("[data-df]");if(!b)return;docFilter=b.dataset.df;renderDocs()});

@@ -27,7 +27,7 @@ const DOCS=[
   {id:"POL-05",layer:"02",name:"資訊資產可接受使用政策",fmt:"docx",file:"docs/POL-05.docx",mandatory:false,
    clauses:["7.3"],controls:["A.5.10","A.5.11","A.6.7","A.7.7","A.8.1"],desc:"員工使用電腦、網路、郵件、行動裝置與遠距工作的規則"},
   {id:"SOA",layer:"02",name:"適用性聲明（SoA）",fmt:"xlsx",file:"isms-soa-risk-template.xlsx",mandatory:true,
-   clauses:["6.1.3"],controls:[],desc:"93 項控制措施的適用性、理由與實施狀態；與風險評鑑表在同一個活頁簿，可匯入本工具檢查",tool:true},
+   clauses:["6.1.3"],controls:[],desc:"93 項控制措施的適用性、理由與實施狀態；與風險評鑑表在同一個活頁簿，可匯入本工具檢查",tool:true,example:"isms-soa-risk-example.xlsx"},
   // 03 程序辦法
   {id:"PRO-01",layer:"03",name:"文件化資訊管制程序",fmt:"docx",file:"docs/PRO-01.docx",mandatory:true,
    clauses:["7.5"],controls:["A.5.33","A.5.37"],desc:"文件的編號、審查核准、發行、變更、保存與銷毀"},
@@ -70,7 +70,7 @@ const DOCS=[
   {id:"REC-01",layer:"05",name:"資訊資產清冊",fmt:"xlsx",file:"docs/REC-01.xlsx",mandatory:false,
    clauses:[],controls:["A.5.9","A.5.12"],desc:"資產、擁有者、分級與存放位置，作為風險評鑑的基礎"},
   {id:"REC-02",layer:"05",name:"風險評鑑表暨風險處理計畫",fmt:"xlsx",file:"isms-soa-risk-template.xlsx",mandatory:true,
-   clauses:["6.1.2","6.1.3","8.2","8.3"],controls:[],desc:"風險登錄、評估結果與處理計畫；與 SoA 在同一個活頁簿，可匯入本工具檢查",tool:true},
+   clauses:["6.1.2","6.1.3","8.2","8.3"],controls:[],desc:"風險登錄、評估結果與處理計畫；與 SoA 在同一個活頁簿，可匯入本工具檢查",tool:true,example:"isms-soa-risk-example.xlsx"},
   {id:"REC-03",layer:"05",name:"資安目標與量測計畫",fmt:"xlsx",file:"docs/REC-03.xlsx",mandatory:true,
    clauses:["6.2","9.1"],controls:[],desc:"可量測的目標、負責人、期限與每期量測結果"},
   {id:"REC-04",layer:"05",name:"教育訓練與能力紀錄",fmt:"xlsx",file:"docs/REC-04.xlsx",mandatory:true,

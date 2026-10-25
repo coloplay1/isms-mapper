@@ -337,13 +337,7 @@ footer{font-size:12px;color:var(--muted);padding-block:0 30px}
 .why.rlink.bad b{color:var(--seal)}
 .drawer dd.ciabox input,.drawer .rappr input{width:auto;flex:none}
 
-/* ===== 範本、文件管制、風險準則 ===== */
-.tpl{list-style:none;margin:0;padding:0;display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
-.tpl li{border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--surface);display:grid;gap:2px}
-.tpl a{color:var(--accent);font-weight:700;text-decoration:none}
-.tpl a::before{content:"⬇ ";font-weight:400}
-.tpl a:hover{text-decoration:underline}
-.tpl span{font-size:13px;color:var(--muted)}
+/* ===== 文件管制、風險準則 ===== */
 .docgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
 .docgrid label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
 .critline{white-space:normal;max-width:52ch}
@@ -378,3 +372,23 @@ a.btn{text-decoration:none;display:inline-block}
 .drel{display:block;text-align:left;background:var(--surface2);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:14px;color:var(--ink);text-decoration:none}
 .drel.planned{color:var(--muted)}
 #docSeg{flex-wrap:wrap}
+
+/* ===== 首頁 ===== */
+.home2{display:grid;gap:22px}
+.intro h2{margin-bottom:4px}
+.starts{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.start{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;gap:12px;align-items:flex-start}
+.start h3{margin:0 0 2px;font-size:15px}
+.start p{margin:0 0 10px;font-size:13px;color:var(--muted)}
+.start>div{display:flex;flex-direction:column;min-width:0;height:100%}
+.start .btn,.start .sbtns{margin-top:auto;align-self:flex-start}
+.sbtns{display:flex;flex-wrap:wrap;gap:6px}
+.sicon{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-size:16px;font-weight:700}
+#createPanel h3{font-size:17px}
+.fopt{border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+.fopt summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font-size:14px}
+.fopt summary .note{font-size:12px;margin:0}
+.fopt summary .fcount{margin-left:auto}
+.dbtns{display:flex;gap:6px;flex:none}
+a.dl.ghost{border-color:var(--line);color:var(--muted)}
+a.dl.ghost:hover{background:var(--surface2);color:var(--ink)}
