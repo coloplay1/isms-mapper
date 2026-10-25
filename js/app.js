@@ -1303,6 +1303,23 @@ function relatedDocsHTML(code){
     <div class="rel">${list.map(d=>d.status==="planned"?`<span class="drel planned"><span class="mono">${d.id}</span> ${esc(d.name)}（規劃中）</span>`:
       `<a class="drel" href="${docHref(d)}" download="${esc(docDl(d))}"><span class="mono">${d.id}</span> ${esc(d.name)} <span class="saved">${d.fmt==="docx"?"Word":"Excel"}</span></a>`).join("")}</div>`;
 }
+/* ================= 深淺色切換 =================
+   第一次跟隨系統設定；按下後記住選擇（只存在這個瀏覽器，存取失敗時仍可切換） */
+const THEME_KEY="isms-mapper-theme";
+const sysDark=()=>matchMedia("(prefers-color-scheme: dark)").matches;
+function currentTheme(){const t=document.documentElement.dataset.theme;return t||(sysDark()?"dark":"light")}
+function applyTheme(t){
+  if(t)document.documentElement.dataset.theme=t;else delete document.documentElement.dataset.theme;
+  const dark=currentTheme()==="dark",b=$("#themeBtn");
+  if(b){b.innerHTML=`<span aria-hidden="true">${dark?"☀":"☾"}</span><span class="tlabel">${dark?"淺色":"深色"}</span>`;
+    b.setAttribute("aria-label",dark?"切換為淺色模式":"切換為深色模式");b.setAttribute("aria-pressed",String(dark))}
+  const m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",dark?"#16211f":"#0e5a6b");
+}
+(function(){let t=null;try{t=localStorage.getItem(THEME_KEY)}catch(e){}
+  applyTheme(t==="dark"||t==="light"?t:null);
+  $("#themeBtn").addEventListener("click",()=>{const n=currentTheme()==="dark"?"light":"dark";applyTheme(n);try{localStorage.setItem(THEME_KEY,n)}catch(e){}});
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{if(!document.documentElement.dataset.theme)applyTheme(null)});
+})();
 /* ================= INIT ================= */
 $("#tabs").addEventListener("click",e=>{const b=e.target.closest("[data-tab]");if(!b)return;
   if(!cur()&&NEEDS_PROJECT.has(b.dataset.tab)){toast("請先建立專案，或從首頁開啟一個範例");return}

@@ -392,3 +392,7 @@ a.btn{text-decoration:none;display:inline-block}
 .dbtns{display:flex;gap:6px;flex:none}
 a.dl.ghost{border-color:var(--line);color:var(--muted)}
 a.dl.ghost:hover{background:var(--surface2);color:var(--ink)}
+
+/* ===== 深淺色切換按鈕 ===== */
+.themebtn{display:inline-flex;align-items:center;gap:4px}
+@media (max-width:560px){.themebtn .tlabel{display:none}.themebtn{padding:6px 10px}}
