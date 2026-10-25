@@ -12,8 +12,9 @@ test('風險分數 = 可能性 × 衝擊，任一項未評估或超出範圍為 
   for (const [l, i] of [[0, 3], [3, 0], [6, 1], [1.5, 2], ['x', 2], [null, null]]) assert.equal(A.riskScore(l, i), 0);
 });
 
-test('風險等級涵蓋 1–25 分且不重疊', () => {
-  for (let s = 1; s <= 25; s++) assert.equal(A.RISK_LEVELS.filter(l => s >= l.min && s <= l.max).length, 1, `${s} 分`);
+test('預設四級準則涵蓋 1–25 分且不重疊', () => {
+  const lv = A.riskCriteria(null).levels;
+  for (let s = 1; s <= 25; s++) assert.equal(lv.filter(l => s >= l.min && s <= l.max).length, 1, `${s} 分`);
   assert.equal(A.riskLevel(4).label, '低');
   assert.equal(A.riskLevel(5).label, '中');
   assert.equal(A.riskLevel(10).label, '高');
@@ -21,7 +22,7 @@ test('風險等級涵蓋 1–25 分且不重疊', () => {
   assert.equal(A.riskLevel(0), null);
 });
 
-test('可接受水準只接受預設選項，其他值改回 4', () => {
+test('舊版專案的可接受水準（4 或 9）仍可讀取', () => {
   assert.equal(A.riskAccept({ riskAccept: 9 }), 9);
   for (const v of [undefined, 0, 7, '9x', 100]) assert.equal(A.riskAccept({ riskAccept: v }), 4);
 });
@@ -63,10 +64,20 @@ test('殘餘風險高於可接受水準時需擁有者核准，核准後不再�
   assert.deepEqual(kinds(proj([risk(r)], c, { riskAccept: 9 })), [], '提高可接受水準後 9 分可接受');
 });
 
-test('接受高風險需要核准；避免風險不需要', () => {
-  assert.deepEqual(kinds(proj([risk({ l: 4, i: 4, treat: 'accept' })])), ['needApproval']);
-  assert.deepEqual(kinds(proj([risk({ l: 4, i: 4, treat: 'accept', accepted: true })])), []);
+test('接受「需核准」等級的風險要有核准；避免風險不需要', () => {
+  assert.deepEqual(kinds(proj([risk({ l: 3, i: 3, treat: 'accept' })])), ['needApproval']);
+  assert.deepEqual(kinds(proj([risk({ l: 3, i: 3, treat: 'accept', accepted: true })])), []);
   assert.deepEqual(kinds(proj([risk({ l: 4, i: 4, treat: 'avoid' })])), []);
+});
+
+test('「不可接受」等級不能直接接受，核准也一樣', () => {
+  const c = A.riskChecks(proj([risk({ l: 4, i: 4, treat: 'accept', accepted: true })]));
+  assert.deepEqual(c.map(x => [x.kind, x.sev]), [['acceptTreat', 'err']]);
+});
+
+test('殘餘風險仍在「不可接受」等級時要求再處理', () => {
+  const c = { 'A.8.13': { app: 'Y' } };
+  assert.deepEqual(kinds(proj([risk({ l: 5, i: 5, treat: 'mitigate', controls: ['A.8.13'], rl: 4, ri: 4, accepted: true })], c)), ['residualTreat']);
 });
 
 test('SoA 連動：被風險引用卻判為不適用是衝突，未判定是待確認', () => {
@@ -101,12 +112,13 @@ test('匯入：風險只保留合法欄位與存在的控制措施', () => {
   assert.equal(r.due, '');
   assert.equal(r.accepted, false);
   assert.equal('evil' in r, false);
-  for (const bad of [null, 'x', { id: 'X-1' }, { id: '<b>' }]) assert.equal(A.sanitizeRisk(bad), null);
+  for (const bad of [null, 'x', { id: 'r-1' }, { id: 'R1' }, { id: '<b>' }, { id: 'ABCDE-1' }]) assert.equal(A.sanitizeRisk(bad), null);
+  assert.equal(A.sanitizeRisk({ id: 'RG-07' }).id, 'RG-07', '允許 RG-07 這類前綴');
 });
 
-test('匯入：重複編號的風險只保留第一筆，可接受水準限定選項', () => {
-  const p = A.sanitizeProject({ name: 'x', controls: {}, riskAccept: 12,
+test('匯入：重複編號的風險只保留第一筆，不合格的準則改用預設', () => {
+  const p = A.sanitizeProject({ name: 'x', controls: {}, criteria: { levels: [{ label: '低', max: 30, policy: 'accept' }] },
     risks: [{ id: 'R-001', title: 'a' }, { id: 'R-001', title: 'b' }, { id: 'bad' }, { id: 'R-002' }] });
   assert.deepEqual(p.risks.map(r => r.id + r.title), ['R-001a', 'R-002']);
-  assert.equal(p.riskAccept, 4);
+  assert.deepEqual(p.criteria, A.presetCriteria('four'));
 });

@@ -84,14 +84,16 @@ function sanitizeProject(raw){
   p.reasons=Array.isArray(raw.reasons)?[...new Set(raw.reasons.map(x=>str(x,200).trim()).filter(Boolean))].slice(0,200):[];
   const st=v=>{const n=Number(v);return Number.isInteger(n)&&n>=0&&n<=3?n:0};
   for(const [code,v] of Object.entries(raw.controls)){ if(!ANNEX_MAP[code]||!isObj(v))continue;
-    p.controls[code]={app:["","Y","N"].includes(v.app)?v.app:"",status:st(v.status),owner:str(v.owner,60),evidence:str(v.evidence,300),reason:str(v.reason,500)} }
+    p.controls[code]={app:["","Y","N"].includes(v.app)?v.app:"",status:st(v.status),owner:str(v.owner,60),evidence:str(v.evidence,300),reason:str(v.reason,500)};
+    if(v.impl)p.controls[code].impl=str(v.impl,500) }
   if(isObj(raw.clauses))for(const [code,v] of Object.entries(raw.clauses)){ if(!CLAUSE_MAP[code]||!isObj(v))continue;
     p.clauses[code]={status:st(v.status),owner:str(v.owner,60),evidence:str(v.evidence,300)} }
   p.log=Array.isArray(raw.log)?raw.log.filter(e=>isObj(e)&&CODE_OK.has(e.c)&&FIELD_LABEL[e.f]).slice(-3000)
     .map(e=>({t:Number(e.t)||0,c:e.c,f:e.f,from:typeof e.from==="number"||typeof e.from==="boolean"?e.from:str(e.from,500),to:typeof e.to==="number"||typeof e.to==="boolean"?e.to:str(e.to,500)})):[];
   const seen=new Set();
   p.risks=Array.isArray(raw.risks)?raw.risks.slice(0,500).map(sanitizeRisk).filter(r=>r&&!seen.has(r.id)&&seen.add(r.id)):[];
-  p.riskAccept=riskAccept(raw);
+  p.criteria=sanitizeCriteria(raw.criteria)||legacyCriteria(raw);
+  p.doc=sanitizeDoc(raw.doc);
   p.lastBackupAt=Date.now();p.changesSinceBackup=0;
   return p;
 }
@@ -106,19 +108,48 @@ const splitReasons=v=>String(v||"").split(/[；;]/).map(x=>x.trim()).filter(Bool
    風險選定的控制措施會連動到 SoA：被風險引用的控制措施不應判為不適用。 */
 const LIKELIHOOD=["","幾乎不會","不太可能","可能","很可能","幾乎確定"];
 const IMPACT=["","輕微","小","中等","嚴重","災難性"];
-const RISK_LEVELS=[{id:"low",label:"低",min:1,max:4},{id:"mid",label:"中",min:5,max:9},{id:"high",label:"高",min:10,max:14},{id:"crit",label:"極高",min:15,max:25}];
-const ACCEPT_OPTIONS=[4,9];
+/* 風險準則：2–4 個等級，每級有分數上限與處理原則。可接受＝不需處理；需核准＝處理或由擁有者核准接受；須處理＝不可接受 */
+const POLICIES=[{v:"accept",label:"可接受",short:"可接受"},{v:"approve",label:"需擁有者核准",short:"需核准"},{v:"treat",label:"不可接受，須處理",short:"不可接受"}];
+const CRITERIA_PRESETS={
+  four:{label:"四級：低 1–4、中 5–9、高 10–14、極高 15–25",levels:[["低",4,"accept"],["中",9,"approve"],["高",14,"approve"],["極高",25,"treat"]]},
+  three:{label:"三級：低 1–6、中 8–12、高 15–25",levels:[["低",6,"accept"],["中",12,"approve"],["高",25,"treat"]]}
+};
+const LEVEL_IDS={2:["low","crit"],3:["low","mid","crit"],4:["low","mid","high","crit"]};
 const TREATMENTS=[{v:"",label:"未決定"},{v:"mitigate",label:"降低"},{v:"accept",label:"接受"},{v:"transfer",label:"移轉"},{v:"avoid",label:"避免"}];
 const TREAT_HINT={mitigate:"採取控制措施降低可能性或衝擊",accept:"在可接受水準內，或經核准承擔",transfer:"以保險、契約或委外分擔",avoid:"停止或改變造成風險的活動"};
 const RISK_REASON=REASONS_IN[0];
 function riskScore(l,i){l=Number(l);i=Number(i);return Number.isInteger(l)&&Number.isInteger(i)&&l>=1&&l<=5&&i>=1&&i<=5?l*i:0}
-function riskLevel(score){return RISK_LEVELS.find(x=>score>=x.min&&score<=x.max)||null}
-function riskAccept(p){const n=p?Number(p.riskAccept):NaN;return ACCEPT_OPTIONS.includes(n)?n:ACCEPT_OPTIONS[0]}
+function presetCriteria(key){return {levels:CRITERIA_PRESETS[key].levels.map(([label,max,policy])=>({label,max,policy}))}}
+/* 檢查並整理準則；不合格回傳 null */
+function sanitizeCriteria(raw){
+  if(!isObj(raw)||!Array.isArray(raw.levels))return null;
+  const lv=raw.levels.slice(0,5).map(l=>isObj(l)?{label:str(l.label,10).trim(),max:Number(l.max),policy:POLICIES.some(x=>x.v===l.policy)?l.policy:""}:null);
+  if(lv.length<2||lv.length>4||lv.some(l=>!l||!l.label||!l.policy||!Number.isInteger(l.max)))return null;
+  for(let k=0;k<lv.length;k++){if(lv[k].max<1||lv[k].max>25||(k&&lv[k].max<=lv[k-1].max))return null}
+  if(lv[lv.length-1].max!==25)return null;
+  return {levels:lv};
+}
+/* 舊版只存可接受分數（4 或 9） */
+function legacyCriteria(raw){const c=presetCriteria("four");if(raw&&Number(raw.riskAccept)===9)c.levels[1].policy="accept";return c}
+function riskCriteria(p){
+  const c=(p&&sanitizeCriteria(p.criteria))||legacyCriteria(p);
+  const ids=LEVEL_IDS[c.levels.length];
+  return {levels:c.levels.map((l,k)=>({...l,id:ids[k],min:k?c.levels[k-1].max+1:1}))};
+}
+function riskLevel(score,p){return score?riskCriteria(p).levels.find(x=>score>=x.min&&score<=x.max)||null:null}
+function policyOf(score,p){const l=riskLevel(score,p);return l?l.policy:""}
+/* 從最低等級起連續「可接受」的最高分數；第一級就不可接受時為 0 */
+function riskAccept(p){let n=0;for(const l of riskCriteria(p).levels){if(l.policy!=="accept")break;n=l.max}return n}
+/* 可能性 × 衝擊實際會出現的分數（7、11、13、14… 不會出現），顯示範圍時以此為準 */
+const SCORES=[...new Set([1,2,3,4,5].flatMap(a=>[1,2,3,4,5].map(b=>a*b)))].sort((a,b)=>a-b);
+function criteriaText(p){return riskCriteria(p).levels.map(l=>{const s=SCORES.filter(x=>x>=l.min&&x<=l.max);
+  return `${l.label} ${s.length?s[0]+(s.length>1?"–"+s[s.length-1]:""):l.min+"–"+l.max}（${POLICIES.find(x=>x.v===l.policy).label}）`}).join("、")}
 function inherentScore(r){return riskScore(r.l,r.i)}
 function residualScore(r){return riskScore(r.rl,r.ri)}
 /* 判斷是否還要追的風險：決定採用的分數是殘餘（有評估時）或固有 */
 function effectiveScore(r){return residualScore(r)||inherentScore(r)}
-function blankRisk(id){return {id,title:"",asset:"",threat:"",cia:"",owner:"",l:0,i:0,treat:"",controls:[],plan:"",due:"",rl:0,ri:0,accepted:false}}
+const RISK_STATUS=["","規劃中","處理中","已完成"];
+function blankRisk(id){return {id,title:"",asset:"",threat:"",vuln:"",existing:"",cia:"",owner:"",l:0,i:0,treat:"",controls:[],plan:"",due:"",rl:0,ri:0,accepted:false,status:""}}
 function nextRiskId(p){
   const n=Math.max(0,...((p&&p.risks)||[]).map(r=>Number(String(r.id).replace(/^R-/,""))||0));
   return "R-"+String(n+1).padStart(3,"0");
@@ -131,20 +162,24 @@ function risksByControl(p){
 /* 連動檢查：回傳 {sev:"err"|"warn"|"info", kind, rid?, code?, msg} 陣列。只提出問題，不自動修改。 */
 function riskChecks(p){
   const out=[];if(!p)return out;
-  const acc=riskAccept(p), risks=p.risks||[];
+  const risks=p.risks||[], pol=x=>policyOf(x,p), lab=x=>(riskLevel(x,p)||{}).label;
   const app=code=>((p.controls||{})[code]||{}).app||"";
   for(const r of risks){
     const tag=`${r.id}${r.title?"「"+r.title+"」":""}`;
     const s=inherentScore(r), rs=residualScore(r);
     if(!String(r.owner||"").trim())out.push({sev:"warn",kind:"noOwner",rid:r.id,msg:`${tag} 尚未指定風險擁有者`});
     if(!s){out.push({sev:"warn",kind:"noScore",rid:r.id,msg:`${tag} 尚未評估可能性與衝擊`});continue}
-    if(!r.treat){if(s>acc)out.push({sev:"warn",kind:"noTreat",rid:r.id,msg:`${tag} 高於可接受水準，尚未決定處理方式`});}
+    if(!r.treat){if(pol(s)!=="accept")out.push({sev:"warn",kind:"noTreat",rid:r.id,msg:`${tag} 為「${lab(s)}」風險，尚未決定處理方式`});}
     else if(r.treat==="mitigate"){
       if(!(r.controls||[]).length)out.push({sev:"warn",kind:"noControl",rid:r.id,msg:`${tag} 選擇降低風險，但沒有選定控制措施`});
       else if(!rs)out.push({sev:"warn",kind:"noResidual",rid:r.id,msg:`${tag} 尚未評估處理後的殘餘風險`});
     }
+    if(r.treat==="accept"&&pol(s)==="treat")out.push({sev:"err",kind:"acceptTreat",rid:r.id,msg:`${tag} 為「${lab(s)}」風險，依準則不可直接接受，須處理`});
     const eff=r.treat==="accept"?s:rs;
-    if(r.treat&&r.treat!=="avoid"&&eff>acc&&!r.accepted)out.push({sev:"warn",kind:"needApproval",rid:r.id,msg:`${tag} ${r.treat==="accept"?"":"殘餘"}風險 ${eff} 分高於可接受水準 ${acc} 分，需風險擁有者核准`});
+    if(r.treat&&r.treat!=="avoid"&&eff){
+      if(pol(eff)==="treat"&&r.treat!=="accept")out.push({sev:"warn",kind:"residualTreat",rid:r.id,msg:`${tag} 殘餘風險 ${eff} 分仍屬「${lab(eff)}」，依準則須再處理`});
+      else if(pol(eff)==="approve"&&!r.accepted)out.push({sev:"warn",kind:"needApproval",rid:r.id,msg:`${tag} ${r.treat==="accept"?"":"殘餘"}風險 ${eff} 分屬「${lab(eff)}」，需風險擁有者核准`});
+    }
     for(const c of r.controls||[]){
       if(app(c)==="N")out.push({sev:"err",kind:"conflict",rid:r.id,code:c,msg:`${r.id} 以 ${c} 處理風險，但 SoA 判為不適用`});
       else if(app(c)==="")out.push({sev:"warn",kind:"undecided",rid:r.id,code:c,msg:`${r.id} 以 ${c} 處理風險，SoA 尚未判定適用性`});
@@ -160,15 +195,16 @@ function riskChecks(p){
 }
 function sanitizeRisk(raw){
   if(!isObj(raw))return null;
-  const id=/^R-\d{1,4}$/.test(raw.id)?raw.id:null; if(!id)return null;
+  const id=/^[A-Z]{1,4}-\d{1,4}$/.test(raw.id)?raw.id:null; if(!id)return null;
   const lv=v=>{const n=Number(v);return Number.isInteger(n)&&n>=0&&n<=5?n:0};
   const r=blankRisk(id);
   r.title=str(raw.title,120);r.asset=str(raw.asset,120);r.threat=str(raw.threat,500);r.owner=str(raw.owner,60);r.plan=str(raw.plan,500);
+  r.vuln=str(raw.vuln,500);r.existing=str(raw.existing,300);r.status=RISK_STATUS.includes(raw.status)?raw.status:"";
   r.cia=[..."CIA"].filter(x=>String(raw.cia||"").includes(x)).join("");
   r.l=lv(raw.l);r.i=lv(raw.i);r.rl=lv(raw.rl);r.ri=lv(raw.ri);
   r.treat=TREATMENTS.some(t=>t.v===raw.treat)?raw.treat:"";
   r.controls=Array.isArray(raw.controls)?[...new Set(raw.controls.filter(c=>ANNEX_MAP[c]))]:[];
-  r.due=/^\d{4}-\d{2}-\d{2}$/.test(raw.due)?raw.due:"";
+  r.due=/^\d{4}-\d{2}(-\d{2})?$/.test(raw.due)?raw.due:"";
   r.accepted=raw.accepted===true;
   return r;
 }
