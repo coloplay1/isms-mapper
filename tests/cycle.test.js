@@ -52,7 +52,7 @@ test('建立新年度：保留內容、已驗證改為已實施、風險待重�
   assert.equal(p.controls['A.5.1'].reason, '依風險評鑑結果');
   assert.equal(p.controls['A.7.4'].app, 'N');
   assert.equal(p.clauses['9.3'].status, 2);
-  assert.deepEqual(summary, { downgraded: 1, clauses: 1, reassess: 3, approvals: 1 });
+  assert.deepEqual(summary, { downgraded: 1, clauses: 1, reassess: 3, approvals: 1, carried: 0 });
   assert.ok(p.risks.every(r => r.reassess === true && r.accepted === false));
   assert.equal(p.risks[0].l, 4, '沿用去年分數');
   assert.deepEqual(p.log, []);
@@ -117,10 +117,10 @@ test('也可以拿兩個獨立專案比較（不需要快照）', () => {
   assert.equal(d.planStats.done, 2);
 });
 
-test('比較 Excel：五個工作表，表頭含比較期間與文件管制列', () => {
+test('比較 Excel：六個工作表，表頭含比較期間與文件管制列', () => {
   const p = A.rolloverProject(lastYear(), { period: '2026 年度', prevLabel: '2025 年度' }).project;
   const wb = A.buildComparisonWorkbook(p, p.baseline, { now: new Date('2026-03-01') });
-  assert.deepEqual(wb.map(s => s.sheet), ['比較摘要', '適用性變更', '實施狀態變化', '風險變更', '處理計畫追蹤']);
+  assert.deepEqual(wb.map(s => s.sheet), ['比較摘要', '前次改善事項', '適用性變更', '實施狀態變化', '風險變更', '處理計畫追蹤']);
   const txt = s => JSON.stringify(wb.find(x => x.sheet === s).data);
   assert.match(txt('比較摘要'), /比較基準：2025 年度/);
   assert.match(txt('比較摘要'), /版次：2\.0/);

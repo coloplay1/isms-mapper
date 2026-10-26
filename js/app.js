@@ -146,7 +146,23 @@ function buildSample(d){
   // 納入理由：被風險引用的寫「依風險評鑑結果」，其餘輪流使用其他理由
   const byC=risksByControl(p);let k=0;
   ANNEX.forEach(c=>{const v=p.controls[c.code];if(v.app==="Y")v.reason=byC[c.code]?RISK_REASON:REASONS_IN[1+(k++%(REASONS_IN.length-1))]});
+  p.actions=sampleActions(d);
   return p;
+}
+/* 範例的改善事項：建置中有 2 項，驗證稽核前做過內部稽核與管理審查，有 5 項 */
+function sampleActions(d){
+  const o=k=>d.owners[k]||d.owners[0]||"",sid=d.stageId||(d.stage==="建置中"?"build":d.stage==="驗證稽核前"?"audit":"intro");
+  const A=(n,x)=>({...blankAction("I-"+String(n).padStart(3,"0")),...x});
+  if(sid==="build")return [
+    A(1,{type:"ofi",source:"資安小組會議",raised:"2026-05-12",title:"備份還原沒有定期測試",action:"每季挑一套系統做還原演練並留紀錄",refs:["A.8.13"],owner:o(0),due:"2026-09-30",status:"處理中"}),
+    A(2,{type:"inc",source:"資安事件 2026-04",raised:"2026-04-20",title:"同仁點擊釣魚郵件連結並輸入帳密",correction:"立即重設密碼並檢查登入紀錄",cause:"未啟用多因子驗證，教育訓練未涵蓋釣魚辨識",action:"全員啟用多因子驗證，加入釣魚演練",refs:["A.5.24","A.6.3","A.8.5"],owner:o(0),due:"2026-07-31",status:"已完成",doneAt:"2026-07-15"})];
+  if(sid==="audit")return [
+    A(1,{type:"nc",source:"2026 內部稽核",raised:"2026-08-18",title:"抽查 5 名離職人員，2 名的 VPN 帳號未於 3 日內停用",correction:"當日停用 2 個帳號並檢查登入紀錄",cause:"離職通知只送人資與主管，沒有通知資訊部",action:"離職單加入資訊部簽核，每月比對人事名單與帳號清單",refs:["A.5.18","A.6.5"],owner:o(0),due:"2026-09-30",status:"已確認有效",doneAt:"2026-09-10",verify:"10 月抽查 6 名離職人員，帳號皆於當日停用"}),
+    A(2,{type:"nc",source:"2026 內部稽核",raised:"2026-08-18",title:"委外廠商遠端維護沒有存取紀錄",correction:"暫停該廠商遠端帳號，改為申請制",cause:"合約未要求紀錄，系統未開啟稽核日誌",action:"開啟遠端連線紀錄並每月檢視，合約增訂資安條款",refs:["A.5.20","A.8.15"],owner:o(0),due:"2026-10-15",status:"已完成",doneAt:"2026-10-08"}),
+    A(3,{type:"obs",source:"2026 內部稽核",raised:"2026-08-19",title:"資產清冊部分設備缺少擁有者",action:"補齊擁有者並於季度盤點時更新",refs:["A.5.9"],owner:o(2),due:"2026-11-30",status:"處理中"}),
+    A(4,{type:"mr",source:"2026 第 1 次管理審查",raised:"2026-09-05",title:"社交工程演練由每年一次改為每季一次",action:"排定季度演練並將結果列入下次管理審查",refs:["A.6.3","9.3"],owner:o(1),due:"2026-12-31",status:"處理中"}),
+    A(5,{type:"mr",source:"2026 第 1 次管理審查",raised:"2026-09-05",title:"編列預算更換已停止支援的作業系統",action:"盤點 EOS 設備並提出汰換計畫",refs:["A.8.8"],owner:o(0),due:"2026-08-31",status:"待處理"})];
+  return [];
 }
 function resetSample(id){const d=SAMPLE_DEFS.find(x=>x.id===id);if(d)SAMPLES[id]=buildSample(d)}
 SAMPLE_DEFS.forEach(d=>resetSample(d.id));
@@ -330,7 +346,7 @@ function showImportReport(p,rep){
     <ul class="kvlist" style="margin-top:14px">
       <li><span>讀取的工作表</span><b>${esc(rep.sheets.join("、")||"—")}</b></li>
       <li><span>控制措施</span><b>${rep.controls} 項</b></li>
-      <li><span>風險</span><b>${rep.risks} 項</b></li>
+      <li><span>風險</span><b>${rep.risks} 項</b></li>${rep.actions?`<li><span>改善事項</span><b>${rep.actions} 項</b></li>`:""}
       <li><span>條款 4–10</span><b>${rep.clauses} 條</b></li>
       <li><span>風險準則</span><b>${rep.criteria?"已匯入":"未找到，使用預設四級"}</b></li>
       <li><span>連動檢查</span><b>${n?n+" 項待確認":"沒有發現不一致"}</b></li>
@@ -359,15 +375,15 @@ let tab="overview";
 const filt={theme:"all",status:"all",q:""};
 let searchQ="";
 
-const NEEDS_PROJECT=new Set(["overview","risks","annex","clauses"]);
+const NEEDS_PROJECT=new Set(["overview","risks","annex","clauses","improve"]);
 function render(){
   if(!cur()&&NEEDS_PROJECT.has(tab))tab="home";
   refreshFocus();refreshOwnerList();personEdit=personDel=null;
   renderProjSel(); renderSaved(); renderSampleBanner();
   document.querySelectorAll("#tabs button").forEach(b=>{b.setAttribute("aria-selected",b.dataset.tab===tab);
     b.setAttribute("aria-disabled",!cur()&&NEEDS_PROJECT.has(b.dataset.tab))});
-  ["home","overview","search","risks","annex","clauses","docs","projects"].forEach(v=>$("#view-"+v).hidden=v!==tab);
-  ({home:renderHome,overview:renderOverview,search:renderSearch,risks:renderRisks,annex:renderAnnex,docs:renderDocs,clauses:renderClauses,projects:renderProjects})[tab]();
+  ["home","overview","search","risks","annex","clauses","improve","docs","projects"].forEach(v=>$("#view-"+v).hidden=v!==tab);
+  ({home:renderHome,overview:renderOverview,search:renderSearch,risks:renderRisks,annex:renderAnnex,docs:renderDocs,clauses:renderClauses,improve:renderImprove,projects:renderProjects})[tab]();
 }
 function renderProjSel(){
   const sel=$("#projSel");
@@ -846,6 +862,7 @@ function openRolloverDrawer(){
   const np=nextPeriod(p,new Date());
   const nRisk=(p.risks||[]).filter(r=>inherentScore(r)).length;
   const nVer=Object.values(p.controls||{}).filter(v=>v.status===3).length+Object.values(p.clauses||{}).filter(v=>v.status===3).length;
+  const nAct=(p.actions||[]).filter(a=>a.status!==ACTION_CLOSED).length;
   const d=sanitizeDoc(p.doc);
   const host=$("#drawerHost");
   host.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="建立新年度">
@@ -863,6 +880,7 @@ function openRolloverDrawer(){
       <li>${nVer?`<b>${nVer}</b> 項「已驗證」改為「已實施」，`:"「已驗證」改為「已實施」，"}提醒今年重新收集證據</li>
       <li>${nRisk?`<b>${nRisk}</b> 項風險`:"風險"}保留去年分數作為起點，標示「待重新評估」；擁有者核准需重新取得</li>
       <li>文件版次 ${esc(d.ver||"（未填）")} → ${esc(bumpVersion(d.ver)||"（未填）")}，日期與核准日期清空，狀態改回「草案」</li>
+      <li>${nAct?`<b>${nAct}</b> 項`:""}未結案的改善事項帶入新年度繼續追蹤，已確認有效的留在去年的紀錄</li>
       <li>修改紀錄從新年度開始重新記錄</li>
     </ul>
     <div style="display:flex;gap:8px;margin-top:18px"><button class="btn primary" id="roGo">建立</button><button class="btn" data-close>取消</button></div>
@@ -872,7 +890,7 @@ function openRolloverDrawer(){
     const {project:np2,summary:sm}=rolloverProject(p,{name:$("#roName").value.trim()||np.name,period:$("#roPer").value.trim(),prevLabel:$("#roPrev").value.trim()});
     S.projects[np2.id]=np2;S.activeId=np2.id;copying=false;cmpBase="baseline";compareOpen=false;
     $("#drawerHost").innerHTML="";save();resetBuilt();tab="projects";render();window.scrollTo(0,0);ensurePersist();
-    toast(`已建立「${np2.name}」：${sm.downgraded+sm.clauses} 項改回已實施、${sm.reassess} 項風險待重新評估`);
+    toast(`已建立「${np2.name}」：${sm.downgraded+sm.clauses} 項改回已實施、${sm.reassess} 項風險待重新評估${sm.carried?`、${sm.carried} 項改善事項帶入`:""}`);
   });
   $("#roName").focus();
 }
@@ -889,6 +907,7 @@ function comparePanel(p){
   const sign=n=>n>0?`<span class="up">+${n}</span>`:n<0?`<span class="down">${n}</span>`:`<span class="saved">0</span>`;
   const code=c=>`<button class="ref mono" data-open="${c}">${c}</button>`;
   const rid=r=>(p.risks||[]).some(x=>x.id===r)?`<button class="ref mono" data-risk="${r}">${r}</button>`:`<span class="mono">${r}</span>`;
+  const ca=id=>(p.actions||[]).some(x=>x.id===id)?`<button class="ref mono" data-act="${id}">${id}</button>`:`<span class="mono">${id}</span>`;
   const blk=(title,n,body)=>`<details class="cmpblk" ${n&&n<=12?"open":""}><summary><b>${title}</b><span class="count">${n} 項</span></summary>${body}</details>`;
   const res={"已完成":"ok","進行中":"","逾期未完成":"warn","狀態未填":"","風險已移除":""};
   const st=[...d.statusUp.map(x=>[code(x.code),esc(x.name),x.from,x.to,`<span class="up">進步</span>`]),
@@ -897,7 +916,7 @@ function comparePanel(p){
     ...d.removed.map(r=>[rid(r.id),"移除",esc(r.title),lvlBadge(inherentScore(r)),"—"]),
     ...d.changed.map(x=>[rid(x.id),x.dir==="up"?`<span class="down">分數上升</span>`:`<span class="up">分數下降</span>`,esc(x.title),lvlBadge(x.from)+(x.rFrom!==x.rTo?`<div class="saved">殘餘 ${x.rFrom||"—"}</div>`:""),lvlBadge(x.to)+(x.rFrom!==x.rTo?`<div class="saved">殘餘 ${x.rTo||"—"}</div>`:"")])];
   return `<div class="panel" style="margin-top:18px" id="cmpPanel">
-    <div class="secthead"><h3>年度比較</h3><span class="note">管理審查（9.3.2 f）風險評鑑結果與處理計畫狀態的輸入資料</span></div>
+    <div class="secthead"><h3>年度比較</h3><span class="note">管理審查（9.3.2）的輸入資料：前次決議處理情形、風險評鑑結果與處理計畫狀態</span></div>
     <div class="filters">
       <label class="cmpsel">比較基準<select id="cmpBase">${list.map(x=>`<option value="${esc(x.id)}" ${x.id===b.id?"selected":""}>${esc(x.label)}</option>`).join("")}</select></label>
       <button class="btn primary" id="cmpXls" style="margin-left:auto">匯出比較 Excel</button><button class="btn" id="cmpClose">收合</button>
@@ -908,11 +927,12 @@ function comparePanel(p){
 
     </tbody></table></div>
     <p class="cmpplan"><b>去年處理計畫</b>共 ${ps.total} 項：完成 ${ps.done}、進行中 ${ps.open}、<span class="${ps.overdue?"down":""}">逾期 ${ps.overdue}</span>${ps.unknown?`、狀態未填 ${ps.unknown}`:""}、風險已移除 ${ps.removed}</p>
+    ${blk("前次改善事項處理情形",d.prevActions.length,cmpTable(["編號","類型","事項","負責人","結果"],d.prevActions.map(x=>[ca(x.id),esc(ACTION_TYPE_MAP[x.type].label),esc(x.title),esc(x.owner),`<span class="rstate ${{"已結案":"ok","逾期未完成":"warn"}[x.result]||""}">${esc(x.result)}</span>`]),"比較基準沒有改善事項。可在「改善追蹤」分頁登錄稽核發現與管理審查決議。"))}
     ${blk("適用性變更",d.appChanges.length,cmpTable(["編號","控制措施",d.base.label,d.cur.label,"本期理由"],d.appChanges.map(x=>[code(x.code),esc(x.name),x.from,x.to,esc(x.reason)||`<span class="warnhint" style="display:inline">未填理由</span>`]),"適用性沒有變更。"))}
     ${blk("實施狀態變化",st.length,cmpTable(["編號","控制措施",d.base.label,d.cur.label,"變化"],st,"實施狀態沒有變化。"))}
     ${blk("風險變更",rk.length,cmpTable(["編號","類型","風險",d.base.label,d.cur.label],rk,"風險沒有增刪，分數也沒有變動。"))}
     ${blk("去年處理計畫追蹤",d.plans.length,cmpTable(["編號","風險","處理計畫","預計完成","結果"],d.plans.map(x=>[rid(x.id),esc(x.title),esc(x.plan),esc(x.due),`<span class="rstate ${res[x.result]}">${x.result}</span>`]),"去年沒有需要處理的風險。"))}
-    <p class="note" style="margin-top:12px">Excel 包含比較摘要、適用性變更、實施狀態變化、風險變更與處理計畫追蹤，可附在管理審查會議紀錄。前次決議處理情形、內外部議題變化、稽核結果等其他輸入請另行準備。</p>
+    <p class="note" style="margin-top:12px">Excel 包含比較摘要、前次改善事項、適用性變更、實施狀態變化、風險變更與處理計畫追蹤，可附在管理審查會議紀錄。內外部議題變化、利害關係者回饋等其他輸入請另行準備。</p>
   </div>`;
 }
 function exportComparison(){
@@ -1479,6 +1499,121 @@ function openCriteriaDrawer(){
   };
   draw();
 }
+/* ================= 改善追蹤 ================= */
+let actFilter="open",howtoOpen=true;
+function actions(){const p=cur();if(!p)return [];if(!Array.isArray(p.actions))p.actions=[];return p.actions}
+function actionById(id){return actions().find(a=>a.id===id)}
+function actStatusBadge(a){
+  if(actionOverdue(a))return `<span class="rstate warn">${esc(a.status)}・逾期</span>`;
+  return `<span class="astate s${ACTION_STATUS.indexOf(a.status)}">${esc(a.status)}</span>`;
+}
+function newAction(init){
+  const p=cur();if(!p)return null;
+  const a=Object.assign(blankAction(nextActionId(p)),{raised:todayStr()},init||{});
+  actions().push(a);touchRisk();return a;
+}
+function deleteAction(id){
+  const list=actions(),i=list.findIndex(a=>a.id===id);if(i<0)return;
+  const [a]=list.splice(i,1);touchRisk();$("#drawerHost").innerHTML="";render();
+  undoToast(`已刪除 ${a.id}${a.title?" "+a.title:""}`,()=>{list.splice(i,0,a);touchRisk();render()});
+}
+const IMPROVE_FLOW=[
+  ["發現","內部稽核（9.2）、管理審查（9.3）、資安事件、日常監督量測，找出不符合、觀察事項與改善機會"],
+  ["登錄","每一項記下來源、負責人與預計完成日，關聯到相關條款或控制措施"],
+  ["處理","不符合事項先立即處置，再分析根本原因，決定矯正措施，避免再發生（10.2）"],
+  ["確認","措施完成後，確認是否真的有效（例如抽查、再稽核），有效才結案"],
+  ["循環","建立新年度時未結案事項自動帶入；年度比較列出前次事項處理情形，作為下次管理審查的輸入（9.3.2 a）"]
+];
+function renderImprove(){
+  const p=cur(),list=actions(),st=actionStats(p),checks=actionChecks(p);
+  const shown=list.filter(a=>actFilter==="all"||(actFilter==="open"&&a.status!==ACTION_CLOSED)||(actFilter==="late"&&actionOverdue(a))||(actFilter==="verify"&&a.status==="已完成"))
+    .slice().sort((x,y)=>(x.status===ACTION_CLOSED)-(y.status===ACTION_CLOSED)||(x.due||"9999").localeCompare(y.due||"9999"));
+  const issues=checks.filter(c=>c.sev!=="info");
+  $("#view-improve").innerHTML=`<h2>改善追蹤</h2>
+  <p class="lede">登錄內部稽核發現、管理審查決議、資安事件檢討與改善機會，追蹤到確認有效為止。這是 PDCA 的「Act」：讓問題不只被發現，也被解決，並留下持續改善（10.1）的證據。</p>
+  <details class="panel howto" id="aHow" ${howtoOpen?"open":""}><summary><b>這個分頁怎麼用</b><span class="note">從發現問題到結案的流程，以及和條款的對應</span></summary>
+    <ol class="flow">${IMPROVE_FLOW.map(([t,d],k)=>`<li><span class="fstep">${k+1}</span><b>${t}</b><span>${d}</span></li>`).join("")}</ol>
+    <div class="table-wrap" style="margin-top:12px"><table class="cmptable"><thead><tr><th style="width:130px">類型</th><th style="width:80px">條款</th><th>什麼時候用</th><th style="width:150px">需要填</th></tr></thead><tbody>
+      ${ACTION_TYPES.map(t=>`<tr><td>${t.label}</td><td class="code"><button class="ref mono" data-open="${t.clause}">${t.clause}</button></td><td>${esc(t.hint)}</td><td>${t.cause?"原因分析、矯正措施、有效性確認":"處理措施、完成日期"}</td></tr>`).join("")}
+    </tbody></table></div>
+    <p class="note" style="margin:10px 0 0">稽核時常被問：「去年稽核的缺失改善了嗎？」「怎麼知道矯正措施有效？」這裡的紀錄與匯出 Excel 的「改善追蹤」工作表可以直接回答。表單範本可在「文件範本」分頁下載矯正措施單與管理審查紀錄。</p>
+  </details>
+  <div class="filters">
+    <button class="btn primary" id="aNew">＋ 新增改善事項</button>
+    <div class="seg" id="aSeg">${[["open","未結案"],["late","逾期"],["verify","待確認有效"],["all","全部"]].map(([k,t])=>`<button data-af="${k}" aria-pressed="${actFilter===k}">${t}</button>`).join("")}</div>
+    <button class="btn" id="aXls" style="margin-left:auto">匯出 SoA Excel</button>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>${st.open}</b><span>未結案</span></div>
+    <div class="stat"><b class="${st.overdue?"down":""}">${st.overdue}</b><span>逾期</span></div>
+    <div class="stat"><b>${st.toVerify}</b><span>已完成待確認</span></div>
+    <div class="stat"><b>${st.closed}</b><span>已確認有效</span></div>
+  </div>
+  ${issues.length?`<div class="panel" style="margin-bottom:18px"><h3>需要注意</h3><ul class="cklist">${issues.slice(0,8).map(c=>`<li class="ck ${c.sev}"><span class="ckmsg">${esc(c.msg)}</span><span class="ckact"><button class="btn" data-act="${c.aid}">開啟</button></span></li>`).join("")}</ul>${issues.length>8?`<p class="note">另有 ${issues.length-8} 項</p>`:""}</div>`:""}
+  <div class="table-wrap"><table class="rtable"><thead><tr><th style="width:70px">編號</th><th>事項</th><th style="width:120px">類型</th><th style="width:120px">負責人</th><th style="width:100px">預計完成</th><th style="width:130px">狀態</th></tr></thead><tbody>
+  ${shown.map(a=>`<tr>
+    <td class="code"><button data-act="${a.id}">${a.id}</button></td>
+    <td class="name"><button class="rtitle" data-act="${a.id}">${esc(a.title||"（未填寫）")}</button><div class="saved">${[a.source,a.carried?"沿用自 "+a.carried:"",(a.refs||[]).join("、")].filter(Boolean).map(esc).join("｜")}</div></td>
+    <td>${esc(ACTION_TYPE_MAP[a.type].label)}</td>
+    <td>${esc(a.owner)||`<span class="saved">未指定</span>`}</td>
+    <td class="mono">${esc(a.due)||`<span class="saved">—</span>`}</td>
+    <td>${actStatusBadge(a)}</td></tr>`).join("")||`<tr><td colspan="6"><div class="empty">${list.length?"這個篩選沒有項目。":"還沒有改善事項。內部稽核、管理審查或資安事件之後，把要處理的事項登錄在這裡。"}</div></td></tr>`}
+  </tbody></table></div>`;
+  const on=(id,fn)=>{const el=$("#"+id);if(el)el.addEventListener("click",fn)};
+  on("aNew",()=>{const a=newAction();renderImprove();openActionDrawer(a.id)});
+  on("aXls",exportExcel);
+  $("#aHow").addEventListener("toggle",e=>{howtoOpen=e.target.open});
+  $("#aSeg").addEventListener("click",e=>{const b=e.target.closest("[data-af]");if(!b)return;actFilter=b.dataset.af;renderImprove()});
+}
+document.addEventListener("click",e=>{const a=e.target.closest("[data-act]");if(a){e.preventDefault();openActionDrawer(a.dataset.act)}});
+function openActionDrawer(id){
+  const a=actionById(id);if(!a)return;
+  const host=$("#drawerHost");
+  const draw=()=>{
+    const t=ACTION_TYPE_MAP[a.type];
+    host.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${esc(a.id)} 改善事項">
+    <button class="btn x" data-close>關閉</button>
+    <div class="code">${a.id}　改善事項${a.carried?`<span class="saved">　沿用自 ${esc(a.carried)}</span>`:""}</div>
+    <dl>
+      <div><dt>類型</dt><dd><select id="aType">${ACTION_TYPES.map(x=>`<option value="${x.v}" ${x.v===a.type?"selected":""}>${x.label}（${x.clause}）</option>`).join("")}</select><div class="saved" style="margin-top:4px">${esc(t.hint)}</div></dd></div>
+      <div><dt>事項描述</dt><dd><textarea id="aTitle" rows="2" placeholder="例如：抽查 5 名離職人員，2 名的 VPN 帳號未於 3 日內停用">${esc(a.title)}</textarea></dd></div>
+      <div class="r2x"><div><dt>來源</dt><dd><input id="aSrc" value="${esc(a.source)}" placeholder="例如：2026 內部稽核"></dd></div>
+        <div><dt>提出日期</dt><dd><input id="aRaised" value="${esc(a.raised)}" placeholder="2026-03-15"></dd></div></div>
+      <div><dt>關聯條款或控制措施</dt><dd><input id="aRefs" value="${esc((a.refs||[]).join("、"))}" placeholder="例如：A.5.18、9.2"><div class="saved" id="aRefsOk" style="margin-top:4px"></div></dd></div>
+    </dl>
+    <h3>處理${t.cause?"（10.2）":""}</h3>
+    <dl>
+      ${t.cause?`<div><dt>立即處置</dt><dd><textarea id="aCorr" rows="2" placeholder="先把問題本身處理掉，例如：立即停用 2 個帳號">${esc(a.correction)}</textarea></dd></div>
+      <div><dt>原因分析</dt><dd><textarea id="aCause" rows="2" placeholder="為什麼會發生，例如：人資離職通知未包含資訊部">${esc(a.cause)}</textarea></dd></div>`:""}
+      <div><dt>${t.cause?"矯正措施":"處理措施"}</dt><dd><textarea id="aAct" rows="2" placeholder="${t.cause?"消除原因、避免再發生，例如：離職流程加入資訊部簽核，每月帳號清查":"要做什麼"}">${esc(a.action)}</textarea></dd></div>
+      <div class="r2x"><div><dt>負責人</dt><dd><input id="aOwner" data-owner list="ownerList" autocomplete="off" value="${esc(a.owner)}"></dd></div>
+        <div><dt>預計完成</dt><dd><input id="aDue" value="${esc(a.due)}" placeholder="2026-06-30 或 2026-06"></dd></div></div>
+      <div class="r2x"><div><dt>狀態</dt><dd><select id="aStat">${ACTION_STATUS.map(x=>`<option ${x===a.status?"selected":""}>${x}</option>`).join("")}</select></dd></div>
+        <div><dt>完成日期</dt><dd><input id="aDone" value="${esc(a.doneAt)}" placeholder="2026-05-20"></dd></div></div>
+      <div><dt>有效性確認</dt><dd><textarea id="aVerify" rows="2" placeholder="怎麼確認有效，例如：6 月抽查 10 名離職人員，帳號皆於當日停用">${esc(a.verify)}</textarea></dd></div>
+    </dl>
+    <div id="aChecks"></div>
+    <div style="margin-top:18px;display:flex;gap:8px"><button class="btn danger" id="aDel">刪除這個事項</button></div>
+    </aside>`;
+    const refresh=()=>{const cks=actionChecks({actions:[a]});
+      $("#aChecks").innerHTML=cks.length?`<ul class="cklist" style="margin-top:6px">${cks.map(c=>`<li class="ck ${c.sev}"><span class="ckmsg">${esc(c.msg.replace(a.id+(a.title?"「"+a.title+"」":""),"").trim())}</span></li>`).join("")}</ul>`:"";
+      const raw=$("#aRefs").value.trim(),codes=parseRefCodes(raw);$("#aRefsOk").textContent=raw?(codes.length?"辨識為："+codes.join("、"):"沒有辨識到條款或控制措施編號"):""};
+    const set=(f,v)=>{if(a[f]===v)return;a[f]=v;touchRisk();refresh()};
+    const dt=v=>dueFrom(v)||"";
+    [["aTitle","title"],["aSrc","source"],["aCorr","correction"],["aCause","cause"],["aAct","action"],["aOwner","owner"],["aVerify","verify"]]
+      .forEach(([id,f])=>{const el=$("#"+id);if(el)el.addEventListener("input",()=>set(f,el.value))});
+    [["aRaised","raised"],["aDue","due"],["aDone","doneAt"]].forEach(([id,f])=>$("#"+id).addEventListener("change",e=>{const v=dt(e.target.value);e.target.value=v||e.target.value;set(f,v)}));
+    $("#aRefs").addEventListener("input",e=>set("refs",parseRefCodes(e.target.value)));
+    $("#aType").addEventListener("change",e=>{set("type",e.target.value);draw()});
+    $("#aStat").addEventListener("change",e=>{set("status",e.target.value);if(["已完成",ACTION_CLOSED].includes(a.status)&&!a.doneAt){a.doneAt=todayStr();$("#aDone").value=a.doneAt;touchRisk()}refresh()});
+    $("#aDel").addEventListener("click",()=>deleteAction(a.id));
+    host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeDrawer));
+    refresh();
+  };
+  draw();
+  if(!a.title)$("#aTitle").focus();else host.querySelector(".x").focus();
+}
+
 /* ================= 文件範本 ================= */
 const docHref=d=>TPL_BASE+d.file;
 const docDl=d=>`${d.id} ${d.name}.${d.fmt}`;

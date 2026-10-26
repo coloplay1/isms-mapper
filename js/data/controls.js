@@ -106,7 +106,7 @@ const ANNEX_RAW = [
 ["A.8.34","稽核測試期間的系統保護","規劃稽核測試時避免影響正式系統。","稽核作業計畫、授權紀錄"]
 ];
 const ANNEX = ANNEX_RAW.map(([code,name,desc,ev])=>({code,name,desc,ev,theme:code.split(".")[1],isNew:NEW2022.has(code)}));
-const ANNEX_MAP = Object.fromEntries(ANNEX.map(c=>[c.code,c]));
+const ANNEX_MAP = Object.assign(Object.create(null),Object.fromEntries(ANNEX.map(c=>[c.code,c])));   // 無原型：「__proto__」「toString」等鍵查不到
 
 // 條款 4–10 ; phase for PDCA
 const CLAUSES = [
@@ -136,4 +136,4 @@ const CLAUSES = [
 ["10.1","持續改善","持續改善 ISMS 的適切性與有效性。","改善提案、追蹤紀錄","A"],
 ["10.2","不符合事項與矯正措施","處理不符合事項並消除根本原因。","矯正措施單、根因分析","A"]
 ].map(([code,name,desc,ev,phase])=>({code,name,desc,ev,phase}));
-const CLAUSE_MAP = Object.fromEntries(CLAUSES.map(c=>[c.code,c]));
+const CLAUSE_MAP = Object.assign(Object.create(null),Object.fromEntries(CLAUSES.map(c=>[c.code,c])));   // 無原型：「__proto__」「toString」等鍵查不到

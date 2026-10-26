@@ -97,4 +97,4 @@ const DOC_REQUIREMENTS=[
   {code:"9.3",req:"管理審查的結果",docs:["PRO-04","FRM-05"]},
   {code:"10.2",req:"不符合事項的性質、採取的措施與矯正措施的結果",docs:["PRO-05","FRM-04"]}
 ];
-const DOC_MAP=Object.fromEntries(DOCS.map(d=>[d.id,d]));
+const DOC_MAP=Object.assign(Object.create(null),Object.fromEntries(DOCS.map(d=>[d.id,d])));   // 無原型：「__proto__」「toString」等鍵查不到

@@ -14,7 +14,8 @@ const NAMES = ['THEMES', 'ANNEX', 'ANNEX_MAP', 'CLAUSES', 'CLAUSE_MAP', 'CASES',
   'riskCriteria', 'policyOf', 'criteriaText', 'STATUS_ALIAS', 'REASON_CODES', 'sanitizeDoc', 'docLine', 'parseDocLine', 'reasonCodes',
   'parseControlCodes', 'buildWorkbook', 'importWorkbook', 'parseCriteria', 'normHead', 'mapColumns', 'IMPORT_COLS',
   'DOCS', 'DOC_LAYERS', 'DOC_REQUIREMENTS', 'DOC_MAP', 'sanitizeCase', 'nextCaseId', 'parseRefCodes', 'splitKeywords',
-  'snapshotProject', 'sanitizeBaseline', 'bumpVersion', 'nextPeriod', 'rolloverProject', 'compareProjects', 'buildComparisonWorkbook'];
+  'snapshotProject', 'sanitizeBaseline', 'bumpVersion', 'nextPeriod', 'rolloverProject', 'compareProjects', 'buildComparisonWorkbook',
+  'ACTION_TYPES', 'ACTION_STATUS', 'blankAction', 'sanitizeAction', 'nextActionId', 'actionOverdue', 'actionChecks', 'actionStats'];
 
 function load() {
   const src = FILES.map(f => `// ---- ${f}\n` + fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');

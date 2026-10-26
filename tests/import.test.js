@@ -85,3 +85,10 @@ test('匯出檔名去除不合法字元', () => {
   assert.equal(A.safeName('示範/科技:公司 (2026)'), '示範科技公司_2026');
   assert.equal(A.safeName('///'), '專案');
 });
+
+test('「__proto__」「toString」等鍵不會被當成控制措施或條款編號', () => {
+  const p = A.sanitizeProject(JSON.parse('{"controls":{"__proto__":{"app":"Y"},"toString":{"app":"Y"},"A.5.1":{"app":"Y"}},"focusOn":["constructor"],"risks":[{"id":"R-001","controls":["toString","A.5.1"]}]}'));
+  assert.deepEqual(Object.keys(p.controls), ['A.5.1']);
+  assert.deepEqual(p.focusOn, []);
+  assert.deepEqual(p.risks[0].controls, ['A.5.1']);
+});

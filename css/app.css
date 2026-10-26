@@ -441,3 +441,18 @@ table.cmptable.sum th{white-space:nowrap}
 .pform{display:grid;gap:10px}
 .pform .form input{flex:1 1 200px}
 .ppl{grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr))}
+/* 改善追蹤 */
+.howto{margin-bottom:18px}
+.howto summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
+.howto[open] summary{margin-bottom:12px}
+.flow{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:10px}
+.flow li{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;align-content:start;border:1px solid var(--line);border-radius:6px;padding:10px;background:var(--surface2);font-size:13px;line-height:1.6}
+.flow .fstep{grid-row:span 2;width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:12px;font-weight:600}
+.flow b{font-size:14px}
+.flow li>span:last-child{color:var(--muted)}
+.astate{font-size:13px;white-space:nowrap}
+.astate.s0{color:var(--muted)}
+.astate.s1{color:var(--accent)}
+.astate.s2{color:var(--ink)}
+.astate.s3{color:var(--s3)}
+.drawer .r2x{display:grid;grid-template-columns:1fr 1fr;gap:10px}

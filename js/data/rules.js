@@ -17,7 +17,7 @@ const FEATURES=[
   {id:"ot",label:"有生產線或工控（OT）設備",why:"OT 設備難以修補，一旦中毒常造成停產",codes:["A.8.22","A.8.8","A.8.19","A.7.10","A.5.30"]},
   {id:"onprem",label:"自建機房或伺服器室",why:"實體環境與支援設施由組織自行負責",codes:["A.7.1","A.7.2","A.7.5","A.7.11","A.8.14"]}
 ];
-const FEATURE_MAP=Object.fromEntries(FEATURES.map(x=>[x.id,x]));
+const FEATURE_MAP=Object.assign(Object.create(null),Object.fromEntries(FEATURES.map(x=>[x.id,x])));   // 無原型：「__proto__」「toString」等鍵查不到
 FEATURE_MAP.manual={id:"manual",label:"自行標示",why:"由專案成員手動加入的重點"};
 const INDUSTRIES=[
   {id:"",label:"未選擇",features:[]},
@@ -30,7 +30,7 @@ const INDUSTRIES=[
   {id:"edu",label:"教育／補教",features:["pii","cloud"]},
   {id:"general",label:"一般企業",features:["cloud","remote"]}
 ];
-const INDUSTRY_MAP=Object.fromEntries(INDUSTRIES.map(x=>[x.id,x]));
+const INDUSTRY_MAP=Object.assign(Object.create(null),Object.fromEntries(INDUSTRIES.map(x=>[x.id,x])));   // 無原型：「__proto__」「toString」等鍵查不到
 const mojq=kw=>"https://law.moj.gov.tw/Law/LawSearchResult.aspx?ty=ONEBAR&kw="+encodeURIComponent(kw);
 const LAWS=[
   {when:{f:"pii"},name:"個人資料保護法",kind:"法律",

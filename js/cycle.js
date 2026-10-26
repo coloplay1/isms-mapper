@@ -11,7 +11,8 @@ function snapshotProject(p,label,now){
     const o={};BASE_CTL_FIELDS.forEach(f=>o[f]=v[f]);controls[code]=o}
   for(const [code,v] of Object.entries(p.clauses||{})){if(CLAUSE_MAP[code]&&isObj(v))clauses[code]={status:v.status}}
   return {label:str(label,20)||str(p.period,20)||"去年",name:str(p.name,120),at:now||Date.now(),
-    controls,clauses,risks:(p.risks||[]).map(r=>{const o={...r,controls:[...(r.controls||[])]};delete o.reassess;return o}),criteria:p.criteria||null};
+    controls,clauses,risks:(p.risks||[]).map(r=>{const o={...r,controls:[...(r.controls||[])]};delete o.reassess;return o}),
+    actions:(p.actions||[]).map(a=>({...a,refs:[...(a.refs||[])]})),criteria:p.criteria||null};
 }
 function sanitizeBaseline(raw){
   if(!isObj(raw)||!isObj(raw.controls))return null;
@@ -23,6 +24,7 @@ function sanitizeBaseline(raw){
   const seen=new Set();
   b.risks=Array.isArray(raw.risks)?raw.risks.slice(0,500).map(sanitizeRisk).filter(r=>r&&!seen.has(r.id)&&seen.add(r.id)):[];
   b.risks.forEach(r=>delete r.reassess);
+  b.actions=sanitizeActions(raw.actions);
   b.criteria=sanitizeCriteria(raw.criteria);
   return b;
 }
@@ -48,7 +50,7 @@ function rolloverProject(prev,opts={}){
   const now=opts.now||Date.now();
   const src=JSON.parse(JSON.stringify(prev));delete src.baseline;
   const p=sanitizeProject(src);
-  const sum={downgraded:0,clauses:0,reassess:0,approvals:0};
+  const sum={downgraded:0,clauses:0,reassess:0,approvals:0,carried:0};
   p.id=uid();p.name=str(opts.name,120)||p.name;p.period=str(opts.period,20);
   p.created=p.updated=now;p.log=[];
   delete p.lastBackupAt;p.changesSinceBackup=0;
@@ -57,6 +59,10 @@ function rolloverProject(prev,opts={}){
   for(const v of Object.values(p.clauses))if(v.status===3){v.status=2;sum.clauses++}
   // 風險保留去年的分數作為起點，標示待重新評估；擁有者核准每年重新取得
   for(const r of p.risks){if(inherentScore(r)){r.reassess=true;sum.reassess++}if(r.accepted){r.accepted=false;sum.approvals++}}
+  // 未結案的改善事項帶入新年度；已確認有效的留在去年快照
+  const prevLabel=str(opts.prevLabel,20)||str(prev.period,20)||"去年";
+  p.actions=p.actions.filter(a=>a.status!==ACTION_CLOSED);
+  p.actions.forEach(a=>{if(!a.carried)a.carried=prevLabel});sum.carried=p.actions.length;
   const d=sanitizeDoc(p.doc);
   p.doc={...d,ver:bumpVersion(d.ver),date:"",approvedAt:"",status:"草案"};
   p.baseline=snapshotProject(prev,opts.prevLabel,now);
@@ -88,6 +94,11 @@ function compareProjects(base,cur){
     const done=st===RISK_DONE,over=!done&&b.due&&b.due.padEnd(10,"-31")<today;
     return {id:b.id,title:b.title,treat:b.treat,plan:b.plan,due:b.due,baseStatus:b.status||"",curStatus:r?(r.status||""):"",
       result:!r?"風險已移除":done?"已完成":over?"逾期未完成":st?"進行中":"狀態未填"}});
+  // 前次改善事項（管理審查決議、矯正措施）的處理情形：9.3.2 a
+  const ca=new Map(((cur.actions)||[]).map(a=>[a.id,a]));
+  const prevActions=((base.actions)||[]).map(b=>{const a=ca.get(b.id)||b,over=actionOverdue(a);
+    return {id:b.id,type:b.type,title:b.title,owner:a.owner,due:a.due,baseStatus:b.status,curStatus:ca.has(b.id)?a.status:"",
+      result:a.status===ACTION_CLOSED?"已結案":a.status==="已完成"?"已完成待確認":over?"逾期未完成":a.status}});
   const count=(p,fn)=>Object.values(p.controls||{}).filter(fn).length;
   const levels=riskCriteria(cur).levels;
   const byLv=(p,l)=>(p.risks||[]).filter(r=>{const s=inherentScore(r);return s&&s>=l.min&&s<=l.max}).length;
@@ -99,13 +110,14 @@ function compareProjects(base,cur){
     ["已驗證",count(base,v=>v.app==="Y"&&v.status===3),count(cur,v=>v.app==="Y"&&v.status===3)],
     ["已登錄風險",(base.risks||[]).length,(cur.risks||[]).length],
     ...levels.map(l=>[`固有風險「${l.label}」`,byLv(base,l),byLv(cur,l)]),
-    ["風險與 SoA 待確認事項",issues(base),issues(cur)]
+    ["風險與 SoA 待確認事項",issues(base),issues(cur)],
+    ["改善事項（未結案）",(base.actions||[]).filter(a=>a.status!==ACTION_CLOSED).length,(cur.actions||[]).filter(a=>a.status!==ACTION_CLOSED).length]
   ].map(([label,from,to])=>({label,from,to,diff:to-from}));
   const pc=k=>plans.filter(x=>x.result===k).length;
   return {
     base:{label:base.label||str(base.period,20)||"比較基準",name:base.name||""},
     cur:{label:str(cur.period,20)||"本期",name:cur.name||""},
-    summary:rows,appChanges,statusUp,statusDown,added,removed,changed,plans,
+    summary:rows,prevActions,appChanges,statusUp,statusDown,added,removed,changed,plans,
     planStats:{total:plans.length,done:pc("已完成"),open:pc("進行中"),overdue:pc("逾期未完成"),unknown:pc("狀態未填"),removed:pc("風險已移除")},
     criteriaChanged:!!base.criteria&&criteriaText(base)!==criteriaText(cur),
     lv
@@ -125,11 +137,14 @@ function buildComparisonWorkbook(cur,base,opts={}){
       ["適用性變更的控制措施",d.appChanges.length,"適用性變更"],
       ["實施狀態進步",d.statusUp.length,"實施狀態變化"],["實施狀態退步（含待重新驗證）",d.statusDown.length,"實施狀態變化"],
       ["新增風險",d.added.length,"風險變更"],["移除風險",d.removed.length,"風險變更"],["分數變動的風險",d.changed.length,"風險變更"],
-      [`去年處理計畫（共 ${ps.total} 項）`,`完成 ${ps.done}／進行中 ${ps.open}／逾期 ${ps.overdue}／狀態未填 ${ps.unknown}／移除 ${ps.removed}`,"處理計畫追蹤"]]),[],
+      [`去年處理計畫（共 ${ps.total} 項）`,`完成 ${ps.done}／進行中 ${ps.open}／逾期 ${ps.overdue}／狀態未填 ${ps.unknown}／移除 ${ps.removed}`,"處理計畫追蹤"],
+      [`前次改善事項（共 ${d.prevActions.length} 項）`,["已結案","已完成待確認","逾期未完成"].map(k=>`${k} ${d.prevActions.filter(x=>x.result===k).length}`).join("／"),"前次改善事項"]]),[],
     [H("對應管理審查輸入（9.3.2）")],
+    [T("a) 前次管理審查決議的處理情形：前次改善事項（含稽核發現與矯正措施）")],
     [T("f) 風險評鑑結果與風險處理計畫狀態：風險變更、處理計畫追蹤")],
     [T("d) 資訊安全績效（監督與量測結果）：實施狀態變化、本表摘要")],
-    [T("其他輸入請另行準備：a) 前次管理審查決議的處理情形、b) 內外部議題變化、c) 利害關係者需求與期望變化、d) 不符合與矯正措施、稽核結果、目標達成情形、e) 利害關係者回饋、g) 持續改進機會")],
+    [T("d) 不符合與矯正措施、稽核結果：前次改善事項；本期明細見 SoA Excel 的「改善追蹤」工作表")],
+    [T("其他輸入請另行準備：b) 內外部議題變化、c) 利害關係者需求與期望變化、d) 監督量測結果與目標達成情形、e) 利害關係者回饋、g) 持續改善機會")],
     ...(d.criteriaChanged?[[],[T(`注意：風險準則已變更（${d.base.label}：${criteriaText(base)}；${d.cur.label}：${criteriaText(cur)}），等級統計以本期準則計算。`)]]:[])];
   const appData=[...head("適用性變更"),...table(["控制措施編號","控制措施",d.base.label,d.cur.label,"本期納入或排除理由"],d.appChanges.map(x=>[x.code,x.name,x.from,x.to,x.reason]))];
   const stData=[...head("控制措施實施狀態變化（本期適用者）"),
@@ -143,11 +158,72 @@ function buildComparisonWorkbook(cur,base,opts={}){
   const plData=[...head("去年風險處理計畫追蹤"),
     ...table(["風險編號","風險描述","處理方式","處理計畫","預計完成",`${d.base.label} 狀態`,"目前狀態","結果"],
       d.plans.map(x=>[x.id,x.title,TREAT_EXPORT[x.treat]||"",x.plan,x.due,x.baseStatus,x.curStatus,x.result]))];
+  const paData=[...head("前次改善事項處理情形（管理審查決議、稽核發現、矯正措施）"),
+    ...table(["編號","類型","事項","負責人","預計完成",`${d.base.label} 狀態`,"目前狀態","結果"],
+      d.prevActions.map(x=>[x.id,(ACTION_TYPE_MAP[x.type]||{}).label||"",x.title,x.owner,x.due,x.baseStatus,x.curStatus,x.result])),
+    [],[T("建立新年度時，未結案的事項會帶入新年度繼續追蹤；「目前狀態」空白表示該事項已在去年結案。")]];
   return [
     {sheet:"比較摘要",data:sum,columns:W([34,24,14,14])},
+    {sheet:"前次改善事項",data:paData,columns:W([9,14,36,14,11,12,12,13]),stickyRowsCount:7},
     {sheet:"適用性變更",data:appData,columns:W([12,28,10,10,40]),stickyRowsCount:7},
     {sheet:"實施狀態變化",data:stData,columns:W([12,28,10,10,12]),stickyRowsCount:7},
     {sheet:"風險變更",data:rkData,columns:W([10,10,30,14,14,14,14]),stickyRowsCount:7},
     {sheet:"處理計畫追蹤",data:plData,columns:W([10,28,9,30,11,10,10,12]),stickyRowsCount:7}
   ];
+}
+
+/* ================= 改善追蹤（9.2、9.3、10.1、10.2） =================
+   稽核發現、管理審查決議、資安事件檢討與改善機會都登錄為「改善事項」，
+   追蹤負責人、期限與狀態；不符合事項需原因分析與有效性確認（10.2）。
+   建立新年度時未結案的事項會帶入新年度，年度比較列出前次事項的處理情形（9.3.2 a）。 */
+const ACTION_TYPES=[
+  {v:"nc",label:"不符合事項",clause:"10.2",hint:"稽核或自行發現未符合要求，須原因分析與矯正措施",cause:true},
+  {v:"obs",label:"觀察事項",clause:"9.2",hint:"稽核提出、尚未構成不符合但可能演變成問題",cause:true},
+  {v:"mr",label:"管理審查決議",clause:"9.3",hint:"管理審查會議決定要執行的事項"},
+  {v:"inc",label:"資安事件檢討",clause:"A.5.27",hint:"從事件學到的教訓與預防措施",cause:true},
+  {v:"ofi",label:"改善機會",clause:"10.1",hint:"可以讓 ISMS 更適切、充分或有效的改善"}
+];
+const ACTION_TYPE_MAP=Object.assign(Object.create(null),Object.fromEntries(ACTION_TYPES.map(t=>[t.v,t])));   // 無原型：「__proto__」「toString」等鍵查不到
+const ACTION_STATUS=["待處理","處理中","已完成","已確認有效"];
+const ACTION_CLOSED="已確認有效";
+const dateOK=v=>/^\d{4}-\d{2}(-\d{2})?$/.test(v)?v:"";
+function blankAction(id){return {id,type:"nc",source:"",raised:"",title:"",cause:"",correction:"",action:"",refs:[],owner:"",due:"",status:"待處理",doneAt:"",verify:"",carried:""}}
+function sanitizeAction(raw){
+  if(!isObj(raw)||!/^I-\d{1,4}$/.test(raw.id))return null;
+  const a=blankAction(raw.id);
+  a.type=ACTION_TYPE_MAP[raw.type]?raw.type:"nc";
+  a.source=str(raw.source,120);a.title=str(raw.title,300);a.cause=str(raw.cause,500);a.correction=str(raw.correction,500);
+  a.action=str(raw.action,500);a.owner=str(raw.owner,60);a.verify=str(raw.verify,500);a.carried=str(raw.carried,20);
+  a.refs=Array.isArray(raw.refs)?[...new Set(raw.refs.filter(c=>ANNEX_MAP[c]||CLAUSE_MAP[c]))].slice(0,20):[];
+  a.raised=dateOK(raw.raised);a.due=dateOK(raw.due);a.doneAt=dateOK(raw.doneAt);
+  a.status=ACTION_STATUS.includes(raw.status)?raw.status:"待處理";
+  return a;
+}
+function sanitizeActions(list){const seen=new Set();
+  return Array.isArray(list)?list.slice(0,500).map(sanitizeAction).filter(a=>a&&!seen.has(a.id)&&seen.add(a.id)):[]}
+function nextActionId(p){
+  const n=Math.max(0,...((p&&p.actions)||[]).map(a=>Number(String(a.id).slice(2))||0));
+  return "I-"+String(n+1).padStart(3,"0");
+}
+const todayStr=now=>new Date(now||Date.now()).toISOString().slice(0,10);
+/* 期限只填到月份時，以該月最後一天計 */
+const dueEnd=d=>d.length===7?d+"-31":d;
+function actionOverdue(a,now){return !!a.due&&!["已完成",ACTION_CLOSED].includes(a.status)&&dueEnd(a.due)<todayStr(now)}
+/* 需要注意的地方：逾期、不符合未做原因分析、完成後未確認有效性 */
+function actionChecks(p,now){
+  const out=[];
+  for(const a of (p&&p.actions)||[]){const tag=`${a.id}${a.title?"「"+a.title+"」":""}`,t=ACTION_TYPE_MAP[a.type];
+    if(a.status===ACTION_CLOSED)continue;
+    if(!a.owner.trim())out.push({sev:"warn",kind:"noOwner",aid:a.id,msg:`${tag} 尚未指定負責人`});
+    if(!a.due)out.push({sev:"warn",kind:"noDue",aid:a.id,msg:`${tag} 尚未設定預計完成日`});
+    if(actionOverdue(a,now))out.push({sev:"err",kind:"overdue",aid:a.id,msg:`${tag} 已超過預計完成日 ${a.due}`});
+    if(a.type==="nc"&&a.status!=="待處理"&&!a.cause.trim())out.push({sev:"warn",kind:"noCause",aid:a.id,msg:`${tag} 為不符合事項，尚未填寫原因分析（10.2 b）`});
+    if(a.status==="已完成"&&t.cause)out.push({sev:"info",kind:"verify",aid:a.id,msg:`${tag} 已完成，待確認措施有效後結案（10.2 d）`});
+  }
+  const rank={err:0,warn:1,info:2};return out.sort((x,y)=>rank[x.sev]-rank[y.sev]);
+}
+function actionStats(p,now){
+  const list=(p&&p.actions)||[];
+  return {total:list.length,open:list.filter(a=>a.status!==ACTION_CLOSED).length,overdue:list.filter(a=>actionOverdue(a,now)).length,
+    toVerify:list.filter(a=>a.status==="已完成").length,closed:list.filter(a=>a.status===ACTION_CLOSED).length};
 }

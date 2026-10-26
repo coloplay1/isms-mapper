@@ -99,6 +99,7 @@ function sanitizeProject(raw){
   p.criteria=sanitizeCriteria(raw.criteria)||legacyCriteria(raw);
   p.doc=sanitizeDoc(raw.doc);
   p.period=str(raw.period,20);
+  p.actions=sanitizeActions(raw.actions);
   const base=sanitizeBaseline(raw.baseline);if(base)p.baseline=base;
   p.lastBackupAt=Date.now();p.changesSinceBackup=0;
   return p;

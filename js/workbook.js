@@ -104,6 +104,11 @@ function buildWorkbook(p,opts={}){
   sum.push([],["不適用但未填排除理由",ANNEX.filter(c=>missingReason(ctl(c.code))).length].map(V));
   const laws=lawsFor(p);if(laws.length){sum.push([],[H("相關法規與標準（整理於"+RULES_DATE+"，請以官方公告為準）")]);laws.forEach(l=>sum.push([l.name,l.kind,l.note].map(V)))}
 
+  const acts=(p.actions||[]).map(a=>[a.id,(ACTION_TYPE_MAP[a.type]||{}).label||"",a.source,a.raised,a.title,a.cause,a.correction,a.action,
+    (a.refs||[]).join("、"),a.owner,a.due,actionOverdue(a,now)?a.status+"（逾期）":a.status,a.doneAt,a.verify,a.carried?"沿用自 "+a.carried:""]);
+  const actData=[...top("改善追蹤（不符合、矯正措施與改善事項）"),
+    ...table(["編號","類型","來源","提出日期","事項描述","原因分析","立即處置","改善或矯正措施","關聯條款／控制措施","負責人","預計完成","狀態","完成日期","有效性確認","備註"],acts),
+    [],[T("依條款 9.2 內部稽核、9.3 管理審查、10.1 持續改善、10.2 不符合事項與矯正措施登錄。不符合事項應完成原因分析，並在措施完成後確認有效性再結案。")]];
   const lg=(p.log||[]).slice().reverse().map(e=>{const c=ANNEX_MAP[e.c]||CLAUSE_MAP[e.c];
     return [new Date(e.t).toLocaleString("zh-TW",{hour12:false}),e.c,c?c.name:"",FIELD_LABEL[e.f]||e.f,fmtVal(e.f,e.from),fmtVal(e.f,e.to)]});
 
@@ -112,6 +117,7 @@ function buildWorkbook(p,opts={}){
     {sheet:"風險登錄表",data:rkData,columns:W([9,26,16,24,24,18,12,14,7,7,11,8,28,26,11,7,7,11,9,9]),stickyRowsCount:5},
     {sheet:"風險評鑑準則",data:critData,columns:W([14,30,20,24])},
     {sheet:"連動檢查",data:[...top("風險評鑑與 SoA 連動檢查"),...table(["類型","風險","控制措施","說明"],ck)],columns:W([8,9,10,70])},
+    {sheet:"改善追蹤",data:actData,columns:W([8,12,16,11,30,24,22,28,14,12,11,12,11,24,12]),stickyRowsCount:5},
     {sheet:"條款4-10檢核",data:[...top("管理系統條款 4–10 檢核"),...table(["條款","名稱","PDCA","說明","執行狀態","負責人","證據位置"],clRows)],columns:W([8,24,6,40,10,14,26]),stickyRowsCount:5},
     {sheet:"統計摘要",data:sum,columns:W([22,14,10,10,10,10,10])},
     {sheet:"修改紀錄",data:table(["時間","編號","名稱","欄位","變更前","變更後"],lg),columns:W([20,9,24,10,18,18]),stickyRowsCount:1}
@@ -127,6 +133,9 @@ const IMPORT_COLS={
     existing:["現有控制","現有控制待查證"],cia:["影響","CIA"],owner:["風險擁有者","擁有者","擁有者/期限"],l:["可能性","L"],i:["衝擊","I"],
     treat:["處理方式","擬採處理"],controls:["選定控制措施","選用控制","對應控制"],plan:["處理計畫"],due:["預計完成","預計完成日","處理期限"],
     rl:["殘餘可能性","殘餘L"],ri:["殘餘衝擊","殘餘I"],accepted:["擁有者核准"],status:["處理狀態","狀態"]},
+  action:{id:["編號","改善編號","矯正編號"],type:["類型"],source:["來源"],raised:["提出日期","發現日期"],title:["事項描述","問題描述","不符合事項"],
+    cause:["原因分析"],correction:["立即處置"],action:["改善或矯正措施","矯正措施","改善措施"],refs:["關聯條款/控制措施","關聯條款"],owner:["負責人"],
+    due:["預計完成","預計完成日"],status:["狀態","處理狀態"],doneAt:["完成日期"],verify:["有效性確認"],note:["備註"]},
   clause:{code:["條款"],status:["執行狀態","實施狀態"],owner:["負責人"],evidence:["證據位置","對應文件"]}
 };
 function normHead(h){return String(h??"").replace(/[（(][^）)]*[）)]/g,"").replace(/\s+/g,"").replace(/／/g,"/")}
@@ -173,8 +182,8 @@ function parseCriteria(data){
 }
 /* sheets：[{sheet, data:[[儲存格值…]…]}]，回傳 {raw, report}；raw 再交給 sanitizeProject() */
 function importWorkbook(sheets,opts={}){
-  const raw={name:opts.name||"匯入專案",org:"",controls:{},clauses:{},risks:[],criteria:null,doc:null};
-  const report={controls:0,risks:0,clauses:0,criteria:false,sheets:[],warnings:[]};
+  const raw={name:opts.name||"匯入專案",org:"",controls:{},clauses:{},risks:[],actions:[],criteria:null,doc:null};
+  const report={controls:0,risks:0,clauses:0,actions:0,criteria:false,sheets:[],warnings:[]};
   const seenRisk=new Set(),warn=m=>{if(report.warnings.length<50)report.warnings.push(m)};
   for(const {sheet,data} of sheets||[]){
     if(!Array.isArray(data))continue;
@@ -197,6 +206,20 @@ function importWorkbook(sheets,opts={}){
       report.controls+=n;if(n)report.sheets.push(sheet);
       if(n&&n<93)warn(`「${sheet}」只有 ${n} 項控制措施，其餘項目為未決定`);
       continue}
+    // 改善追蹤表：要有「事項描述」與「狀態」
+    const ha=findHeader(data,IMPORT_COLS.action.title);
+    const ma=ha>=0?mapColumns(data[ha],IMPORT_COLS.action):null;
+    if(ma&&"id" in ma&&"status" in ma){const m=ma,seen=new Set(raw.actions.map(a=>a.id));let n=0;
+      for(const row of data.slice(ha+1)){const id=cellText(row&&row[m.id]);if(!/^I-\d{1,4}$/.test(id))continue;
+        if(seen.has(id)){warn(`改善事項 ${id} 重複，只保留第一筆`);continue}
+        const g=k=>k in m?cellText(row[m[k]]):"";
+        const t=ACTION_TYPES.find(x=>x.label===g("type"));
+        const carried=(g("note").match(/^沿用自\s*(.+)$/)||[])[1]||"";
+        raw.actions.push({id,type:t?t.v:"nc",source:g("source"),raised:dueFrom(row[m.raised]),title:g("title"),cause:g("cause"),correction:g("correction"),
+          action:g("action"),refs:parseRefCodes(g("refs")),owner:g("owner"),due:dueFrom(row[m.due]),status:g("status").replace(/（.*）$/,""),
+          doneAt:dueFrom(row[m.doneAt]),verify:g("verify"),carried});
+        seen.add(id);n++}
+      report.actions+=n;if(n)report.sheets.push(sheet);continue}
     const hr=findHeader(data,IMPORT_COLS.risk.id);
     const mr=hr>=0?mapColumns(data[hr],IMPORT_COLS.risk):null;
     // 至少要有編號以外的兩個風險欄位，才當成風險表（避免說明頁裡提到「風險編號」）
