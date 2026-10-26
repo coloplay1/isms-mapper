@@ -39,6 +39,9 @@ test('提醒：逾期、未指定負責人、不符合未做原因分析、完�
   assert.deepEqual(kinds([act({ status: '處理中', due: '2026-12-31' })]), ['noCause']);
   assert.deepEqual(kinds([act({ status: '已完成', cause: '流程沒有通知資訊部' })]), ['verify']);
   assert.deepEqual(kinds([act({ type: 'mr', status: '已完成' })]), [], '管理審查決議完成即可');
+  assert.deepEqual(kinds([act({ type: 'obs', status: '已完成' })]), [], '觀察事項不適用 10.2，不要求有效性確認');
+  assert.deepEqual(kinds([act({ type: 'obs', status: '處理中', due: '2026-12-31' })]), [], '觀察事項的原因分析為建議填');
+  assert.ok(A.ACTION_TYPES.filter(t => t.ca).map(t => t.v).join() === 'nc', '只有不符合事項適用矯正措施');
   assert.deepEqual(kinds([act({ status: '已確認有效', owner: '' })]), [], '已結案不再提醒');
   assert.deepEqual(A.actionStats({ actions: [act(), act({ id: 'I-002', status: '已完成' }), act({ id: 'I-003', status: '已確認有效' })] }, NOW),
     { total: 3, open: 2, overdue: 1, toVerify: 1, closed: 1 });

@@ -177,11 +177,12 @@ function buildComparisonWorkbook(cur,base,opts={}){
    追蹤負責人、期限與狀態；不符合事項需原因分析與有效性確認（10.2）。
    建立新年度時未結案的事項會帶入新年度，年度比較列出前次事項的處理情形（9.3.2 a）。 */
 const ACTION_TYPES=[
-  {v:"nc",label:"不符合事項",clause:"10.2",hint:"稽核或自行發現未符合要求，須原因分析與矯正措施",cause:true},
-  {v:"obs",label:"觀察事項",clause:"9.2",hint:"稽核提出、尚未構成不符合但可能演變成問題",cause:true},
-  {v:"mr",label:"管理審查決議",clause:"9.3",hint:"管理審查會議決定要執行的事項"},
-  {v:"inc",label:"資安事件檢討",clause:"A.5.27",hint:"從事件學到的教訓與預防措施",cause:true},
-  {v:"ofi",label:"改善機會",clause:"10.1",hint:"可以讓 ISMS 更適切、充分或有效的改善"}
+  // ca：適用 10.2 矯正措施（只有不符合事項）；cause：顯示原因分析欄；corr：顯示立即處置欄；need：說明表「需要填」
+  {v:"nc",label:"不符合事項",clause:"10.2",hint:"稽核或自行發現未符合要求，須原因分析與矯正措施",ca:true,cause:true,corr:true,need:"立即處置、原因分析、矯正措施、有效性確認"},
+  {v:"obs",label:"觀察事項",clause:"9.2",hint:"稽核提出、尚未構成不符合但可能演變成問題，屬於預防與改善（10.1）",cause:true,need:"處理措施；建議填原因分析"},
+  {v:"mr",label:"管理審查決議",clause:"9.3",hint:"管理審查會議決定要執行的事項",need:"處理措施、完成日期"},
+  {v:"inc",label:"資安事件檢討",clause:"A.5.27",hint:"從事件學到的教訓與預防措施；若事件顯示未符合要求，改登為不符合事項",cause:true,corr:true,need:"立即處置、處理措施；建議填原因分析"},
+  {v:"ofi",label:"改善機會",clause:"10.1",hint:"可以讓 ISMS 更適切、充分或有效的改善",need:"處理措施、完成日期"}
 ];
 const ACTION_TYPE_MAP=Object.assign(Object.create(null),Object.fromEntries(ACTION_TYPES.map(t=>[t.v,t])));   // 無原型：「__proto__」「toString」等鍵查不到
 const ACTION_STATUS=["待處理","處理中","已完成","已確認有效"];
@@ -218,7 +219,7 @@ function actionChecks(p,now){
     if(!a.due)out.push({sev:"warn",kind:"noDue",aid:a.id,msg:`${tag} 尚未設定預計完成日`});
     if(actionOverdue(a,now))out.push({sev:"err",kind:"overdue",aid:a.id,msg:`${tag} 已超過預計完成日 ${a.due}`});
     if(a.type==="nc"&&a.status!=="待處理"&&!a.cause.trim())out.push({sev:"warn",kind:"noCause",aid:a.id,msg:`${tag} 為不符合事項，尚未填寫原因分析（10.2 b）`});
-    if(a.status==="已完成"&&t.cause)out.push({sev:"info",kind:"verify",aid:a.id,msg:`${tag} 已完成，待確認措施有效後結案（10.2 d）`});
+    if(a.status==="已完成"&&t.ca)out.push({sev:"info",kind:"verify",aid:a.id,msg:`${tag} 已完成，待確認措施有效後結案（10.2 d）`});
   }
   const rank={err:0,warn:1,info:2};return out.sort((x,y)=>rank[x.sev]-rank[y.sev]);
 }

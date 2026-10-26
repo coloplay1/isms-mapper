@@ -135,7 +135,7 @@ function buildSample(d){
     if(na.has(c.code)){p.controls[c.code]={app:"N",status:0,owner:"",evidence:"",reason:d.naReason};return}
     if(rnd()<d.undec){p.controls[c.code]={app:"",status:0,owner:"",evidence:"",reason:""};return}
     const r=rnd(); const st=d.cum.findIndex(x=>r<x);
-    const ow=d.owners[c.theme==="6"?1:c.theme==="7"?2:c.code.startsWith("A.8.2")&&d.owners[3]?3:c.code==="A.5.35"&&d.owners[4]?4:0];
+    const ow=d.owners[sampleOwnerIdx(c.code,d.owners)];
     p.controls[c.code]={app:"Y",status:st<0?3:st,owner:st>=d.ownerFrom?ow:"",evidence:st>=2?c.ev.split("、")[0]:"",reason:REASONS_IN[0]};
   });
   CLAUSES.forEach((c,i)=>{const st=d.cl(i);p.clauses[c.code]={status:st,owner:st?"資安小組":"",evidence:st>=2?c.ev:""}});
@@ -151,6 +151,20 @@ function buildSample(d){
   return p;
 }
 /* 範例的改善事項：建置中有 2 項，驗證稽核前做過內部稽核與管理審查，有 5 項 */
+/* 範例的負責人依控制措施性質分給不同部門：0 資訊、1 人資、2 總務／行政、3 研發／業務、4 稽核／資安室
+   治理與法遵（含職責區隔 A.5.3）不由資訊單位自己負責，避免球員兼裁判 */
+const OWNER_GROUPS=[
+  [4,["A.5.1","A.5.2","A.5.3","A.5.4","A.5.5","A.5.6","A.5.8","A.5.31","A.5.32","A.5.34","A.5.35","A.5.36"]],
+  [1,["A.5.10","A.5.11"]],
+  [2,["A.5.9","A.5.12","A.5.13","A.5.19","A.5.20","A.5.21","A.5.22","A.5.29","A.5.30","A.5.33","A.5.37"]],
+  [3,["A.8.25","A.8.26","A.8.27","A.8.28","A.8.29","A.8.30","A.8.31","A.8.32","A.8.33","A.8.4"]]
+];
+function sampleOwnerIdx(code,owners){
+  const th=code.split(".")[1];let k=th==="6"?1:th==="7"?2:0;
+  for(const [idx,codes] of OWNER_GROUPS)if(codes.includes(code)){k=idx;break}
+  if(!owners[k])k=k===4&&owners[2]?2:k===3&&owners[2]?2:0;
+  return k;
+}
 function sampleActions(d){
   const o=k=>d.owners[k]||d.owners[0]||"",sid=d.stageId||(d.stage==="建置中"?"build":d.stage==="驗證稽核前"?"audit":"intro");
   const A=(n,x)=>({...blankAction("I-"+String(n).padStart(3,"0")),...x});
@@ -282,6 +296,7 @@ async function storageInfo(){
 }
 function renderSaved(){
   const p=cur();
+  $("#savedAt").classList.toggle("isSample",!!(p&&p.sample));
   $("#savedAt").textContent = p&&p.sample ? "範例：修改不會儲存" : !storeOK ? "無法自動儲存" : !p ? "" : (lastSaved?`已自動儲存 ${fmtTime(lastSaved)}`:"自動儲存已開啟");
   $("#storeBanner").hidden = storeOK;
   renderBackupBanner();
@@ -655,7 +670,7 @@ function renderOverview(){
       <div class="panel"><h3>PDCA 循環</h3>${pdcaRing()}</div>
     </div>
     ${focusPanel(p)}
-    <div class="grid2" style="margin-top:18px">
+    <div class="grid2 ovgrid" style="margin-top:18px">
       <div class="panel">
         <h3>附錄 A 覆蓋熱圖</h3>
         ${rows}
@@ -741,7 +756,7 @@ function renderAnnex(){
         <input id="qFilter" class="grow" type="search" placeholder="篩選編號、名稱或負責人">
         <button class="btn primary" id="xlsBtn">匯出 SoA Excel</button>
       </div>
-      <div class="table-wrap"><table><thead><tr><th>編號</th><th>控制措施</th><th style="width:96px">適用性</th><th>納入／排除理由</th><th style="width:118px">執行狀態</th><th style="width:140px">負責人</th><th>證據位置</th></tr></thead><tbody id="annexBody"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>編號</th><th>控制措施</th><th style="width:96px">適用性</th><th style="min-width:260px">納入／排除理由</th><th style="width:118px">執行狀態</th><th style="width:140px">負責人</th><th>證據位置</th></tr></thead><tbody id="annexBody"></tbody></table></div>
       <div class="filters" style="margin-top:8px"><span class="count" id="annexCount"></span></div>`;
     v.dataset.built="1";
     $("#themeSeg").addEventListener("click",e=>{const b=e.target.closest("[data-th]");if(!b)return;filt.theme=b.dataset.th;
@@ -761,7 +776,7 @@ function annexRow(c){
     <td class="code keep"><button data-open="${c.code}">${c.code}</button></td>
     <td class="name keep"><button class="fstar ${FM[c.code]?"on":""}" data-ftoggle="${c.code}" aria-pressed="${!!FM[c.code]}" aria-label="${FM[c.code]?"取消重點":"標為重點"}：${c.code}" data-tip="${FM[c.code]?"取消重點標示":"標為重點"}">${FM[c.code]?"★":"☆"}</button><span class="${FM[c.code]?"fname":""}">${esc(c.name)}</span>${c.isNew?'<span class="tag">2022 新增</span>':""}${FM[c.code]?`<span class="ftag" data-tip="${esc(FM[c.code].map(f=>FEATURE_MAP[f].label).join("、"))}">建議重點</span>`:""}${NAC[c.code]&&!v.app?`<span class="ctag" data-tip="${esc(NAC[c.code])}">可能不適用</span>`:""}${RBC[c.code]?`<span class="rtag ${v.app==="N"?"bad":""}" data-tip="${esc(RBC[c.code].map(id=>{const r=riskById(id);return id+" "+(r&&r.title||"")}).join("、"))}${v.app==="N"?"｜被風險引用卻判為不適用":""}">風險 ${RBC[c.code].length}</span>`:""}<div class="saved">${esc(c.desc)}</div></td>
     <td class="keep"><select data-f="app" aria-label="${c.code} 適用性">${APP.map(a=>`<option value="${a.v}" ${a.v===v.app?"selected":""}>${a.label}</option>`).join("")}</select></td>
-    <td class="keep"><input data-f="reason" data-reason="${c.code}" autocomplete="off" class="${missingReason(v)?"warn":""}" aria-invalid="${missingReason(v)}" value="${esc(v.reason)}" placeholder="${v.app==="N"?"選擇排除理由（必填）":"選擇或輸入理由"}" aria-label="${c.code} 理由" ${missingReason(v)?'data-tip="不適用的項目需要排除理由，稽核時會檢查"':""}></td>
+    <td class="keep"><input data-f="reason" data-reason="${c.code}" title="${esc(v.reason)}" autocomplete="off" class="${missingReason(v)?"warn":""}" aria-invalid="${missingReason(v)}" value="${esc(v.reason)}" placeholder="${v.app==="N"?"選擇排除理由（必填）":"選擇或輸入理由"}" aria-label="${c.code} 理由" ${missingReason(v)?'data-tip="不適用的項目需要排除理由，稽核時會檢查"':""}></td>
     <td><select data-f="status" class="stsel" style="border-left-color:${lvlColor(v.status)}" ${v.app==="N"?"disabled":""} aria-label="${c.code} 狀態">${STATUS.map(s=>`<option value="${s.v}" ${s.v===v.status?"selected":""}>${s.label}</option>`).join("")}</select></td>
     <td><input data-f="owner" data-owner autocomplete="off" value="${esc(v.owner)}" placeholder="選擇或輸入" ${v.app==="N"?"disabled":""} aria-label="${c.code} 負責人"></td>
     <td><input data-f="evidence" value="${esc(v.evidence)}" placeholder="${esc(c.ev.split("、")[0])}" ${v.app==="N"?"disabled":""} aria-label="${c.code} 證據"></td></tr>`;
@@ -1411,7 +1426,7 @@ function renderRisks(){
   ${shown.map(r=>`<tr>
     <td class="code"><button data-risk="${r.id}">${r.id}</button></td>
     <td class="name"><button class="rtitle" data-risk="${r.id}">${esc(r.title||"（未命名風險）")}</button>${r.asset?`<div class="saved">${esc(r.asset)}${r.cia?"｜"+[...r.cia].map(x=>({C:"機密性",I:"完整性",A:"可用性"})[x]).join("、"):""}</div>`:""}</td>
-    <td>${esc(r.owner)||`<span class="saved">未指定</span>`}</td>
+    <td>${esc(r.owner)||`<span class="muted">未指定</span>`}</td>
     <td>${lvlBadge(inherentScore(r))}</td>
     <td>${r.treat?esc(TREATMENTS.find(t=>t.v===r.treat).label):`<span class="saved">未決定</span>`}${r.status?`<div class="saved">${esc(r.status)}</div>`:""}</td>
     <td><div class="rcodes">${(r.controls||[]).slice(0,5).map(c=>{const a=ctl(c).app;return `<button class="rc ${a==="N"?"bad":a===""?"undec":""}" data-open="${c}" data-tip="${c} ${esc(ANNEX_MAP[c].name)}｜SoA：${APP.find(x=>x.v===a).label}">${c}</button>`}).join("")}${(r.controls||[]).length>5?`<span class="saved">+${r.controls.length-5}</span>`:""}</div></td>
@@ -1591,7 +1606,7 @@ function renderImprove(){
   <details class="panel howto" id="aHow" ${howtoOpen?"open":""}><summary><b>這個分頁怎麼用</b><span class="note">從發現問題到結案的流程，以及和條款的對應</span></summary>
     <ol class="flow">${IMPROVE_FLOW.map(([t,d],k)=>`<li><span class="fstep">${k+1}</span><b>${t}</b><span>${d}</span></li>`).join("")}</ol>
     <div class="table-wrap" style="margin-top:12px"><table class="cmptable"><thead><tr><th style="width:130px">類型</th><th style="width:80px">條款</th><th>什麼時候用</th><th style="width:150px">需要填</th></tr></thead><tbody>
-      ${ACTION_TYPES.map(t=>`<tr><td>${t.label}</td><td class="code"><button class="ref mono" data-open="${t.clause}">${t.clause}</button></td><td>${esc(t.hint)}</td><td>${t.cause?"原因分析、矯正措施、有效性確認":"處理措施、完成日期"}</td></tr>`).join("")}
+      ${ACTION_TYPES.map(t=>`<tr><td>${t.label}</td><td class="code"><button class="ref mono" data-open="${t.clause}">${t.clause}</button></td><td>${esc(t.hint)}</td><td>${esc(t.need)}</td></tr>`).join("")}
     </tbody></table></div>
     <p class="note" style="margin:10px 0 0">稽核時常被問：「去年稽核的缺失改善了嗎？」「怎麼知道矯正措施有效？」這裡的紀錄與匯出 Excel 的「改善追蹤」工作表可以直接回答。表單範本可在「文件範本」分頁下載矯正措施單與管理審查紀錄。</p>
   </details>
@@ -1638,16 +1653,16 @@ function openActionDrawer(id){
         <div><dt>提出日期</dt><dd><input id="aRaised" value="${esc(a.raised)}" placeholder="2026-03-15"></dd></div></div>
       <div><dt>關聯條款或控制措施</dt><dd><input id="aRefs" value="${esc((a.refs||[]).join("、"))}" placeholder="例如：A.5.18、9.2"><div class="saved" id="aRefsOk" style="margin-top:4px"></div></dd></div>
     </dl>
-    <h3>處理${t.cause?"（10.2）":""}</h3>
+    <h3>${t.ca?"矯正措施（10.2）":"處理"}</h3>
     <dl>
-      ${t.cause?`<div><dt>立即處置</dt><dd><textarea id="aCorr" rows="2" placeholder="先把問題本身處理掉，例如：立即停用 2 個帳號">${esc(a.correction)}</textarea></dd></div>
-      <div><dt>原因分析</dt><dd><textarea id="aCause" rows="2" placeholder="為什麼會發生，例如：人資離職通知未包含資訊部">${esc(a.cause)}</textarea></dd></div>`:""}
-      <div><dt>${t.cause?"矯正措施":"處理措施"}</dt><dd><textarea id="aAct" rows="2" placeholder="${t.cause?"消除原因、避免再發生，例如：離職流程加入資訊部簽核，每月帳號清查":"要做什麼"}">${esc(a.action)}</textarea></dd></div>
+      ${t.corr?`<div><dt>立即處置</dt><dd><textarea id="aCorr" rows="2" placeholder="先把問題本身處理掉，例如：立即停用 2 個帳號">${esc(a.correction)}</textarea></dd></div>`:""}
+      ${t.cause?`<div><dt>原因分析${t.ca?"":"（建議填）"}</dt><dd><textarea id="aCause" rows="2" placeholder="為什麼會發生，例如：人資離職通知未包含資訊部">${esc(a.cause)}</textarea></dd></div>`:""}
+      <div><dt>${t.ca?"矯正措施":"處理措施"}</dt><dd><textarea id="aAct" rows="2" placeholder="${t.ca?"消除原因、避免再發生，例如：離職流程加入資訊部簽核，每月帳號清查":t.v==="inc"?"預防再發生，例如：全員啟用多因子驗證":"要做什麼"}">${esc(a.action)}</textarea></dd></div>
       <div class="r2x"><div><dt>負責人</dt><dd><input id="aOwner" data-owner list="ownerList" autocomplete="off" value="${esc(a.owner)}"></dd></div>
         <div><dt>預計完成</dt><dd><input id="aDue" value="${esc(a.due)}" placeholder="2026-06-30 或 2026-06"></dd></div></div>
       <div class="r2x"><div><dt>狀態</dt><dd><select id="aStat">${ACTION_STATUS.map(x=>`<option ${x===a.status?"selected":""}>${x}</option>`).join("")}</select></dd></div>
         <div><dt>完成日期</dt><dd><input id="aDone" value="${esc(a.doneAt)}" placeholder="2026-05-20"></dd></div></div>
-      <div><dt>有效性確認</dt><dd><textarea id="aVerify" rows="2" placeholder="怎麼確認有效，例如：6 月抽查 10 名離職人員，帳號皆於當日停用">${esc(a.verify)}</textarea></dd></div>
+      <div><dt>${t.ca?"有效性確認（10.2 d）":"結果確認（選填）"}</dt><dd><textarea id="aVerify" rows="2" placeholder="怎麼確認有效，例如：6 月抽查 10 名離職人員，帳號皆於當日停用">${esc(a.verify)}</textarea></dd></div>
     </dl>
     <div id="aChecks"></div>
     <div style="margin-top:18px;display:flex;gap:8px"><button class="btn danger" id="aDel">刪除這個事項</button></div>
@@ -1776,3 +1791,12 @@ $("#newBtn").addEventListener("click",goNew);
 tab="home";
 try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){storeOK=false}
 render();
+
+/* 分頁列：還能往右捲時右側淡出，捲到底就取消 */
+(function(){const t=document.getElementById("tabs");if(!t)return;
+  const upd=()=>t.classList.toggle("atend",t.scrollLeft+t.clientWidth>=t.scrollWidth-4);
+  t.addEventListener("scroll",upd,{passive:true});window.addEventListener("resize",upd);upd();
+  // 目前分頁在畫面外時捲進來
+  t.addEventListener("click",()=>setTimeout(()=>{const b=t.querySelector('[aria-selected="true"]');if(b)b.scrollIntoView({block:"nearest",inline:"nearest"});upd()},0));
+})();
+document.addEventListener("input",e=>{const el=e.target;if(el.matches&&el.matches("input[data-reason]"))el.title=el.value});

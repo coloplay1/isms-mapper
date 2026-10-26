@@ -507,3 +507,10 @@ table.cmptable.sum th{white-space:nowrap}
 .picked{position:relative;z-index:20;outline:3px solid #fff;outline-offset:1px;box-shadow:0 0 0 6px var(--accent)!important}
 .cell.picked{transform:scale(1.15)}
 @media (prefers-reduced-motion:no-preference){.cell.picked{transition:transform .12s}}
+.muted{color:var(--muted)}
+/* 總覽：熱圖卡片依內容高度，不被右側清單拉長 */
+.ovgrid{align-items:start}
+/* 手機：分頁列右側淡出，提示可以往右滑 */
+.tabs{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 36px),transparent)}
+.tabs.atend{-webkit-mask-image:none;mask-image:none}
+@media (max-width:560px){#savedAt.isSample{display:none}.proj select{max-width:none;flex:1 1 140px;min-width:0}.proj{flex:1 1 100%;flex-wrap:wrap}.proj label{display:none}}
