@@ -78,7 +78,8 @@ const STATUS_ALIAS={"未開始":0,"規劃中":0,"未實施":0,"建置中":1,"部
 /* 納入理由代碼：RA 風險評鑑、LR 法規、CO 契約、BP 最佳實務 */
 const REASON_CODES={RA:REASONS_IN[0],LR:REASONS_IN[1],CO:REASONS_IN[2],BP:REASONS_IN[4]};
 
-/* 產品／服務生命週期（Product/Service Life Cycle Pipeline，參考 ISO 9001 與 ISO/IEC 24748）
+/* 產品／服務生命週期（Product/Service Life Cycle Pipeline）：階段依 ISO/IEC 24748 的生命週期概念整理，
+   與控制措施的對應為本工具歸納，非標準規定（最直接相關的是 A.8.25 安全開發生命週期）
    每個階段列出最相關的附錄 A 控制措施；同一項可出現在多個階段。只是檢視方式，不影響適用性判定。 */
 const LIFECYCLE=[
   {id:"req",name:"需求",en:"Requirement",desc:"蒐集利害關係者（4.2）與 ICT 需求，把資安、法規、隱私與供應商要求寫進需求",

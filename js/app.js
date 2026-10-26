@@ -335,6 +335,7 @@ function exportExcel(){
   if(typeof writeXlsxFile!=="function"){toast("Excel 元件沒有載入，請確認 vendor/write-excel-file.min.js 存在");return}
   const p=cur();
   writeXlsxFile(buildWorkbook(p)).toBlob()
+    .then(blob=>{if(!p.sample){p.lastExcelAt=Date.now();save();if(tab==="risks")renderRisks()}return blob})
     .then(blob=>saveFile(`SoA_${safeName(p.name)}_${new Date().toISOString().slice(0,10)}.xlsx`,blob,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
     .catch(err=>{console.error(err);toast("Excel 產生失敗："+(err&&err.message||err))});
 }
@@ -751,14 +752,14 @@ function renderAnnex(){
   const v=$("#view-annex");
   if(!v.dataset.built){
     v.innerHTML=`<h2>附錄 A 逐項確認</h2><p class="lede">逐項決定是否適用、填寫理由與執行狀態。內容會自動儲存，可隨時匯出為適用性聲明（SoA）Excel。</p>
-      <details class="panel lcwrap" ${lcOpen?"open":""} id="lcWrap"><summary><b>依產品／服務生命週期檢視</b><span class="note">從需求到退休，每個階段該注意哪些控制措施（參考 ISO 9001、ISO/IEC 24748）。點階段可篩選下方清單</span></summary><div id="lcStrip"></div></details>
+      <details class="panel lcwrap" ${lcOpen?"open":""} id="lcWrap"><summary><b>依產品／服務生命週期檢視</b><span class="note">從需求到退休，每個階段該注意哪些控制措施。階段依 ISO/IEC 24748 的生命週期概念整理，與控制措施的對應為本工具歸納，非標準規定；與附錄 A.8.25「安全開發生命週期」最直接相關。點階段可篩選下方清單</span></summary><div id="lcStrip"></div></details>
       <div class="filters">
         <div class="seg" id="themeSeg"><button data-th="all" aria-pressed="true">全部</button>${THEMES.map(t=>`<button data-th="${t.id}" aria-pressed="false">A.${t.id} ${t.name}</button>`).join("")}</div>
         <select id="stFilter" aria-label="狀態篩選"><option value="all">所有狀態</option><option value="undec">未決定適用性</option><option value="N">不適用</option>${STATUS.map(s=>`<option value="${s.v}">${s.label}</option>`).join("")}<option value="new">2022 新增</option><option value="noreason">不適用但未填理由</option><option value="focus">產業建議重點</option><option value="nacand">可能不適用候選</option><option value="risk">有風險引用</option><option value="riskissue">風險連動待確認</option></select>
         <input id="qFilter" class="grow" type="search" placeholder="篩選編號、名稱或負責人">
         <button class="btn primary" id="xlsBtn">匯出 SoA Excel</button>
       </div>
-      <div class="table-wrap"><table><thead><tr><th>編號</th><th>控制措施</th><th style="width:96px">適用性</th><th style="min-width:260px">納入／排除理由</th><th style="width:118px">執行狀態</th><th style="width:140px">負責人</th><th>證據位置</th></tr></thead><tbody id="annexBody"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>編號</th><th>控制措施</th><th style="width:96px">適用性</th><th style="min-width:220px">納入／排除理由</th><th style="width:118px">執行狀態</th><th style="width:140px">負責人</th><th style="min-width:200px">證據位置</th></tr></thead><tbody id="annexBody"></tbody></table></div>
       <div class="filters" style="margin-top:8px"><span class="count" id="annexCount"></span></div>`;
     v.dataset.built="1";
     $("#themeSeg").addEventListener("click",e=>{const b=e.target.closest("[data-th]");if(!b)return;filt.theme=b.dataset.th;
@@ -783,9 +784,9 @@ function annexRow(c){
     <td class="keep"><input data-f="reason" data-reason="${c.code}" title="${esc(v.reason)}" autocomplete="off" class="${missingReason(v)?"warn":""}" aria-invalid="${missingReason(v)}" value="${esc(v.reason)}" placeholder="${v.app==="N"?"選擇排除理由（必填）":"選擇或輸入理由"}" aria-label="${c.code} 理由" ${missingReason(v)?'data-tip="不適用的項目需要排除理由，稽核時會檢查"':""}></td>
     <td><select data-f="status" class="stsel" style="border-left-color:${lvlColor(v.status)}" ${v.app==="N"?"disabled":""} aria-label="${c.code} 狀態">${STATUS.map(s=>`<option value="${s.v}" ${s.v===v.status?"selected":""}>${s.label}</option>`).join("")}</select></td>
     <td><input data-f="owner" data-owner autocomplete="off" value="${esc(v.owner)}" placeholder="選擇或輸入" ${v.app==="N"?"disabled":""} aria-label="${c.code} 負責人"></td>
-    <td><input data-f="evidence" value="${esc(v.evidence)}" placeholder="${esc(c.ev.split("、")[0])}" ${v.app==="N"?"disabled":""} aria-label="${c.code} 證據"></td></tr>`;
+    <td><input data-f="evidence" title="${esc(v.evidence)}" value="${esc(v.evidence)}" placeholder="${esc(c.ev.split("、")[0])}" ${v.app==="N"?"disabled":""} aria-label="${c.code} 證據"></td></tr>`;
 }
-let lcOpen=true;
+let lcOpen=false;   // 附錄 A 的主要工作是逐項判定，生命週期檢視預設收合
 function renderLcStrip(){
   const el=$("#lcStrip");if(!el)return;
   const box=(x,k)=>{const vs=x.codes.map(c=>ctl(c)),app=vs.filter(v=>v.app==="Y"),done=app.filter(v=>v.status>=2).length,und=vs.filter(v=>!v.app).length;
@@ -1357,21 +1358,22 @@ const RF_INFO={
   eval:{what:"把風險分數與準則比較，決定哪些須處理、哪些需擁有者核准、哪些可接受，排出處理的優先順序。",acts:[]},
   treat:{what:"選擇處理方式（降低、移轉、避免、接受），選定控制措施並寫處理計畫與期限。選定的控制措施在 SoA 必須是適用。",acts:[["goto:annex","前往附錄 A"]]},
   accept:{what:"評估處理後的殘餘風險；仍屬需核准等級的，由風險擁有者核准接受（6.1.3 f）。",acts:[]},
-  consult:{what:"風險評鑑過程中與風險擁有者、管理階層溝通：誰負責、處理計畫與殘餘風險由誰核准。",acts:[]},
+  consult:{what:"風險評鑑的每一步都要與風險擁有者、管理階層及相關人員溝通：評估結果、處理計畫與殘餘風險由誰決定、如何告知（7.4 溝通）。工具無法判斷溝通是否做到，請以會議紀錄或核准紀錄佐證。",acts:[]},
+  record:{what:"保存風險評鑑與處理的文件化資訊（6.1.2、6.1.3、8.2、8.3），並向管理階層報告。匯出的 SoA Excel 含風險登錄表、風險評鑑準則與連動檢查，文件狀態改為「已核准」後即可作為紀錄。",acts:[["xls","匯出 SoA Excel"],["goto:projects","文件管制資訊"]]},
   monitor:{what:"定期與重大變更時重新評估，追蹤處理計畫是否如期完成。每年可在專案管理建立新年度。",acts:[["goto:projects","前往年度循環"]]}
 };
 function rfInfoHTML(x){
   if(!x)return "";
   const info=RF_INFO[x.id]||{what:"",acts:[]},n=x.pending.length;
-  const btn=([k,t])=>k==="new"?`<button class="btn" data-rfact="new">${t}</button>`:k==="criteria"?`<button class="btn" data-rfact="criteria">${t}</button>`:`<button class="btn" data-goto="${k.slice(5)}">${t}</button>`;
+  const btn=([k,t])=>k==="xls"?`<button class="btn" data-rfact="xls">${t}</button>`:k==="new"?`<button class="btn" data-rfact="new">${t}</button>`:k==="criteria"?`<button class="btn" data-rfact="criteria">${t}</button>`:`<button class="btn" data-goto="${k.slice(5)}">${t}</button>`;
   return `<div class="rfinfo"><div class="rfih"><b>${esc(x.name)}</b><span class="mono rcl">${esc(x.clause)}</span>
-      <span class="rstate ${x.done?"ok":n&&!x.info?"warn":""}">${x.done?"✓ 已完成":n?`${n} 項${esc(x.note)}`:"尚未開始"}</span><button class="chip rfclose" style="margin-left:auto">收合</button></div>
+      <span class="rstate ${x.done?"ok":n&&!x.info?"warn":""}">${x.neutral?"說明":x.done?"✓ 已完成":n?`${n} 項${esc(x.note)}`:"尚未完成"}</span><button class="chip rfclose" style="margin-left:auto">收合</button></div>
     <p>${esc(info.what)}</p>
-    <div class="rfiact">${n?`<span class="note">下方清單已篩選出這 ${n} 項。</span>`:`<span class="note">這一步目前沒有待處理的風險。</span>`}${info.acts.map(btn).join("")}</div></div>`;
+    <div class="rfiact">${n?`<span class="note">下方清單已篩選出這 ${n} 項。</span>`:x.neutral||x.id==="record"?"":`<span class="note">這一步目前沒有待處理的風險。</span>`}${info.acts.map(btn).join("")}</div></div>`;
 }
 function riskFlowHTML(p){
   const st=riskStages(p),g=id=>st.find(x=>x.id===id);
-  const box=x=>{const n=x.pending.length,cls=x.done?"done":n&&!x.info?"todo":"";const sel=riskView.stage===x.id;
+  const box=x=>{const n=x.pending.length,cls=x.neutral?"neutral":x.done?"done":n&&!x.info?"todo":"";const sel=riskView.stage===x.id;
     return `<button class="rfbox ${cls} ${sel?"sel":""}" data-rstage="${x.id}" aria-pressed="${sel}" aria-expanded="${sel}">
       <span class="rfn">${esc(x.name)}${x.done?` <span class="rfok" aria-label="已完成">✓</span>`:""}</span><span class="rfen">${esc(x.en)}</span><span class="rfv">${esc(x.value)}</span></button>`};
   const arr=`<span class="rfarr" aria-hidden="true">→</span>`;
@@ -1382,8 +1384,8 @@ function riskFlowHTML(p){
       <div class="rfgroup"><span class="rfglab">風險評鑑（Risk assessment，6.1.2）</span><div class="rfgin">${box(g("ident"))}${arr}${box(g("anal"))}${arr}${box(g("eval"))}</div></div>${arr}
       <div class="rfgroup"><span class="rfglab">風險處理（Risk treatment，6.1.3）</span><div class="rfgin">${box(g("treat"))}${arr}${box(g("accept"))}</div></div>
     </div>
-    <div class="rfbands">${box(g("consult"))}${box(g("monitor"))}</div>
-    ${riskView.stage?rfInfoHTML(st.find(x=>x.id===riskView.stage)):`<p class="rfloop">溝通與諮詢、監督與審查貫穿每一個步驟；每年與重大變更時重新評估，結果回到風險識別。</p>`}
+    <div class="rfbands">${box(g("consult"))}${box(g("record"))}${box(g("monitor"))}</div>
+    ${riskView.stage?rfInfoHTML(st.find(x=>x.id===riskView.stage)):`<p class="rfloop">溝通與諮詢、記錄與報告、監督與審查貫穿每一個步驟；每年與重大變更時重新評估，結果回到風險識別。</p>`}
   </div>`;
 }
 function risks(){const p=cur();if(!p)return [];if(!Array.isArray(p.risks))p.risks=[];return p.risks}
@@ -1546,7 +1548,7 @@ function renderRisks(){
   on("ckApplyAll",applyAllRiskToSoA);
   on("mxClear",()=>{riskView.cell=null;renderRisks()});
   $("#view-risks").querySelectorAll("#rsClear,.rfclose").forEach(b=>b.addEventListener("click",()=>{riskView.stage=null;renderRisks()}));
-  $("#view-risks").querySelectorAll("[data-rfact]").forEach(b=>b.addEventListener("click",()=>{if(b.dataset.rfact==="new")openRiskPicker();else openCriteriaDrawer()}));
+  $("#view-risks").querySelectorAll("[data-rfact]").forEach(b=>b.addEventListener("click",()=>{const a=b.dataset.rfact;if(a==="new")openRiskPicker();else if(a==="xls")exportExcel();else openCriteriaDrawer()}));
   $("#view-risks").querySelectorAll("[data-rstage]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.rstage,y=window.scrollY;riskView.stage=riskView.stage===id?null:id;riskView.cell=null;renderRisks();
     // 不捲動頁面：說明框就在流程圖下方，清單的篩選結果往下看即可
     window.scrollTo(0,y);const nb=document.querySelector(`[data-rstage="${id}"]`);if(nb)nb.focus({preventScroll:true})}));
@@ -1929,4 +1931,4 @@ render();
   // 目前分頁在畫面外時捲進來
   t.addEventListener("click",()=>setTimeout(()=>{const b=t.querySelector('[aria-selected="true"]');if(b)b.scrollIntoView({block:"nearest",inline:"nearest"});upd()},0));
 })();
-document.addEventListener("input",e=>{const el=e.target;if(el.matches&&el.matches("input[data-reason]"))el.title=el.value});
+document.addEventListener("input",e=>{const el=e.target;if(el.matches&&el.matches("input[data-reason],input[data-f=evidence]"))el.title=el.value});

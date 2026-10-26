@@ -102,6 +102,7 @@ function sanitizeProject(raw){
   p.criteriaOk=typeof raw.criteriaOk==="boolean"?raw.criteriaOk:!!(sanitizeCriteria(raw.criteria)||(Array.isArray(raw.risks)&&raw.risks.length));
   p.doc=sanitizeDoc(raw.doc);
   p.period=str(raw.period,20);
+  if(Number(raw.lastExcelAt)>0)p.lastExcelAt=Number(raw.lastExcelAt);
   p.actions=sanitizeActions(raw.actions);
   const base=sanitizeBaseline(raw.baseline);if(base)p.baseline=base;
   p.lastBackupAt=Date.now();p.changesSinceBackup=0;

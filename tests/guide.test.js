@@ -102,6 +102,7 @@ test('風險管理流程：各步驟的進度與卡住的風險', () => {
   assert.deepEqual(st.accept.pending, ['R-004'], '殘餘 6 分屬需核准');
   assert.deepEqual(st.monitor.pending, ['R-004']);
   assert.equal(st.monitor.side, true);
-  assert.deepEqual(st.consult.pending, ['R-002'], '溝通與諮詢：未指定擁有者');
-  assert.equal(st.consult.side, true);
+  assert.equal(st.consult.neutral, true, '溝通與諮詢只做說明，不打勾');
+  assert.equal(st.record.done, false, '尚未匯出、文件未核准');
+  assert.equal(A.riskStages({ ...p, lastExcelAt: NOW, doc: { status: '已核准' } }, NOW).find(s => s.id === 'record').done, true);
 });

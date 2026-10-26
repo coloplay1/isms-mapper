@@ -554,7 +554,8 @@ footer a{margin-left:8px;color:var(--accent)}
 .rfglab{font-size:11.5px;color:var(--accent);font-weight:600;padding-left:2px}
 .rfgin{display:flex;gap:4px;align-items:stretch}
 .rfrow>.rfbox{flex:1 1 0;align-self:end}
-.rfbands{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rfbands{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.rfbox.neutral .rfn{color:var(--ink)}
 .rfbands .rfbox{border-top-width:1px;border-left:3px solid var(--line)}
 .rfbands .rfbox.done{border-left-color:var(--s3)}
 .rfbands .rfbox.todo{border-left-color:var(--seal)}
@@ -581,3 +582,7 @@ footer a{margin-left:8px;color:var(--accent)}
 .rfinfo p{margin:0;font-size:14px}
 .rfiact{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:4px}
 .rfiact .note{margin:0}
+/* 附錄 A：分類按鈕不折行；手機版生命週期改直向 */
+#themeSeg{overflow-x:auto;max-width:100%}
+#themeSeg button{white-space:nowrap}
+@media (max-width:980px){.lcin{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}.lcin .lcarr{display:none}.lcbox{min-width:0}.lcsrc{grid-column:1/-1}}
