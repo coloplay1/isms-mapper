@@ -35,7 +35,7 @@ test('建議依急迫程度排序：逾期與衝突在前', () => {
 
 test('全部完成時沒有建議，路線圖 8 步都完成', () => {
   const p = { ...A.blankProject('X', ''), scope: '總部', industry: 'mfg', criteria: A.presetCriteria('four'),
-    doc: { status: '已核准' }, controls: allControls(), clauses: allClauses(3),
+    doc: { status: '已核准' }, controls: allControls(), clauses: allClauses(3), scale: { l: A.SCALE_REF.l, i: A.SCALE_REF.i },
     risks: [{ ...A.blankRisk('R-001'), title: 't', owner: '甲', l: 1, i: 2, treat: 'accept' }],
     actions: [{ ...A.blankAction('I-001'), title: 'x', status: '已確認有效' }] };
   assert.deepEqual(keys(p), []);

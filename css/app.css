@@ -497,3 +497,9 @@ table.cmptable.sum th{white-space:nowrap}
 .chead{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px}
 .chead h3{margin:2px 0 2px}
 @media (max-width:860px){.homegrid{grid-template-columns:minmax(0,1fr)}}
+.drawer table.crit.scale td{vertical-align:top}
+.drawer table.crit.scale textarea{width:100%;font-size:13px;margin-top:2px}
+.sclab{display:grid;font-size:12px;color:var(--muted)}
+.drawer .rscore{flex-wrap:wrap}
+.drawer .sdef{flex-basis:100%;font-size:12px}
+.drawer table.crit.scale th:first-child{white-space:nowrap}

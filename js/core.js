@@ -97,6 +97,7 @@ function sanitizeProject(raw){
   const seenCase=new Set();
   p.cases=Array.isArray(raw.cases)?raw.cases.slice(0,300).map(sanitizeCase).filter(c=>c&&!seenCase.has(c.id)&&seenCase.add(c.id)):[];
   p.criteria=sanitizeCriteria(raw.criteria)||legacyCriteria(raw);
+  const sc=sanitizeScale(raw.scale);if(sc)p.scale=sc;
   // 準則是否經使用者確認（新專案帶入的預設值不算）；舊版專案與 Excel 匯入有準則或風險時視為已確認
   p.criteriaOk=typeof raw.criteriaOk==="boolean"?raw.criteriaOk:!!(sanitizeCriteria(raw.criteria)||(Array.isArray(raw.risks)&&raw.risks.length));
   p.doc=sanitizeDoc(raw.doc);
@@ -137,6 +138,17 @@ function sanitizeCriteria(raw){
   for(let k=0;k<lv.length;k++){if(lv[k].max<1||lv[k].max>25||(k&&lv[k].max<=lv[k-1].max))return null}
   if(lv[lv.length-1].max!==25)return null;
   return {levels:lv};
+}
+/* 可能性與衝擊各級的定義（組織自訂的文字，例如「每年一次」「中斷 1 天」），讓不同的人評分一致 */
+const SCALE_REF={
+  l:["5 年以上可能發生一次","每 2–5 年可能發生一次","約每年發生一次","約每季發生一次","每月或更頻繁"],
+  i:["營運幾乎不受影響，損失小於【金額】","單一部門短暫中斷（4 小時內），或少量內部資料外洩","多部門中斷約 1 天，或少量個資外洩","核心系統中斷數天、客戶受影響，或需通報主管機關","大量個資外洩、重大罰款或嚴重商譽損害"]
+};
+function sanitizeScale(raw){
+  if(!isObj(raw))return null;
+  const arr=a=>[0,1,2,3,4].map(k=>Array.isArray(a)?str(a[k],200).trim():"");
+  const s={l:arr(raw.l),i:arr(raw.i)};
+  return [...s.l,...s.i].some(Boolean)?s:null;
 }
 /* 舊版只存可接受分數（4 或 9） */
 function legacyCriteria(raw){const c=presetCriteria("four");if(raw&&Number(raw.riskAccept)===9)c.levels[1].policy="accept";return c}

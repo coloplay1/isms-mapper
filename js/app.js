@@ -147,6 +147,7 @@ function buildSample(d){
   const byC=risksByControl(p);let k=0;
   ANNEX.forEach(c=>{const v=p.controls[c.code];if(v.app==="Y")v.reason=byC[c.code]?RISK_REASON:REASONS_IN[1+(k++%(REASONS_IN.length-1))]});
   p.actions=sampleActions(d);
+  if(p.stage!=="導入初期")p.scale={l:[...SCALE_REF.l],i:SCALE_REF.i.map(t=>t.replace("【金額】","10 萬元"))};
   return p;
 }
 /* 範例的改善事項：建置中有 2 項，驗證稽核前做過內部稽核與管理審查，有 5 項 */
@@ -1462,7 +1463,8 @@ function openRiskDrawer(id){
   </aside>`;
   const refresh=()=>{
     const s=inherentScore(r),rs=residualScore(r),pl=x=>POLICIES.find(y=>y.v===policyOf(x,cur())).label;
-    $("#rS").innerHTML=lvlBadge(s)+(s?`<span class="saved">${pl(s)}</span>`:"");
+    const df=(k,n)=>{const t=((cur().scale||{})[k]||[])[n-1];return n&&t?`${k==="l"?"可能性":"衝擊"} ${n}：${esc(t)}`:""};
+    $("#rS").innerHTML=lvlBadge(s)+(s?`<span class="saved">${pl(s)}</span>`:"")+[df("l",r.l),df("i",r.i)].filter(Boolean).map(t=>`<div class="saved sdef">${t}</div>`).join("");
     $("#rRS").innerHTML=lvlBadge(rs)+(rs?`<span class="saved">${pl(rs)}</span>`:"");
     const cks=riskChecks(cur()).filter(c=>c.rid===r.id);
     $("#rChecks").innerHTML=cks.length?`<ul class="cklist" style="margin-top:14px">${cks.map(c=>`<li class="ck ${c.sev}"><span class="ckmsg">${esc(c.msg.replace(r.id+(r.title?"「"+r.title+"」":""),"").trim()||c.msg)}</span><span class="ckact">${c.kind==="undecided"?`<button class="btn" data-apply="${c.code}">設為適用</button>`:""}</span></li>`).join("")}</ul>`:"";
@@ -1504,6 +1506,7 @@ function openRiskDrawer(id){
 /* 風險準則設定：預設組合或自訂 2–4 個等級 */
 function openCriteriaDrawer(){
   const p=cur();let lv=riskCriteria(p).levels.map(l=>({label:l.label,max:l.max,policy:l.policy}));
+  const sc=JSON.parse(JSON.stringify(sanitizeScale(p.scale)||{l:["","","","",""],i:["","","","",""]}));
   const host=$("#drawerHost");
   const draw=()=>{
     const c=sanitizeCriteria({levels:lv});
@@ -1522,17 +1525,27 @@ function openCriteriaDrawer(){
       </tbody></table>
       ${lv.length<4?`<button class="btn" id="cAdd">＋ 增加等級</button>`:""}
       <p class="${err?"warnhint":"note"}" style="margin-top:12px">${err||"預覽："+esc(criteriaText({criteria:c}))}</p>
+      <h3 style="margin-top:18px">可能性與衝擊的定義</h3>
+      <p class="note" style="margin:0 0 8px">寫下每一級代表什麼，不同的人評分才會一致。建議用組織自己的頻率、金額與中斷時間；衝擊可同時考量財務、營運、法規、商譽，取最嚴重的一項。</p>
+      <table class="crit scale"><thead><tr><th>等級</th><th>可能性</th><th>衝擊</th></tr></thead><tbody>
+      ${[1,2,3,4,5].map(n=>`<tr><td class="mono">${n}</td>
+        <td><label class="sclab">${LIKELIHOOD[n]}<textarea rows="2" data-sc="l" data-n="${n-1}" placeholder="${esc(SCALE_REF.l[n-1])}">${esc(sc.l[n-1])}</textarea></label></td>
+        <td><label class="sclab">${IMPACT[n]}<textarea rows="2" data-sc="i" data-n="${n-1}" placeholder="${esc(SCALE_REF.i[n-1])}">${esc(sc.i[n-1])}</textarea></label></td></tr>`).join("")}
+      </tbody></table>
+      <button class="btn" id="cRef" style="margin-top:8px">填入參考定義</button><span class="note" style="margin-left:8px">只填空白的欄位，填入後請改成組織的數字</span>
       <div style="display:flex;gap:8px;margin-top:14px"><button class="btn primary" id="cSave" ${c?"":"disabled"}>${p.criteriaOk?"套用":"確認並套用"}</button><button class="btn" data-close>取消</button></div>
     </aside>`;
     host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeDrawer));
     $("#cPreset").addEventListener("change",e=>{if(e.target.value){lv=presetCriteria(e.target.value).levels;draw()}});
+    host.querySelectorAll("[data-sc]").forEach(el=>el.addEventListener("input",()=>{sc[el.dataset.sc][+el.dataset.n]=el.value}));
+    $("#cRef").addEventListener("click",()=>{["l","i"].forEach(k=>sc[k]=sc[k].map((v,n)=>v.trim()?v:SCALE_REF[k][n]));draw()});
     host.querySelectorAll("tbody [data-f]").forEach(el=>el.addEventListener("change",()=>{const l=lv[+el.dataset.k];
       l[el.dataset.f]=el.dataset.f==="max"?Number(el.value):el.value;if(el.dataset.f!=="label")draw()}));
     host.querySelectorAll("tbody [data-f=label]").forEach(el=>el.addEventListener("input",()=>{lv[+el.dataset.k].label=el.value}));
     host.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>{lv.splice(+b.dataset.del,1);lv[lv.length-1].max=25;draw()}));
     const add=$("#cAdd");if(add)add.addEventListener("click",()=>{const last=lv[lv.length-1],prev=lv.length>1?lv[lv.length-2].max:0;
       last.max=Math.min(24,Math.max(prev+1,Math.round((prev+25)/2)));lv.push({label:"新等級",max:25,policy:"treat"});draw()});
-    $("#cSave").addEventListener("click",()=>{const c=sanitizeCriteria({levels:lv});if(!c)return;p.criteria=c;p.criteriaOk=true;touchRisk();closeDrawer();toast("已套用風險準則："+criteriaText(p))});
+    $("#cSave").addEventListener("click",()=>{const c=sanitizeCriteria({levels:lv});if(!c)return;p.criteria=c;p.criteriaOk=true;const s2=sanitizeScale(sc);if(s2)p.scale=s2;else delete p.scale;touchRisk();closeDrawer();toast("已套用風險準則："+criteriaText(p))});
   };
   draw();
 }

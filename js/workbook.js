@@ -91,7 +91,7 @@ function buildWorkbook(p,opts={}){
     ["風險等級","分數下限","分數上限","處理原則"].map(H),...crit.levels.map(l=>[V(l.label),V(SCORES.find(x=>x>=l.min)||l.min),V(l.max),V(POLICIES.find(x=>x.v===l.policy).label)]),[],
     [H("風險分數"),T("可能性 × 衝擊（各 1–5 級），範圍 1–25")],
     [H("核准規定"),T("「需擁有者核准」等級的風險，處理後仍在此等級時須由風險擁有者核准接受；「不可接受」等級須處理至較低等級。")],[],
-    ["等級","可能性","衝擊"].map(H),...[1,2,3,4,5].map(n=>[V(n),V(LIKELIHOOD[n]),V(IMPACT[n])])];
+    ["等級","可能性","衝擊","可能性定義","衝擊定義"].map(H),...[1,2,3,4,5].map(n=>[V(n),V(LIKELIHOOD[n]),V(IMPACT[n]),V(((p.scale||{}).l||[])[n-1]||""),V(((p.scale||{}).i||[])[n-1]||"")])];
 
   const ck=riskChecks(p).map(c=>[{err:"衝突",warn:"待確認",info:"提醒"}[c.sev],c.rid||"",c.code||"",c.msg]);
   const clRows=CLAUSES.map(c=>{const v=cls(c.code);return [c.code,c.name,c.phase,c.desc,STATUS[v.status].label,v.owner,v.evidence]});
@@ -115,7 +115,7 @@ function buildWorkbook(p,opts={}){
   return [
     {sheet:"適用性聲明SoA",data:soaData,columns:W([12,10,24,8,18,8,9,30,28,10,14,24,14,28]),stickyRowsCount:5},
     {sheet:"風險登錄表",data:rkData,columns:W([9,26,16,24,24,18,12,14,7,7,11,8,28,26,11,7,7,11,9,9]),stickyRowsCount:5},
-    {sheet:"風險評鑑準則",data:critData,columns:W([14,30,20,24])},
+    {sheet:"風險評鑑準則",data:critData,columns:W([14,30,20,36,44])},
     {sheet:"連動檢查",data:[...top("風險評鑑與 SoA 連動檢查"),...table(["類型","風險","控制措施","說明"],ck)],columns:W([8,9,10,70])},
     {sheet:"改善追蹤",data:actData,columns:W([8,12,16,11,30,24,22,28,14,12,11,12,11,24,12]),stickyRowsCount:5},
     {sheet:"條款4-10檢核",data:[...top("管理系統條款 4–10 檢核"),...table(["條款","名稱","PDCA","說明","執行狀態","負責人","證據位置"],clRows)],columns:W([8,24,6,40,10,14,26]),stickyRowsCount:5},
@@ -165,6 +165,15 @@ function dueFrom(v){
 }
 /* 「須處理，或經擁有者核准後條件接受」屬於需核准，所以先判斷「不可接受」，再判斷「核准」 */
 function policyFrom(t){return /不可接受|不得|須優先/.test(t)?"treat":/核准/.test(t)?"approve":/可接受/.test(t)?"accept":/須處理|必須處理/.test(t)?"treat":""}
+/* 風險評鑑準則表中的「可能性定義」「衝擊定義」 */
+function parseScale(data){
+  const h=data.findIndex(r=>(r||[]).map(normHead).includes("可能性定義"));if(h<0)return null;
+  const hs=data[h].map(normHead),cl=hs.indexOf("可能性定義"),ci=hs.indexOf("衝擊定義"),cn=hs.indexOf("等級");
+  const s={l:["","","","",""],i:["","","","",""]};
+  for(const row of data.slice(h+1,h+8)){const n=Number(cellText((row||[])[cn<0?0:cn]));if(!(n>=1&&n<=5))continue;
+    s.l[n-1]=cellText(row[cl]);if(ci>=0)s.i[n-1]=cellText(row[ci])}
+  return sanitizeScale(s);
+}
 function parseCriteria(data){
   // 本工具格式：風險等級｜分數下限｜分數上限｜處理原則
   const h=data.findIndex(r=>(r||[]).map(normHead).includes("風險等級")&&(r||[]).map(normHead).includes("分數上限"));
@@ -249,6 +258,7 @@ function importWorkbook(sheets,opts={}){
         const g=k=>k in m?cellText(row[m[k]]):"";
         raw.clauses[code]={status:statusFrom(g("status")),owner:g("owner"),evidence:g("evidence")};n++}
       report.clauses+=n;if(n)report.sheets.push(sheet);continue}
+    if(!raw.scale){const sc=parseScale(data);if(sc)raw.scale=sc}
     if(/準則/.test(sheet)||!raw.criteria){const c=parseCriteria(data);if(c&&!raw.criteria){raw.criteria=c;report.criteria=true;report.sheets.push(sheet)}}
   }
   function k_due(row,m){return "due" in m?row[m.due]:""}

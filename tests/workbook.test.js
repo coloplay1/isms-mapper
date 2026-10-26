@@ -127,3 +127,20 @@ test('說明頁裡出現「風險編號」字樣不會被當成風險表', () =>
   assert.ok(!report.warnings.some(w => w.includes('風險編號')));
   assert.equal(report.risks, 0);
 });
+
+test('可能性與衝擊的定義：格式檢查、匯出到準則工作表、匯入還原', () => {
+  assert.equal(A.sanitizeScale(null), null);
+  assert.equal(A.sanitizeScale({ l: ['', ''], i: [] }), null, '全部空白視為沒有定義');
+  const s = A.sanitizeScale({ l: ['很少', 5, 'x'.repeat(300)], i: 'bad' });
+  assert.deepEqual(s.l.slice(0, 2), ['很少', '5']);
+  assert.equal(s.l[2].length, 200);
+  assert.deepEqual(s.i, ['', '', '', '', '']);
+  const p = { ...A.blankProject('X', '甲'), controls: { 'A.5.1': { app: 'Y', status: 2, owner: '', evidence: '', reason: '' } },
+    criteria: A.presetCriteria('four'), scale: { l: A.SCALE_REF.l, i: A.SCALE_REF.i } };
+  const wb = A.buildWorkbook(p);
+  assert.match(JSON.stringify(wb.find(x => x.sheet === '風險評鑑準則').data), /可能性定義/);
+  const plain = wb.map(x => ({ sheet: x.sheet, data: x.data.map(r => r.map(c => c && typeof c === 'object' ? c.value : c)) }));
+  const back = A.sanitizeProject(A.importWorkbook(plain, {}).raw);
+  assert.deepEqual(back.scale, p.scale);
+  assert.equal(A.sanitizeProject(JSON.parse(JSON.stringify(p))).scale.i[4], A.SCALE_REF.i[4]);
+});
