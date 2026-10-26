@@ -91,7 +91,7 @@ function roadmapSteps(p,now){
 }
 
 /* ================= 風險管理流程（ISO/IEC 27005、ISO 31000） =================
-   把風險登錄表的資料對應到課本上的流程圖：每一步顯示進度，pending 是卡在這一步的風險編號。 */
+   把風險登錄表的資料對應到標準的風險管理流程圖：每一步顯示進度，pending 是卡在這一步的風險編號。 */
 function riskStages(p,now){
   if(!p)return [];
   const risks=p.risks||[],checks=riskChecks(p),pol=s=>policyOf(s,p);

@@ -8,14 +8,14 @@ const version = JSON.parse(read('package.json')).version;
 
 test('index.html 每個 ?v= 都等於 package.json 的版本', () => {
   const html = read('index.html');
-  const tags = [...html.matchAll(/(?:src|href)="((?:js|css|vendor)\/[^"]+)"/g)].map(m => m[1]);
+  const tags = [...html.matchAll(/(?:src|href)="((?:js|css|vendor|docs)\/[^"]+)"/g)].map(m => m[1]);
   assert.ok(tags.length >= 10, '應載入至少 10 個程式與樣式檔');
   for (const t of tags) assert.match(t, new RegExp(`\\?v=${version.replace(/\./g, '\\.')}$`), `${t} 的版本號不是 ${version}`);
 });
 
 test('index.html 載入的檔案都存在', () => {
   const html = read('index.html');
-  for (const m of html.matchAll(/(?:src|href)="((?:js|css|vendor)\/[^"?]+)/g))
+  for (const m of html.matchAll(/(?:src|href)="((?:js|css|vendor|docs)\/[^"?]+)/g))
     assert.ok(fs.existsSync(path.join(__dirname, '..', m[1])), m[1]);
 });
 

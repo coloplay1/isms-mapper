@@ -433,6 +433,8 @@ function sampleStats(p){
   const t={s0:0,s1:0,s2:0,s3:0,undec:0,na:0};vs.forEach(v=>t[v.app==="N"?"na":v.app===""?"undec":"s"+v.status]++);
   return {t,undec:t.undec,impl:app.length?Math.round(app.filter(v=>v.status>=2).length/app.length*100):0,evid:t.s3};
 }
+/* 使用指南的網址帶上目前版本號，更新 PDF 後瀏覽器不會沿用舊的快取 */
+const GUIDE_URL="docs/user-guide.pdf"+((((document.querySelector('script[src*="js/app.js"]')||{}).src||"").match(/\?v=[\w.]+/)||[""])[0]);
 function renderHome(){
   const mine=Object.values(S.projects).sort((a,b)=>b.updated-a.updated);
   const nDocs=DOCS.filter(d=>d.status!=="planned").length;
@@ -441,7 +443,7 @@ function renderHome(){
     <section class="intro">
       <h2>從哪裡開始？</h2>
       <p class="lede">依 ISO/IEC 27001:2022 架構，把日常工作對應到條款、評估風險並完成適用性聲明（SoA）。所有資料只存在這個瀏覽器，不會上傳。</p>
-      <p class="guidehint">第一次使用？<a href="docs/user-guide.pdf" target="_blank" rel="noopener">看使用指南（PDF，15 頁）</a>，依熟悉程度分成第一次導入、已有 Excel 資料、年度維運三條路線。</p>
+      <p class="guidehint">第一次使用？<a href="${GUIDE_URL}" target="_blank" rel="noopener">看使用指南（PDF，15 頁）</a>，依熟悉程度分成第一次導入、已有 Excel 資料、年度維運三條路線。</p>
     </section>
     ${mine.length?`<section><div class="secthead"><h3>我的專案</h3><span class="note">${mine.length} 個，依最近修改排序</span></div>${projRows(mine,"home")}</section>`:""}
     <div class="homegrid">
