@@ -60,3 +60,11 @@ test('同義詞不會同時出現在兩個群組', () => {
     seen.set(k, gi);
   }));
 });
+
+test('生命週期七個階段，引用的控制措施都存在', () => {
+  assert.equal(A.LIFECYCLE.length, 7);
+  for (const s of A.LIFECYCLE) {
+    assert.ok(s.codes.length >= 3, s.id);
+    for (const c of s.codes) assert.ok(A.ANNEX_MAP[c], `${s.id} ${c}`);
+  }
+});

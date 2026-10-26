@@ -77,3 +77,23 @@ const FIELD_LABEL={app:"適用性",status:"執行狀態",reason:"理由",impl:"�
 const STATUS_ALIAS={"未開始":0,"規劃中":0,"未實施":0,"建置中":1,"部分實施":1,"實施中":1,"已實施":2,"待驗證":2,"已驗證":3,"已有證據":3};
 /* 納入理由代碼：RA 風險評鑑、LR 法規、CO 契約、BP 最佳實務 */
 const REASON_CODES={RA:REASONS_IN[0],LR:REASONS_IN[1],CO:REASONS_IN[2],BP:REASONS_IN[4]};
+
+/* 產品／服務生命週期（Product/Service Life Cycle Pipeline，參考 ISO 9001 與 ISO/IEC 24748）
+   每個階段列出最相關的附錄 A 控制措施；同一項可出現在多個階段。只是檢視方式，不影響適用性判定。 */
+const LIFECYCLE=[
+  {id:"req",name:"需求",en:"Requirement",desc:"蒐集利害關係者（4.2）與 ICT 需求，把資安、法規、隱私與供應商要求寫進需求",
+   codes:["A.5.8","A.8.26","A.5.31","A.5.34","A.5.12","A.5.19","A.5.20","A.5.23"]},
+  {id:"dev",name:"設計開發",en:"Design / Development",desc:"安全的架構設計、開發流程與程式碼，委外開發也要管理",
+   codes:["A.8.25","A.8.27","A.8.28","A.8.30","A.8.4","A.8.31","A.5.21"]},
+  {id:"ver",name:"查證確證",en:"Verification / Validation",desc:"在測試環境驗證是否符合規格與需求，未通過就回到設計開發",
+   codes:["A.8.29","A.8.33","A.8.31"]},
+  {id:"trans",name:"轉移上線",en:"Transition",desc:"經變更管理部署到正式環境，登錄資產、建立組態與作業程序",
+   codes:["A.8.32","A.8.9","A.8.19","A.5.37","A.5.9","A.6.3"]},
+  {id:"op",name:"監控營運",en:"Monitor / Operation",desc:"日常運作的存取、日誌、監控、備份、弱點與事件處理",
+   codes:["A.5.15","A.5.18","A.8.2","A.8.6","A.8.7","A.8.8","A.8.13","A.8.14","A.8.15","A.8.16","A.5.24","A.5.25","A.5.26","A.5.29","A.5.30"]},
+  {id:"reeval",name:"重新評估",en:"Re-evaluation",desc:"定期檢討是否仍符合需求與要求：遵循性審查、供應商監督、事件學習",
+   codes:["A.5.35","A.5.36","A.5.22","A.5.27","A.5.7"]},
+  {id:"disp",name:"處置退休",en:"Disposal / Retirement",desc:"報廢、汰換或歸檔：資料刪除、設備汰除、資產歸還與紀錄保存",
+   codes:["A.7.14","A.8.10","A.7.10","A.5.11","A.5.33"]}
+];
+const LIFECYCLE_MAP=Object.assign(Object.create(null),Object.fromEntries(LIFECYCLE.map(x=>[x.id,x])));

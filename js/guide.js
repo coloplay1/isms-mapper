@@ -89,3 +89,34 @@ function roadmapSteps(p,now){
   const cur=steps.find(s=>!s.done);if(cur)cur.current=true;
   return steps;
 }
+
+/* ================= 風險管理流程（ISO/IEC 27005、ISO 31000） =================
+   把風險登錄表的資料對應到課本上的流程圖：每一步顯示進度，pending 是卡在這一步的風險編號。 */
+function riskStages(p,now){
+  if(!p)return [];
+  const risks=p.risks||[],checks=riskChecks(p),pol=s=>policyOf(s,p);
+  const ids=fn=>risks.filter(fn).map(r=>r.id);
+  const ckIds=kinds=>[...new Set(checks.filter(c=>kinds.includes(c.kind)).map(c=>c.rid))];
+  const scored=risks.filter(r=>inherentScore(r));
+  const need=scored.filter(r=>pol(inherentScore(r))!=="accept");
+  const n=k=>scored.filter(r=>pol(inherentScore(r))===k).length;
+  const today=new Date(now||Date.now()).toISOString().slice(0,10);
+  const late=ids(r=>r.due&&r.status!=="已完成"&&r.treat&&r.treat!=="accept"&&(r.due.length===7?r.due+"-31":r.due)<today);
+  const ctxOk=!!String(p.scope||"").trim()&&p.criteriaOk!==false;
+  const treatPend=ckIds(["noTreat","noControl","acceptTreat","conflict","undecided"]),accPend=ckIds(["noResidual","residualTreat","needApproval"]);
+  return [
+    {id:"ctx",name:"建立全景",en:"Context",clause:"4、6.1.2 a",done:ctxOk,value:ctxOk?"範圍與準則已確認":"範圍或準則待確認",pending:[]},
+    {id:"ident",name:"風險識別",en:"Identification",clause:"6.1.2 c",done:risks.length>0&&!ckIds(["noOwner"]).length,value:`${risks.length} 項`,
+      pending:ids(r=>!String(r.owner||"").trim()),note:"未指定擁有者"},
+    {id:"anal",name:"風險分析",en:"Analysis",clause:"6.1.2 d",done:risks.length>0&&scored.length===risks.length,value:`已評分 ${scored.length}／${risks.length}`,
+      pending:ids(r=>!inherentScore(r)),note:"未評可能性與衝擊"},
+    {id:"eval",name:"風險評估",en:"Evaluation",clause:"6.1.2 e",done:scored.length>0,value:`須處理 ${n("treat")}・需核准 ${n("approve")}・可接受 ${n("accept")}`,
+      pending:need.map(r=>r.id),note:"高於可接受水準",info:true},
+    {id:"treat",name:"風險處理",en:"Treatment",clause:"6.1.3",done:scored.length>0&&!treatPend.length,
+      value:`已決定 ${need.filter(r=>r.treat).length}／${need.length}${treatPend.length?`・待確認 ${treatPend.length}`:""}`,pending:treatPend,note:"處理方式或控制措施待確認"},
+    {id:"accept",name:"風險接受",en:"Acceptance",clause:"6.1.3 f",done:scored.length>0&&!treatPend.length&&!accPend.length,
+      value:accPend.length?`待處理 ${accPend.length}`:"殘餘風險已核准或可接受",pending:accPend,note:"殘餘風險待評估或核准"},
+    {id:"monitor",name:"監督與審查",en:"Monitoring & Review",clause:"8.2、9.1",side:true,done:!risks.some(r=>r.reassess)&&!late.length,
+      value:`待重新評估 ${risks.filter(r=>r.reassess).length}・計畫逾期 ${late.length}`,pending:[...new Set([...ids(r=>r.reassess),...late])],note:"待重新評估或處理計畫逾期"}
+  ];
+}

@@ -84,3 +84,22 @@ test('風險引用但未判定的控制措施有專屬建議，不和一般待�
   assert.ok(!list.some(x => x.key === 'riskWarn'), '未判定不再重複算進風險處理待確認');
   assert.ok(list.findIndex(x => x.key === 'riskCtl') < list.findIndex(x => x.key === 'undecided'));
 });
+
+test('風險管理流程：各步驟的進度與卡住的風險', () => {
+  const p = { ...A.blankProject('X', ''), scope: '總部', criteriaOk: true, criteria: A.presetCriteria('four'), controls: {},
+    risks: [
+      { ...A.blankRisk('R-001'), title: 'a', owner: '甲' },
+      { ...A.blankRisk('R-002'), title: 'b', owner: '', l: 4, i: 4 },
+      { ...A.blankRisk('R-003'), title: 'c', owner: '甲', l: 1, i: 2, treat: 'accept' },
+      { ...A.blankRisk('R-004'), title: 'd', owner: '甲', l: 3, i: 3, treat: 'mitigate', controls: ['A.5.1'], rl: 2, ri: 3, reassess: true }] };
+  p.controls['A.5.1'] = { app: 'Y', status: 2, owner: '', reason: '' };
+  const st = Object.fromEntries(A.riskStages(p, NOW).map(s => [s.id, s]));
+  assert.equal(st.ctx.done, true);
+  assert.deepEqual(st.ident.pending, ['R-002']);
+  assert.deepEqual(st.anal.pending, ['R-001']);
+  assert.equal(st.eval.value, '須處理 1・需核准 1・可接受 1');
+  assert.deepEqual(st.treat.pending, ['R-002']);
+  assert.deepEqual(st.accept.pending, ['R-004'], '殘餘 6 分屬需核准');
+  assert.deepEqual(st.monitor.pending, ['R-004']);
+  assert.equal(st.monitor.side, true);
+});

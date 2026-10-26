@@ -388,7 +388,7 @@ function exportJSON(){
 
 /* ================= VIEWS ================= */
 let tab="overview";
-const filt={theme:"all",status:"all",q:""};
+const filt={theme:"all",status:"all",q:"",lc:""};
 let searchQ="";
 
 const NEEDS_PROJECT=new Set(["overview","risks","annex","clauses","improve"]);
@@ -751,6 +751,7 @@ function renderAnnex(){
   const v=$("#view-annex");
   if(!v.dataset.built){
     v.innerHTML=`<h2>附錄 A 逐項確認</h2><p class="lede">逐項決定是否適用、填寫理由與執行狀態。內容會自動儲存，可隨時匯出為適用性聲明（SoA）Excel。</p>
+      <details class="panel lcwrap" ${lcOpen?"open":""} id="lcWrap"><summary><b>依產品／服務生命週期檢視</b><span class="note">從需求到退休，每個階段該注意哪些控制措施（參考 ISO 9001、ISO/IEC 24748）。點階段可篩選下方清單</span></summary><div id="lcStrip"></div></details>
       <div class="filters">
         <div class="seg" id="themeSeg"><button data-th="all" aria-pressed="true">全部</button>${THEMES.map(t=>`<button data-th="${t.id}" aria-pressed="false">A.${t.id} ${t.name}</button>`).join("")}</div>
         <select id="stFilter" aria-label="狀態篩選"><option value="all">所有狀態</option><option value="undec">未決定適用性</option><option value="N">不適用</option>${STATUS.map(s=>`<option value="${s.v}">${s.label}</option>`).join("")}<option value="new">2022 新增</option><option value="noreason">不適用但未填理由</option><option value="focus">產業建議重點</option><option value="nacand">可能不適用候選</option><option value="risk">有風險引用</option><option value="riskissue">風險連動待確認</option></select>
@@ -763,6 +764,8 @@ function renderAnnex(){
     $("#themeSeg").addEventListener("click",e=>{const b=e.target.closest("[data-th]");if(!b)return;filt.theme=b.dataset.th;
       $("#themeSeg").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));renderAnnexRows()});
     $("#stFilter").addEventListener("change",e=>{filt.status=e.target.value;renderAnnexRows()});
+    $("#lcWrap").addEventListener("toggle",e=>{lcOpen=e.target.open});
+    $("#lcStrip").addEventListener("click",e=>{const b=e.target.closest("[data-lc]");if(!b)return;filt.lc=filt.lc===b.dataset.lc?"":b.dataset.lc;renderAnnexRows()});
     $("#qFilter").addEventListener("input",e=>{filt.q=e.target.value;renderAnnexRows()});
     $("#xlsBtn").addEventListener("click",exportExcel);
     $("#annexBody").addEventListener("change",onAnnexEdit);
@@ -782,10 +785,24 @@ function annexRow(c){
     <td><input data-f="owner" data-owner autocomplete="off" value="${esc(v.owner)}" placeholder="選擇或輸入" ${v.app==="N"?"disabled":""} aria-label="${c.code} 負責人"></td>
     <td><input data-f="evidence" value="${esc(v.evidence)}" placeholder="${esc(c.ev.split("、")[0])}" ${v.app==="N"?"disabled":""} aria-label="${c.code} 證據"></td></tr>`;
 }
+let lcOpen=true;
+function renderLcStrip(){
+  const el=$("#lcStrip");if(!el)return;
+  const box=(x,k)=>{const vs=x.codes.map(c=>ctl(c)),app=vs.filter(v=>v.app==="Y"),done=app.filter(v=>v.status>=2).length,und=vs.filter(v=>!v.app).length;
+    const sel=filt.lc===x.id;
+    return `${k?`<span class="lcarr" aria-hidden="true">→</span>`:""}<button class="lcbox ${sel?"sel":""}" data-lc="${x.id}" aria-pressed="${sel}" data-tip="${esc(x.desc)}">
+      <span class="lcn"><i>${k+1}</i>${esc(x.name)}</span><span class="lcen">${esc(x.en)}</span>
+      <span class="lcbar"><span style="width:${app.length?Math.round(done/app.length*100):0}%"></span></span>
+      <span class="lcv">${app.length?`已實施 ${done}／${app.length}`:`${x.codes.length} 項`}${und?`・未判定 ${und}`:""}</span></button>`};
+  el.innerHTML=`<div class="lcin"><span class="lcsrc">利害關係者<br>與 ICT 需求</span><span class="lcarr" aria-hidden="true">→</span>${LIFECYCLE.map(box).join("")}</div>
+    <div class="lcnote"><span>查證確證未通過時，回到設計開發修正。</span>${filt.lc?`<span>篩選：${esc(LIFECYCLE_MAP[filt.lc].name)}－${esc(LIFECYCLE_MAP[filt.lc].desc)}</span><button class="chip" data-lc="${filt.lc}">清除篩選</button>`:""}</div>`;
+}
 function renderAnnexRows(){
+  renderLcStrip();
   const q=norm(filt.q);
   const list=ANNEX.filter(c=>{const v=ctl(c.code);
     if(filt.theme!=="all"&&c.theme!==filt.theme)return false;
+    if(filt.lc&&LIFECYCLE_MAP[filt.lc]&&!LIFECYCLE_MAP[filt.lc].codes.includes(c.code))return false;
     if(filt.status==="undec"&&v.app!=="")return false;
     if(filt.status==="N"&&v.app!=="N")return false;
     if(filt.status==="new"&&!c.isNew)return false;
@@ -1330,7 +1347,18 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#drawerHost").in
 document.addEventListener("click",e=>{const o=e.target.closest("[data-open]");if(o){e.preventDefault();openDrawer(o.dataset.open)}});
 
 /* ================= 風險評鑑與處理 ================= */
-const riskView={mode:"in",cell:null};
+const riskView={mode:"in",cell:null,stage:null};
+/* 風險管理流程圖：對應 ISO/IEC 27005 的流程，每一步顯示進度，點一下篩選卡在這一步的風險 */
+function riskFlowHTML(p){
+  const st=riskStages(p),main=st.filter(x=>!x.side),side=st.find(x=>x.side);
+  const box=x=>{const n=x.pending.length,cls=x.done?"done":n&&!x.info?"todo":"";const sel=riskView.stage===x.id;
+    return `<button class="rfbox ${cls} ${sel?"sel":""}" data-rstage="${x.id}" aria-pressed="${sel}" ${n||x.id==="eval"?"":"disabled"} data-tip="${esc(x.clause)}${n?`｜${n} 項${x.note}，點一下篩選`:""}">
+      <span class="rfn">${esc(x.name)}${x.done?` <span class="rfok" aria-label="已完成">✓</span>`:""}</span><span class="rfen">${esc(x.en)}</span><span class="rfv">${esc(x.value)}</span></button>`};
+  return `<div class="rflow" aria-label="風險管理流程">
+    <div class="rfrow">${main.map((x,k)=>(k?`<span class="rfarr" aria-hidden="true">→</span>`:"")+box(x)).join("")}</div>
+    <div class="rfside">${box(side)}<span class="rfloop">每年與重大變更時重新評估，結果回到風險識別</span></div>
+  </div>`;
+}
 function risks(){const p=cur();if(!p)return [];if(!Array.isArray(p.risks))p.risks=[];return p.risks}
 function riskById(id){return risks().find(r=>r.id===id)}
 function lvlBadge(score){
@@ -1446,10 +1474,9 @@ let showAllChecks=false;
 function renderRisks(){
   const p=cur(),list=risks(),checks=riskChecks(p);
   const issues=checks.filter(c=>c.sev!=="info"),info=checks.filter(c=>c.sev==="info");
-  const high=list.filter(r=>inherentScore(r)>=10).length;
-  const pending=checks.filter(c=>c.kind==="needApproval").length;
   const pickScore=riskView.mode==="res"?residualScore:inherentScore;
-  const shown=riskView.cell?list.filter(r=>{const [l,i]=riskView.mode==="res"?[r.rl,r.ri]:[r.l,r.i];return l+"-"+i===riskView.cell}):list;
+  const stg=riskView.stage?riskStages(p).find(x=>x.id===riskView.stage):null;
+  const shown=riskView.cell?list.filter(r=>{const [l,i]=riskView.mode==="res"?[r.rl,r.ri]:[r.l,r.i];return l+"-"+i===riskView.cell}):stg?list.filter(r=>stg.pending.includes(r.id)):list;
   const ck=showAllChecks?issues:issues.slice(0,6);
   $("#view-risks").innerHTML=`<h2>風險評鑑與處理</h2>
   <p class="lede">依條款 6.1.2 識別與評估風險，依 6.1.3 決定處理方式並選定控制措施。風險選定的控制措施會連到附錄 A，作為適用性聲明（SoA）納入理由的依據；這裡只提出不一致的地方，不會自動改變判定。</p>
@@ -1458,12 +1485,7 @@ function renderRisks(){
     <span class="saved critline">風險準則：${esc(criteriaText(p))}</span><button class="btn" id="rCrit">調整準則</button>
     <button class="btn" id="rXls" style="margin-left:auto">匯出 SoA Excel</button>
   </div>
-  <div class="stats">
-    <div class="stat"><b>${list.length}</b><span>已登錄風險</span></div>
-    <div class="stat"><b>${high}</b><span>固有風險高以上</span></div>
-    <div class="stat"><b>${pending}</b><span>待擁有者核准</span></div>
-    <div class="stat"><b>${issues.length}</b><span>待確認事項</span></div>
-  </div>
+  ${riskFlowHTML(p)}
   <div class="grid2">
     <div class="panel"><div class="secthead"><h3>風險矩陣</h3>
       <div class="seg" id="mxSeg" style="margin-left:auto"><button data-mode="in" aria-pressed="${riskView.mode==="in"}">固有風險</button><button data-mode="res" aria-pressed="${riskView.mode==="res"}">殘餘風險</button></div></div>
@@ -1476,8 +1498,9 @@ function renderRisks(){
     </div>
   </div>
   ${list.some(r=>r.reassess)?`<p class="note reassess">${list.filter(r=>r.reassess).length} 項風險沿用 ${p.baseline?esc(p.baseline.label):"去年"}的評估，待重新評估。打開風險確認可能性與衝擊後，按「已重新評估」。</p>`:""}
+  ${stg&&!riskView.cell?`<div class="filters" style="margin-top:18px"><span class="count">流程篩選：${esc(stg.name)}－${esc(stg.note)}（${shown.length} 項）</span><button class="chip" id="rsClear">清除篩選</button></div>`:""}
   ${riskView.cell?`<div class="filters" style="margin-top:18px"><span class="count">篩選：${riskView.mode==="res"?"殘餘":"固有"}風險 可能性 ${riskView.cell.split("-")[0]} × 衝擊 ${riskView.cell.split("-")[1]}（${shown.length} 項）</span><button class="chip" id="mxClear">清除篩選</button></div>`:""}
-  <div class="table-wrap" style="margin-top:${riskView.cell?8:18}px"><table class="rtable"><thead><tr><th style="width:70px">編號</th><th>風險</th><th style="width:120px">風險擁有者</th><th style="width:84px">固有</th><th style="width:70px">處理方式</th><th>控制措施</th><th style="width:84px">殘餘</th><th style="width:96px">進度</th><th style="width:96px">檢查<span class="saved" style="display:block;font-weight:400">與 SoA 連動</span></th></tr></thead><tbody>
+  <div class="table-wrap" style="margin-top:${riskView.cell||stg?8:18}px"><table class="rtable"><thead><tr><th style="width:70px">編號</th><th>風險</th><th style="width:120px">風險擁有者</th><th style="width:84px">固有</th><th style="width:70px">處理方式</th><th>控制措施</th><th style="width:84px">殘餘</th><th style="width:96px">進度</th><th style="width:96px">檢查<span class="saved" style="display:block;font-weight:400">與 SoA 連動</span></th></tr></thead><tbody>
   ${shown.map(r=>`<tr>
     <td class="code"><button data-risk="${r.id}">${r.id}</button></td>
     <td class="name"><button class="rtitle" data-risk="${r.id}">${esc(r.title||"（未命名風險）")}</button>${r.asset?`<div class="saved">${esc(r.asset)}${r.cia?"｜"+[...r.cia].map(x=>({C:"機密性",I:"完整性",A:"可用性"})[x]).join("、"):""}</div>`:""}</td>
@@ -1495,9 +1518,12 @@ function renderRisks(){
   on("ckMore",()=>{showAllChecks=!showAllChecks;renderRisks()});
   on("ckApplyAll",applyAllRiskToSoA);
   on("mxClear",()=>{riskView.cell=null;renderRisks()});
+  on("rsClear",()=>{riskView.stage=null;renderRisks()});
+  $("#view-risks").querySelectorAll("[data-rstage]").forEach(b=>b.addEventListener("click",()=>{riskView.stage=riskView.stage===b.dataset.rstage?null:b.dataset.rstage;riskView.cell=null;renderRisks();
+    const t=$("#view-risks .rtable");if(t&&riskView.stage)t.scrollIntoView({block:"nearest"})}));
   on("rCrit",openCriteriaDrawer);
   $("#mxSeg").addEventListener("click",e=>{const b=e.target.closest("[data-mode]");if(!b)return;riskView.mode=b.dataset.mode;riskView.cell=null;renderRisks()});
-  $("#view-risks").querySelectorAll("[data-mx]").forEach(b=>b.addEventListener("click",()=>{riskView.cell=riskView.cell===b.dataset.mx?null:b.dataset.mx;renderRisks()}));
+  $("#view-risks").querySelectorAll("[data-mx]").forEach(b=>b.addEventListener("click",()=>{riskView.cell=riskView.cell===b.dataset.mx?null:b.dataset.mx;riskView.stage=null;renderRisks()}));
 }
 document.addEventListener("click",e=>{
   const a=e.target.closest("[data-apply]");if(a){e.preventDefault();applyRiskToSoA(a.dataset.apply);return}
