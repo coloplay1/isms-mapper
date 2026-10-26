@@ -1439,7 +1439,7 @@ function renderRisks(){
     <td>${esc(r.owner)||`<span class="muted">未指定</span>`}</td>
     <td>${lvlBadge(inherentScore(r))}</td>
     <td>${r.treat?esc(TREATMENTS.find(t=>t.v===r.treat).label):`<span class="muted">未決定</span>`}</td>
-    <td><div class="rcodes">${(r.controls||[]).slice(0,5).map(c=>{const a=ctl(c).app;return `<button class="rc ${a==="N"?"bad":a===""?"undec":""}" data-open="${c}" data-tip="${c} ${esc(ANNEX_MAP[c].name)}｜SoA：${APP.find(x=>x.v===a).label}">${c}</button>`}).join("")}${(r.controls||[]).length>5?`<span class="saved">+${r.controls.length-5}</span>`:""}</div></td>
+    <td><div class="rcodes">${(r.controls||[]).slice(0,3).map(c=>{const a=ctl(c).app;return `<button class="rc ${a==="N"?"bad":a===""?"undec":""}" data-open="${c}" data-tip="${c} ${esc(ANNEX_MAP[c].name)}｜SoA：${APP.find(x=>x.v===a).label}">${c}</button>`}).join("")}${(r.controls||[]).length>3?`<span class="saved" data-tip="${esc(r.controls.slice(3).join("、"))}">+${r.controls.length-3}</span>`:""}</div></td>
     <td>${lvlBadge(residualScore(r))}</td>
     <td>${riskProgress(r)}</td>
     <td>${riskState(r,checks)}</td></tr>`).join("")||`<tr><td colspan="9"><div class="empty">${list.length?"這一格沒有風險。":"還沒有風險。可以按「新增風險」，或到案例搜尋把情境加入風險登錄表。"}</div></td></tr>`}
@@ -1468,29 +1468,36 @@ function openRiskDrawer(id){
   host.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${esc(r.id)} 風險">
     <button class="btn x" data-close>關閉</button>
     <div class="code">${r.id}　風險登錄</div>
+    <h3 class="rstep"><span>1</span>識別</h3>
     <dl>
       <div><dt>風險描述</dt><dd><input id="rTitle" value="${esc(r.title)}" placeholder="例如：離職員工帳號未停用，資料遭不當存取"></dd></div>
       <div><dt>相關資產</dt><dd><input id="rAsset" value="${esc(r.asset)}" placeholder="例如：CRM 系統、AD 帳號"></dd></div>
+      <div><dt>風險擁有者</dt><dd><input id="rOwner" data-owner autocomplete="off" value="${esc(r.owner)}" placeholder="對這個風險負責、核准處理方式的人"></dd></div>
+    </dl>
+    <details class="rmore" ${r.threat||r.vuln||r.existing||r.cia?"open":""}><summary>更多細節<span class="saved">威脅、脆弱性、現有控制、影響（選填，風險評鑑表會用到）</span></summary>
+    <dl>
       <div><dt>威脅</dt><dd><textarea id="rThreat" rows="2" placeholder="可能發生什麼事，例如：離職人員不當存取">${esc(r.threat)}</textarea></dd></div>
       <div><dt>脆弱性</dt><dd><textarea id="rVuln" rows="2" placeholder="為什麼會發生，例如：離職帳號未即時停用">${esc(r.vuln||"")}</textarea></dd></div>
       <div><dt>現有控制</dt><dd><input id="rExist" value="${esc(r.existing||"")}" placeholder="目前已有的措施，例如：到職／離職流程"></dd></div>
       <div><dt>影響</dt><dd class="ciabox">${[["C","機密性"],["I","完整性"],["A","可用性"]].map(([k,l])=>`<label><input type="checkbox" data-cia="${k}" ${r.cia.includes(k)?"checked":""}> ${l}</label>`).join("")}</dd></div>
-      <div><dt>風險擁有者</dt><dd><input id="rOwner" data-owner autocomplete="off" value="${esc(r.owner)}" placeholder="對這個風險負責、核准處理方式的人"></dd></div>
-    </dl>
-    <h3>評估（6.1.2）</h3>
+    </dl></details>
+    <h3 class="rstep"><span>2</span>評估（6.1.2）</h3>
     ${r.reassess?`<div class="reabox" id="rReBox"><span>沿用 ${cur().baseline?esc(cur().baseline.label):"去年"}的評估，請依今年情況確認可能性與衝擊。</span><button class="btn" id="rRe">已重新評估</button></div>`:""}
     <div class="r2"><label>可能性${levelSelect("rL",r.l,LIKELIHOOD)}</label><label>衝擊${levelSelect("rI",r.i,IMPACT)}</label><div class="rscore" id="rS"></div></div>
-    <h3 style="margin-top:16px">處理（6.1.3）</h3>
+    <h3 class="rstep" style="margin-top:16px"><span>3</span>處理（6.1.3）</h3>
+    <p class="note" id="rTreatWait" style="margin:4px 0 0">先評估可能性與衝擊，再決定處理方式。</p>
+    <div id="rTreatSec">
     <dl>
-      <div><dt>處理方式</dt><dd><select id="rTreat">${TREATMENTS.map(t=>`<option value="${t.v}" ${t.v===r.treat?"selected":""}>${t.label}${TREAT_HINT[t.v]?"："+TREAT_HINT[t.v]:""}</option>`).join("")}</select></dd></div>
-      <div><dt>選定的控制措施</dt><dd id="rCtl"></dd></div>
-      <div><dt>處理計畫</dt><dd><textarea id="rPlan" rows="2" placeholder="要做什麼、需要哪些資源">${esc(r.plan)}</textarea></dd></div>
-      <div><dt>預計完成</dt><dd><input id="rDue" value="${esc(r.due)}" placeholder="例如 2026-12-31 或 2026-12"></dd></div>
-      <div id="rStatRow" ${r.treat==="accept"?"hidden":""}><dt>處理狀態</dt><dd><select id="rStat">${RISK_STATUS.map(x=>`<option value="${x}" ${x===(r.status||"")?"selected":""}>${x||"未設定"}</option>`).join("")}</select></dd></div>
+      <div><dt>處理方式</dt><dd><select id="rTreat">${TREATMENTS.map(t=>`<option value="${t.v}" ${t.v===r.treat?"selected":""}>${t.label}${TREAT_HINT[t.v]?"："+TREAT_HINT[t.v]:""}</option>`).join("")}</select><div class="saved" id="rTreatHint" style="margin-top:4px"></div></dd></div>
+      <div data-show="mitigate"><dt>選定的控制措施</dt><dd id="rCtl"></dd></div>
+      <div data-show="mitigate transfer avoid"><dt>處理計畫</dt><dd><textarea id="rPlan" rows="2" placeholder="要做什麼、需要哪些資源">${esc(r.plan)}</textarea></dd></div>
+      <div class="r2x" data-show="mitigate transfer avoid"><div><dt>預計完成</dt><dd><input id="rDue" value="${esc(r.due)}" placeholder="例如 2026-12-31 或 2026-12"></dd></div>
+        <div><dt>處理狀態</dt><dd><select id="rStat">${RISK_STATUS.map(x=>`<option value="${x}" ${x===(r.status||"")?"selected":""}>${x||"未設定"}</option>`).join("")}</select></dd></div></div>
     </dl>
-    <h3>殘餘風險</h3>
-    <div class="r2"><label>可能性${levelSelect("rRL",r.rl,LIKELIHOOD)}</label><label>衝擊${levelSelect("rRI",r.ri,IMPACT)}</label><div class="rscore" id="rRS"></div></div>
-    <label class="rappr"><input type="checkbox" id="rAcc2" ${r.accepted?"checked":""}> 風險擁有者已核准處理計畫與殘餘風險</label>
+    <div data-show="mitigate transfer"><h3>處理後的殘餘風險</h3>
+    <div class="r2"><label>可能性${levelSelect("rRL",r.rl,LIKELIHOOD)}</label><label>衝擊${levelSelect("rRI",r.ri,IMPACT)}</label><div class="rscore" id="rRS"></div></div></div>
+    <label class="rappr" id="rApprRow"><input type="checkbox" id="rAcc2" ${r.accepted?"checked":""}> <span id="rApprText">風險擁有者已核准處理計畫與殘餘風險</span></label>
+    </div>
     <div id="rChecks"></div>
     <div style="margin-top:18px;display:flex;gap:8px"><button class="btn danger" id="rDel">刪除這個風險</button></div>
   </aside>`;
@@ -1499,6 +1506,14 @@ function openRiskDrawer(id){
     const df=(k,n)=>{const t=((cur().scale||{})[k]||[])[n-1];return n&&t?`${k==="l"?"可能性":"衝擊"} ${n}：${esc(t)}`:""};
     $("#rS").innerHTML=lvlBadge(s)+(s?`<span class="saved">${pl(s)}</span>`:"")+[df("l",r.l),df("i",r.i)].filter(Boolean).map(t=>`<div class="saved sdef">${t}</div>`).join("");
     $("#rRS").innerHTML=lvlBadge(rs)+(rs?`<span class="saved">${pl(rs)}</span>`:"");
+    // 依目前的分數與處理方式，只顯示需要填的欄位
+    $("#rTreatWait").hidden=!!s;$("#rTreatSec").hidden=!s;
+    host.querySelectorAll("[data-show]").forEach(el=>el.hidden=!el.dataset.show.split(" ").includes(r.treat));
+    const eff=r.treat==="accept"?s:rs;
+    const needAppr=!!r.treat&&r.treat!=="avoid"&&!!eff&&policyOf(eff,cur())==="approve";
+    $("#rApprRow").hidden=!(needAppr||r.accepted);
+    $("#rApprText").textContent=r.treat==="accept"?"風險擁有者已核准接受此風險":"風險擁有者已核准處理計畫與殘餘風險";
+    $("#rTreatHint").textContent=!s?"":r.treat?"":`目前 ${s} 分屬「${riskLevel(s,cur()).label}」：${pl(s)}`;
     const cks=riskChecks(cur()).filter(c=>c.rid===r.id);
     $("#rChecks").innerHTML=cks.length?`<ul class="cklist" style="margin-top:14px">${cks.map(c=>`<li class="ck ${c.sev}"><span class="ckmsg">${esc(c.msg.replace(r.id+(r.title?"「"+r.title+"」":""),"").trim()||c.msg)}</span><span class="ckact">${c.kind==="undecided"?`<button class="btn" data-apply="${c.code}">設為適用</button>`:""}</span></li>`).join("")}</ul>`:"";
   };
@@ -1522,7 +1537,7 @@ function openRiskDrawer(id){
   const reDone=()=>{if(!r.reassess)return;delete r.reassess;touchRisk();const b=$("#rReBox");if(b)b.remove()};
   [["rL","l"],["rI","i"],["rRL","rl"],["rRI","ri"]].forEach(([id,f])=>$("#"+id).addEventListener("change",e=>{set(f,Number(e.target.value));if(f==="l"||f==="i")reDone()}));
   const rb=$("#rRe");if(rb)rb.addEventListener("click",reDone);
-  $("#rTreat").addEventListener("change",e=>{set("treat",e.target.value);$("#rStatRow").hidden=r.treat==="accept"});
+  $("#rTreat").addEventListener("change",e=>set("treat",e.target.value));
   $("#rStat").addEventListener("change",e=>set("status",e.target.value));
   $("#rAcc2").addEventListener("change",e=>set("accepted",e.target.checked));
   host.querySelectorAll("[data-cia]").forEach(b=>b.addEventListener("change",()=>set("cia",[...host.querySelectorAll("[data-cia]:checked")].map(x=>x.dataset.cia).join(""))));
