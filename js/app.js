@@ -1547,8 +1547,9 @@ function renderRisks(){
   on("mxClear",()=>{riskView.cell=null;renderRisks()});
   $("#view-risks").querySelectorAll("#rsClear,.rfclose").forEach(b=>b.addEventListener("click",()=>{riskView.stage=null;renderRisks()}));
   $("#view-risks").querySelectorAll("[data-rfact]").forEach(b=>b.addEventListener("click",()=>{if(b.dataset.rfact==="new")openRiskPicker();else openCriteriaDrawer()}));
-  $("#view-risks").querySelectorAll("[data-rstage]").forEach(b=>b.addEventListener("click",()=>{riskView.stage=riskView.stage===b.dataset.rstage?null:b.dataset.rstage;riskView.cell=null;renderRisks();
-    const t=$("#view-risks .rtable");if(t&&riskView.stage)t.scrollIntoView({block:"nearest"})}));
+  $("#view-risks").querySelectorAll("[data-rstage]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.rstage,y=window.scrollY;riskView.stage=riskView.stage===id?null:id;riskView.cell=null;renderRisks();
+    // 不捲動頁面：說明框就在流程圖下方，清單的篩選結果往下看即可
+    window.scrollTo(0,y);const nb=document.querySelector(`[data-rstage="${id}"]`);if(nb)nb.focus({preventScroll:true})}));
   on("rCrit",openCriteriaDrawer);
   $("#mxSeg").addEventListener("click",e=>{const b=e.target.closest("[data-mode]");if(!b)return;riskView.mode=b.dataset.mode;riskView.cell=null;renderRisks()});
   $("#view-risks").querySelectorAll("[data-mx]").forEach(b=>b.addEventListener("click",()=>{riskView.cell=riskView.cell===b.dataset.mx?null:b.dataset.mx;riskView.stage=null;renderRisks()}));
