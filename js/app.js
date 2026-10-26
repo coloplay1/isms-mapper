@@ -1349,21 +1349,41 @@ document.addEventListener("click",e=>{const o=e.target.closest("[data-open]");if
 /* ================= 風險評鑑與處理 ================= */
 const riskView={mode:"in",cell:null,stage:null};
 /* 風險管理流程圖：對應 ISO/IEC 27005 的流程，每一步顯示進度，點一下篩選卡在這一步的風險 */
+/* 點流程圖的步驟：說明這一步做什麼、工具裡對應哪些欄位，以及可以直接做的動作 */
+const RF_INFO={
+  ctx:{what:"決定風險管理的範圍與規則：驗證範圍、內外部議題，以及風險準則（可能性、衝擊的定義與可接受水準）。",acts:[["criteria","調整風險準則"],["goto:projects","設定驗證範圍"]]},
+  ident:{what:"找出可能影響機密性、完整性、可用性的事件：涉及哪些資產、有什麼威脅與脆弱性，並指定風險擁有者。",acts:[["new","新增風險"]]},
+  anal:{what:"評估每個風險發生的可能性與衝擊，風險分數＝可能性 × 衝擊。可參考準則裡各級的定義與過去的事件。",acts:[["criteria","查看可能性與衝擊定義"]]},
+  eval:{what:"把風險分數與準則比較，決定哪些須處理、哪些需擁有者核准、哪些可接受，排出處理的優先順序。",acts:[]},
+  treat:{what:"選擇處理方式（降低、移轉、避免、接受），選定控制措施並寫處理計畫與期限。選定的控制措施在 SoA 必須是適用。",acts:[["goto:annex","前往附錄 A"]]},
+  accept:{what:"評估處理後的殘餘風險；仍屬需核准等級的，由風險擁有者核准接受（6.1.3 f）。",acts:[]},
+  consult:{what:"風險評鑑過程中與風險擁有者、管理階層溝通：誰負責、處理計畫與殘餘風險由誰核准。",acts:[]},
+  monitor:{what:"定期與重大變更時重新評估，追蹤處理計畫是否如期完成。每年可在專案管理建立新年度。",acts:[["goto:projects","前往年度循環"]]}
+};
+function rfInfoHTML(x){
+  if(!x)return "";
+  const info=RF_INFO[x.id]||{what:"",acts:[]},n=x.pending.length;
+  const btn=([k,t])=>k==="new"?`<button class="btn" data-rfact="new">${t}</button>`:k==="criteria"?`<button class="btn" data-rfact="criteria">${t}</button>`:`<button class="btn" data-goto="${k.slice(5)}">${t}</button>`;
+  return `<div class="rfinfo"><div class="rfih"><b>${esc(x.name)}</b><span class="mono rcl">${esc(x.clause)}</span>
+      <span class="rstate ${x.done?"ok":n&&!x.info?"warn":""}">${x.done?"✓ 已完成":n?`${n} 項${esc(x.note)}`:"尚未開始"}</span><button class="chip rfclose" style="margin-left:auto">收合</button></div>
+    <p>${esc(info.what)}</p>
+    <div class="rfiact">${n?`<span class="note">下方清單已篩選出這 ${n} 項。</span>`:`<span class="note">這一步目前沒有待處理的風險。</span>`}${info.acts.map(btn).join("")}</div></div>`;
+}
 function riskFlowHTML(p){
   const st=riskStages(p),g=id=>st.find(x=>x.id===id);
   const box=x=>{const n=x.pending.length,cls=x.done?"done":n&&!x.info?"todo":"";const sel=riskView.stage===x.id;
-    return `<button class="rfbox ${cls} ${sel?"sel":""}" data-rstage="${x.id}" aria-pressed="${sel}" ${n||x.id==="eval"?"":"disabled"} data-tip="${esc(x.clause)}${n?`｜${n} 項${x.note}，點一下篩選`:""}">
+    return `<button class="rfbox ${cls} ${sel?"sel":""}" data-rstage="${x.id}" aria-pressed="${sel}" aria-expanded="${sel}">
       <span class="rfn">${esc(x.name)}${x.done?` <span class="rfok" aria-label="已完成">✓</span>`:""}</span><span class="rfen">${esc(x.en)}</span><span class="rfv">${esc(x.value)}</span></button>`};
   const arr=`<span class="rfarr" aria-hidden="true">→</span>`;
   const done=st.filter(x=>!x.side&&x.done).length,total=st.filter(x=>!x.side).length;
   return `<div class="rflow" aria-label="風險管理流程">
-    <div class="rfhead"><b>風險管理流程</b><span class="note">ISO/IEC 27005、ISO 31000｜${done}／${total} 步完成。點有紅色標示的步驟，下方清單只列出卡在那一步的風險</span></div>
+    <div class="rfhead"><b>風險管理流程</b><span class="note">ISO/IEC 27005、ISO 31000｜${done}／${total} 步完成。點任一步驟可看說明與該做的事；紅色表示有風險卡在這一步</span></div>
     <div class="rfrow">${box(g("ctx"))}${arr}
       <div class="rfgroup"><span class="rfglab">風險評鑑（Risk assessment，6.1.2）</span><div class="rfgin">${box(g("ident"))}${arr}${box(g("anal"))}${arr}${box(g("eval"))}</div></div>${arr}
       <div class="rfgroup"><span class="rfglab">風險處理（Risk treatment，6.1.3）</span><div class="rfgin">${box(g("treat"))}${arr}${box(g("accept"))}</div></div>
     </div>
     <div class="rfbands">${box(g("consult"))}${box(g("monitor"))}</div>
-    <p class="rfloop">溝通與諮詢、監督與審查貫穿每一個步驟；每年與重大變更時重新評估，結果回到風險識別。</p>
+    ${riskView.stage?rfInfoHTML(st.find(x=>x.id===riskView.stage)):`<p class="rfloop">溝通與諮詢、監督與審查貫穿每一個步驟；每年與重大變更時重新評估，結果回到風險識別。</p>`}
   </div>`;
 }
 function risks(){const p=cur();if(!p)return [];if(!Array.isArray(p.risks))p.risks=[];return p.risks}
@@ -1483,7 +1503,7 @@ function renderRisks(){
   const issues=checks.filter(c=>c.sev!=="info"),info=checks.filter(c=>c.sev==="info");
   const pickScore=riskView.mode==="res"?residualScore:inherentScore;
   const stg=riskView.stage?riskStages(p).find(x=>x.id===riskView.stage):null;
-  const shown=riskView.cell?list.filter(r=>{const [l,i]=riskView.mode==="res"?[r.rl,r.ri]:[r.l,r.i];return l+"-"+i===riskView.cell}):stg?list.filter(r=>stg.pending.includes(r.id)):list;
+  const shown=riskView.cell?list.filter(r=>{const [l,i]=riskView.mode==="res"?[r.rl,r.ri]:[r.l,r.i];return l+"-"+i===riskView.cell}):stg&&stg.pending.length?list.filter(r=>stg.pending.includes(r.id)):list;
   const ck=showAllChecks?issues:issues.slice(0,6);
   $("#view-risks").innerHTML=`<h2>風險評鑑與處理</h2>
   <p class="lede">依條款 6.1.2 識別與評估風險，依 6.1.3 決定處理方式並選定控制措施。風險選定的控制措施會連到附錄 A，作為適用性聲明（SoA）納入理由的依據；這裡只提出不一致的地方，不會自動改變判定。</p>
@@ -1505,9 +1525,9 @@ function renderRisks(){
     </div>
   </div>
   ${list.some(r=>r.reassess)?`<p class="note reassess">${list.filter(r=>r.reassess).length} 項風險沿用 ${p.baseline?esc(p.baseline.label):"去年"}的評估，待重新評估。打開風險確認可能性與衝擊後，按「已重新評估」。</p>`:""}
-  ${stg&&!riskView.cell?`<div class="filters" style="margin-top:18px"><span class="count">流程篩選：${esc(stg.name)}－${esc(stg.note)}（${shown.length} 項）</span><button class="chip" id="rsClear">清除篩選</button></div>`:""}
+  ${stg&&stg.pending.length&&!riskView.cell?`<div class="filters" style="margin-top:18px"><span class="count">流程篩選：${esc(stg.name)}－${esc(stg.note)}（${shown.length} 項）</span><button class="chip" id="rsClear">清除篩選</button></div>`:""}
   ${riskView.cell?`<div class="filters" style="margin-top:18px"><span class="count">篩選：${riskView.mode==="res"?"殘餘":"固有"}風險 可能性 ${riskView.cell.split("-")[0]} × 衝擊 ${riskView.cell.split("-")[1]}（${shown.length} 項）</span><button class="chip" id="mxClear">清除篩選</button></div>`:""}
-  <div class="table-wrap" style="margin-top:${riskView.cell||stg?8:18}px"><table class="rtable"><thead><tr><th style="width:70px">編號</th><th>風險</th><th style="width:120px">風險擁有者</th><th style="width:84px">固有</th><th style="width:70px">處理方式</th><th>控制措施</th><th style="width:84px">殘餘</th><th style="width:96px">進度</th><th style="width:96px">檢查<span class="saved" style="display:block;font-weight:400">與 SoA 連動</span></th></tr></thead><tbody>
+  <div class="table-wrap" style="margin-top:${riskView.cell||(stg&&stg.pending.length)?8:18}px"><table class="rtable"><thead><tr><th style="width:70px">編號</th><th>風險</th><th style="width:120px">風險擁有者</th><th style="width:84px">固有</th><th style="width:70px">處理方式</th><th>控制措施</th><th style="width:84px">殘餘</th><th style="width:96px">進度</th><th style="width:96px">檢查<span class="saved" style="display:block;font-weight:400">與 SoA 連動</span></th></tr></thead><tbody>
   ${shown.map(r=>`<tr>
     <td class="code"><button data-risk="${r.id}">${r.id}</button></td>
     <td class="name"><button class="rtitle" data-risk="${r.id}">${esc(r.title||"（未命名風險）")}</button>${r.asset?`<div class="saved">${esc(r.asset)}${r.cia?"｜"+[...r.cia].map(x=>({C:"機密性",I:"完整性",A:"可用性"})[x]).join("、"):""}</div>`:""}</td>
@@ -1525,7 +1545,8 @@ function renderRisks(){
   on("ckMore",()=>{showAllChecks=!showAllChecks;renderRisks()});
   on("ckApplyAll",applyAllRiskToSoA);
   on("mxClear",()=>{riskView.cell=null;renderRisks()});
-  on("rsClear",()=>{riskView.stage=null;renderRisks()});
+  $("#view-risks").querySelectorAll("#rsClear,.rfclose").forEach(b=>b.addEventListener("click",()=>{riskView.stage=null;renderRisks()}));
+  $("#view-risks").querySelectorAll("[data-rfact]").forEach(b=>b.addEventListener("click",()=>{if(b.dataset.rfact==="new")openRiskPicker();else openCriteriaDrawer()}));
   $("#view-risks").querySelectorAll("[data-rstage]").forEach(b=>b.addEventListener("click",()=>{riskView.stage=riskView.stage===b.dataset.rstage?null:b.dataset.rstage;riskView.cell=null;renderRisks();
     const t=$("#view-risks .rtable");if(t&&riskView.stage)t.scrollIntoView({block:"nearest"})}));
   on("rCrit",openCriteriaDrawer);
