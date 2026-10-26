@@ -465,6 +465,7 @@ function renderHome(){
     </section>
     <div class="starts">
       ${start("","⇪","匯入既有資料","已有 SoA、風險評鑑表，或之前匯出的專案檔，匯入後會建立新專案並檢查內容",`<div class="sbtns"><button class="btn" id="hXlsx">從 Excel 匯入</button><button class="btn" id="hImport">匯入專案檔</button></div>`)}
+      ${start("","？","使用指南（PDF）","依熟悉程度分成三條路線：第一次導入、已有 Excel 資料、年度維運與顧問，附操作畫面，共 14 頁",`<div class="sbtns"><a class="btn" href="docs/user-guide.pdf" target="_blank" rel="noopener">開啟</a><a class="btn" href="docs/user-guide.pdf" download="ISMS條款對照台_使用指南.pdf">下載</a></div>`)}
       ${start("","⬇","下載文件範本",`政策、程序、表單與紀錄共 ${nDocs} 份，依五層架構整理`,`<button class="btn" data-goto="docs">查看範本</button>`)}
     </div>
     </div>
