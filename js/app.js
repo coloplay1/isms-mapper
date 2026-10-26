@@ -429,7 +429,7 @@ function renderHome(){
     <div class="homegrid">
     <section class="panel" id="createPanel">
       <div class="chead"><span class="sicon" aria-hidden="true">＋</span><div><h3>建立新專案</h3>
-      <p class="note" style="margin:0">一個專案代表一家公司或一次稽核。建立後會進入附錄 A 逐項確認，修改會自動儲存。</p></div></div>
+      <p class="note" style="margin:0">一個專案代表一家公司或一次稽核。建立後會進入總覽，依「下一步建議」逐步完成，修改會自動儲存。</p></div></div>
       <form id="homeForm" class="cform">
         <label>專案名稱<input id="hName" required placeholder="例如：2027 年度 ISMS 驗證"></label>
         <label>組織名稱<input id="hOrg" placeholder="選填"></label>
@@ -466,7 +466,7 @@ function renderHome(){
   const v=$("#view-home");
   $("#homeForm").addEventListener("submit",e=>{e.preventDefault();
     const p=newProject($("#hName").value.trim(),$("#hOrg").value.trim(),$("#hScope").value.trim(),v.querySelector('input[name="hStart"]:checked').value,$("#hInd").value,readFeatures(v,"hF"));
-    tab="annex";render();window.scrollTo(0,0);toast("已建立專案："+p.name)});
+    tab="overview";render();window.scrollTo(0,0);toast("已建立專案："+p.name+"，可依總覽的下一步建議開始")});
   $("#hImport").addEventListener("click",()=>$("#importFile").click());
   $("#hXlsx").addEventListener("click",()=>$("#xlsxFile").click());
   v.querySelectorAll("[data-jump]").forEach(b=>b.addEventListener("click",()=>{const t=document.getElementById(b.dataset.jump);if(!t)return;
