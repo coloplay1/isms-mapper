@@ -21,7 +21,7 @@ const DOCS=[
   {id:"POL-02",layer:"02",name:"ISMS 適用範圍書",fmt:"docx",file:"docs/POL-02.docx",mandatory:true,
    clauses:["4.3"],controls:[],desc:"驗證範圍涵蓋的組織、地點、系統、介面與排除事項"},
   {id:"POL-03",layer:"02",name:"組織全景與利害關係者分析",fmt:"docx",file:"docs/POL-03.docx",mandatory:false,
-   clauses:["4.1","4.2","6.1.1"],controls:["A.5.31"],desc:"內外部議題、利害關係者及其要求，作為範圍與風險評鑑的輸入"},
+   clauses:["4.1","4.2","6.1.1"],controls:["A.5.31"],desc:"內外部議題（含 2024 年增修的氣候變遷判斷）、利害關係者及其要求，作為範圍與風險評鑑的輸入"},
   {id:"POL-04",layer:"02",name:"存取控制政策",fmt:"docx",file:"docs/POL-04.docx",mandatory:false,
    clauses:[],controls:["A.5.15","A.5.16","A.5.17","A.5.18","A.8.2","A.8.3","A.8.5"],desc:"帳號生命週期、最小權限、特權帳號、鑑別與定期複審"},
   {id:"POL-05",layer:"02",name:"資訊資產可接受使用政策",fmt:"docx",file:"docs/POL-05.docx",mandatory:false,

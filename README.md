@@ -2,7 +2,7 @@
 
 [![單元測試](https://github.com/coloplay1/isms-mapper/actions/workflows/test.yml/badge.svg)](https://github.com/coloplay1/isms-mapper/actions/workflows/test.yml)
 
-依 ISO/IEC 27001:2022 架構設計的 ISMS（資訊安全管理系統）導入輔助工具。把日常工作情境對應到條款，登錄並評估風險，依風險結果完成附錄 A 適用性判定，並匯出適用性聲明（SoA）與風險登錄表 Excel。
+依 ISO/IEC 27001:2022（含 2024 年氣候變遷增修 Amd 1:2024）架構設計的 ISMS（資訊安全管理系統）導入輔助工具。把日常工作情境對應到條款，登錄並評估風險，依風險結果完成附錄 A 適用性判定，並匯出適用性聲明（SoA）與風險登錄表 Excel。
 
 **線上試用：** https://coloplay1.github.io/isms-mapper/
 （開啟後可先預覽首頁的範例專案：8 個產業、各 3 個導入階段，共 24 家虛構公司，不需註冊或安裝）
@@ -69,7 +69,7 @@
 
 - **我負責**：需求定義（從導入 ISMS 時遇到的實際問題出發）、ISMS 內容與條款對應、功能設計與取捨（例如建議只標示不自動判定、風險與 SoA 連動規則）、實際操作測試並提出修正
 - **AI 負責**：撰寫程式碼、單元測試與文件範本初稿
-- **驗證方式**：102 項單元測試，由 GitHub Actions 自動執行
+- **驗證方式**：105 項單元測試，由 GitHub Actions 自動執行
 
 ## 檔案結構
 
@@ -116,6 +116,7 @@ npm test
 | `tests/cycle.test.js` | 建立新年度（版次、狀態降級、待重新評估、快照不疊加）、年度比較、比較 Excel |
 | `tests/actions.test.js` | 改善事項：格式檢查、逾期與結案規則、提醒、帶入新年度、前次處理情形、Excel 匯出→匯入往返 |
 | `tests/guide.test.js` | 下一步建議的條件與排序、導入進度各步驟的完成判斷、建議與步驟的對應 |
+| `tests/version.test.js` | `index.html` 載入檔案的版本號、CHANGELOG 最新版與 `package.json` 一致，CHANGELOG 格式正確 |
 | `tests/backup.test.js` | 備份提醒的觸發條件與「明天再提醒」 |
 
 每次推送到 GitHub 都會由 GitHub Actions 自動執行測試，結果顯示在本頁最上方的徽章。
@@ -201,7 +202,6 @@ npm test
 - [x] 改善追蹤（不符合、矯正措施、管理審查決議）
 - [ ] 風險處理計畫的到期提醒與追蹤
 - [ ] 修改紀錄加入操作人，支援多人協作
-- [ ] 2013 版與 2022 版控制措施對照
 - [ ] 擴充案例庫與產業規則
 - [x] 單元測試（搜尋、產業規則、匯入檢查、備份提醒）
 
