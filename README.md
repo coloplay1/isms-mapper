@@ -211,6 +211,8 @@ npm test
 
 ## 授權
 
-程式碼以 [MIT License](LICENSE) 釋出。
+ISO 與 ISO/IEC 27001 為國際標準化組織（ISO）及國際電工委員會（IEC）之標準名稱，本工具與 ISO、IEC 及任何驗證機構無關，使用本工具不代表取得驗證。
+
+程式碼以 [MIT License](LICENSE) 釋出；文件範本（`templates/`）與使用指南以 [CC BY 4.0](templates/LICENSE.md) 釋出，轉載或改作範本時請標示出處。
 
 開發歷程見 [CHANGELOG](CHANGELOG.md)。

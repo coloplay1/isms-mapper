@@ -1830,7 +1830,7 @@ function renderDocs(){
   const show=d=>docFilter==="all"||(docFilter==="req"&&d.mandatory)||docFilter===d.layer;
   const refs=d=>[...d.clauses,...d.controls].map(c=>`<button class="rc" data-open="${c}" data-tip="${c} ${esc((CLAUSE_MAP[c]||ANNEX_MAP[c]||{}).name||"")}">${c}</button>`).join("");
   $("#view-docs").innerHTML=`<h2>ISMS 文件範本</h2>
-  <p class="lede">依五層文件架構整理的通用範本，涵蓋 ISO/IEC 27001 條款 4–10 要求保存的文件化資訊。黃色標示的【】是需要依組織修改的地方；範本內容自行撰寫，不含標準原文。</p>
+  <p class="lede">依五層文件架構整理的通用範本，涵蓋 ISO/IEC 27001 條款 4–10 要求保存的文件化資訊。黃色標示的【】是需要依組織修改的地方；範本內容自行撰寫，不含標準原文。範本以 <a href="https://github.com/coloplay1/isms-mapper/blob/main/templates/LICENSE.md" target="_blank" rel="noopener">CC BY 4.0</a> 釋出，可自由使用與修改；轉載範本時請標示出處。</p>
   <div class="filters">
     <a class="btn primary" href="${TPL_BASE}isms-document-kit.zip" download="ISMS文件範本包.zip">⬇ 下載全部（ZIP）</a>
     <div class="seg" id="docSeg">${[["all","全部"],["req","標準要求的文件"],...DOC_LAYERS.map(l=>[l.id,l.id+" "+l.name])].map(([k,t])=>`<button data-df="${k}" aria-pressed="${docFilter===k}">${t}</button>`).join("")}</div>
