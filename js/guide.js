@@ -47,7 +47,7 @@ function nextSteps(p,now){
   add(f.reassess,{key:"reassess",sev:"warn",title:`重新評估 ${f.reassess} 項沿用去年分數的風險`,desc:"建立新年度時保留了去年的可能性與衝擊，請依今年情況確認（6.1.2）",tab:"risks",cta:"前往風險評鑑"});
   add(!f.criteria,{key:"criteria",sev:"warn",title:"確認風險評鑑準則",desc:"新專案先帶入預設的四級準則，請確認符合組織可接受的風險程度（6.1.2 a）",tab:"risks",open:"criteria",cta:"確認準則"});
   add(f.criteria&&!f.scaleDefs,{key:"scaleDefs",sev:"info",title:"寫下可能性與衝擊各級的定義",desc:"例如「每年一次」「中斷 1 天」，不同的人評分才會一致，也會匯出到風險評鑑準則",tab:"risks",open:"criteria",cta:"填寫定義"});
-  add(!f.risks,{key:"noRisk",sev:"warn",title:"登錄第一個風險",desc:"適用性要依風險評鑑結果決定（6.1.3）。可以從案例搜尋一鍵建立",tab:"risks",cta:"前往風險評鑑"});
+  add(!f.risks,{key:"noRisk",sev:"warn",title:"登錄第一個風險",desc:"適用性要依風險評鑑結果決定（6.1.3）。按「新增風險」可從常見情境挑選",tab:"risks",cta:"前往風險評鑑"});
   add(f.unscored,{key:"unscored",sev:"warn",title:`評估 ${f.unscored} 項風險的可能性與衝擊`,desc:"還沒有分數，就無法判斷要不要處理（6.1.2 d）",tab:"risks",cta:"前往風險評鑑"});
   add(f.undecided,{key:"undecided",sev:"warn",title:`判定 ${f.undecided} 項控制措施的適用性`,desc:"SoA 需要列出每一項適用或不適用，以及理由（6.1.3 d）",tab:"annex",filter:"undec",cta:"前往附錄 A"});
   add(f.noReason,{key:"noReason",sev:"warn",title:`補填 ${f.noReason} 項排除理由`,desc:"標為不適用卻沒有理由，是稽核最常開的缺失之一",tab:"annex",filter:"noreason",cta:"前往補填"});

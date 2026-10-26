@@ -723,7 +723,7 @@ function renderCustomBar(){
   const el=$("#sCustom");if(!el)return;const p=cur(),list=customCases();
   el.innerHTML=`<div class="cbar">${p?`<button class="btn" data-newcase>＋ 新增自訂案例</button>
     ${list.length?`<span class="saved">本專案的自訂案例（${list.length}）：</span>${list.slice(0,12).map(c=>`<button class="chip custom" data-hint="${esc(c.t)}">${esc(c.t)}</button>`).join("")}${list.length>12?`<span class="saved">…</span>`:""}`
-      :`<span class="saved">把組織自己的情境加入案例庫，搜尋時會一起比對，並隨專案檔匯出。</span>`}`
+      :`<span class="saved">自訂案例是組織自己的情境範本（例如公司特有的系統或流程），搜尋時會一起比對，新增風險時也能挑選；實際的風險評估仍記在風險評鑑。</span>`}`
     :`<span class="saved">開啟或建立專案後，可以新增組織自己的情境案例。</span>`}</div>`;
 }
 function renderSearchResult(){
@@ -1364,6 +1364,41 @@ function deleteRisk(id){
   const [r]=list.splice(i,1);touchRisk();$("#drawerHost").innerHTML="";render();
   undoToast(`已刪除 ${r.id}${r.title?" "+r.title:""}`,()=>{list.splice(i,0,r);touchRisk();render()});
 }
+/* 新增風險：先從案例挑一個情境（帶入描述、威脅與建議的控制措施），或建立空白風險 */
+const PICK_HINTS=["離職","勒索","釣魚","遠端","備份","停電","廠商","個資","筆電","密碼","雲端","漏洞"];
+function openRiskPicker(){
+  if(!cur())return;
+  const host=$("#drawerHost");let q="";
+  const has=t=>risks().some(r=>r.title===t);
+  const keyOf=c=>c.id&&/^C-/.test(c.id)?c.id:String(CASES.indexOf(c));
+  const item=c=>`<li><div class="pkbody"><b>${esc(c.t)}</b>${c.id&&/^C-/.test(c.id)?`<span class="ctag">自訂</span>`:""}${has(c.t)?`<span class="ctag">已登錄</span>`:""}
+      <span class="saved">${esc(c.s)}</span>
+      <span class="pkcodes">${c.r.filter(x=>ANNEX_MAP[x]).slice(0,4).map(x=>`<span class="mono">${x}</span>`).join(" ")}</span></div>
+    <button class="btn" data-pick="${esc(keyOf(c))}">建立</button></li>`;
+  const list=()=>{
+    const custom=customCases();
+    if(!q.trim())return custom.length?`<h3 style="margin:14px 0 6px">組織的自訂案例</h3><ul class="pklist">${custom.map(item).join("")}</ul>`:
+      `<p class="note" style="margin-top:14px">輸入關鍵字，或點上面的常見情境。共有 ${CASES.length} 個內建案例可以挑選。</p>`;
+    const r=search(q,custom).cases.map(x=>x.c);
+    return r.length?`<ul class="pklist" style="margin-top:12px">${r.slice(0,8).map(item).join("")}</ul>`:`<p class="note" style="margin-top:14px">找不到相符的案例。可以換個說法，或建立空白風險自己填寫。</p>`;
+  };
+  host.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="新增風險">
+    <button class="btn x" data-close>關閉</button>
+    <div class="code">條款 6.1.2</div><h2>新增風險</h2>
+    <p class="lede">從常見情境挑一個當起點，會帶入描述、威脅與建議的控制措施，之後再依公司情況修改與評分。</p>
+    <label class="lbl">搜尋情境<input id="pkQ" autocomplete="off" placeholder="例如：同事離職、廠商遠端連線、勒索軟體"></label>
+    <div class="hints" style="margin:8px 0 0">${PICK_HINTS.map(h=>`<button class="chip" data-pkh="${h}">${h}</button>`).join("")}</div>
+    <div id="pkList">${list()}</div>
+    <div class="pkblank"><span class="note">沒有合適的情境？</span><button class="btn" id="pkBlank">建立空白風險</button></div>
+  </aside>`;
+  const upd=()=>{$("#pkList").innerHTML=list()};
+  $("#pkQ").addEventListener("input",e=>{q=e.target.value;upd()});
+  host.querySelectorAll("[data-pkh]").forEach(b=>b.addEventListener("click",()=>{q=b.dataset.pkh;$("#pkQ").value=q;upd();$("#pkQ").focus()}));
+  host.querySelector("aside").addEventListener("click",e=>{const b=e.target.closest("[data-pick]");if(!b)return;riskFromCase(b.dataset.pick)});
+  $("#pkBlank").addEventListener("click",()=>{const r=newRisk();host.innerHTML="";renderRisks();openRiskDrawer(r.id)});
+  host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeDrawer));
+  $("#pkQ").focus();
+}
 function riskFromCase(idx){
   const c=/^C-/.test(idx)?customCases().find(x=>x.id===idx):CASES[+idx];if(!c||!cur())return;
   const r=newRisk({title:c.t,threat:c.s,controls:c.r.filter(x=>ANNEX_MAP[x])});
@@ -1409,7 +1444,6 @@ function renderRisks(){
   <p class="lede">依條款 6.1.2 識別與評估風險，依 6.1.3 決定處理方式並選定控制措施。風險選定的控制措施會連到附錄 A，作為適用性聲明（SoA）納入理由的依據；這裡只提出不一致的地方，不會自動改變判定。</p>
   <div class="filters">
     <button class="btn primary" id="rNew">＋ 新增風險</button>
-    <button class="btn" id="rFromCase">從案例搜尋新增</button>
     <span class="saved critline">風險準則：${esc(criteriaText(p))}</span><button class="btn" id="rCrit">調整準則</button>
     <button class="btn" id="rXls" style="margin-left:auto">匯出 SoA Excel</button>
   </div>
@@ -1445,8 +1479,7 @@ function renderRisks(){
     <td>${riskState(r,checks)}</td></tr>`).join("")||`<tr><td colspan="9"><div class="empty">${list.length?"這一格沒有風險。":"還沒有風險。可以按「新增風險」，或到案例搜尋把情境加入風險登錄表。"}</div></td></tr>`}
   </tbody></table></div>`;
   const on=(id,fn)=>{const el=$("#"+id);if(el)el.addEventListener("click",fn)};
-  on("rNew",()=>{const r=newRisk();renderRisks();openRiskDrawer(r.id)});
-  on("rFromCase",()=>{tab="search";render();window.scrollTo(0,0);toast("在案例卡片上按「加入風險登錄表」")});
+  on("rNew",openRiskPicker);
   on("rXls",exportExcel);
   on("ckMore",()=>{showAllChecks=!showAllChecks;renderRisks()});
   on("mxClear",()=>{riskView.cell=null;renderRisks()});
