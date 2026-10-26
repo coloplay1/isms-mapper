@@ -431,3 +431,13 @@ table.cmptable.sum td.wrap{white-space:normal;text-align:left}
 table.cmptable.sum th{white-space:nowrap}
 .cmpplan{margin:10px 0 14px;font-size:14px}
 .cmpplan b{margin-right:10px}
+/* 專案管理 */
+.pcol{display:grid;gap:18px;align-content:start}
+.pcol>.panel,.grid2e>.panel{margin-top:0!important}
+.grid2e{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:18px;margin-top:18px;align-items:start}
+.pgrid{align-items:start}
+.pgrid .secthead{flex-wrap:wrap}
+.lbl{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+.pform{display:grid;gap:10px}
+.pform .form input{flex:1 1 200px}
+.ppl{grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr))}

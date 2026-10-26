@@ -27,7 +27,7 @@ function industryOptions(sel){return INDUSTRIES.map(i=>`<option value="${i.id}" 
 function wireIndustry(root,selId,name,countId){
   const sel=root.querySelector("#"+selId);
   const upd=()=>{if(!countId)return;const fs=[...root.querySelectorAll(`input[name="${name}"]:checked`)].map(x=>x.value);
-    const n=Object.keys(focusMap({features:fs})).length;const el=root.querySelector("#"+countId);if(el)el.textContent=n?`會標示 ${n} 項建議重點`:"不選也可以，之後在「專案與備份」修改"};
+    const n=Object.keys(focusMap({features:fs})).length;const el=root.querySelector("#"+countId);if(el)el.textContent=n?`會標示 ${n} 項建議重點`:"不選也可以，之後在「專案管理」修改"};
   sel.addEventListener("change",()=>{const ind=INDUSTRY_MAP[sel.value];root.querySelectorAll(`input[name="${name}"]`).forEach(cb=>cb.checked=ind.features.includes(cb.value));upd()});
   root.querySelectorAll(`input[name="${name}"]`).forEach(cb=>cb.addEventListener("change",upd));upd();
 }
@@ -760,40 +760,44 @@ let pendingDelete=null;
 function renderProjects(){
   const list=Object.values(S.projects).sort((a,b)=>b.updated-a.updated);
   const p=cur();
-  $("#view-projects").innerHTML=`<h2>專案與備份</h2><p class="lede">資料自動儲存在這個瀏覽器。換電腦或清除瀏覽資料前，請先匯出專案檔備份。</p>
-  <div class="grid2"><div>
-    <div class="secthead"><h3>我的專案</h3><button class="btn" id="pNew">＋ 新專案</button></div>
-    ${list.length?projRows(list,"projects"):`<div class="pempty">還沒有自己的專案。</div>`}
-  </div>
-  <div class="panel"><h3>目前專案</h3>
-    ${!p?`<p class="note">尚未開啟專案。可以匯入之前匯出的專案檔。</p><div class="form"><button class="btn" id="jsonIn">匯入專案檔</button></div>`:
-    p.sample?`<p class="note">目前是範例專案，不能重新命名或匯出專案檔。想保留內容，請先複製成自己的專案。</p>
-      <div class="form"><button class="btn primary" id="pCopy">以此範例建立我的專案</button><button class="btn" id="xls2">匯出 SoA Excel</button><button class="btn" id="jsonIn">匯入專案檔</button></div>`:
-    `<div class="form" style="margin-top:0"><input id="renameIn" value="${esc(p.name)}" aria-label="專案名稱"><button class="btn" id="renameBtn">重新命名</button></div>
-    <div class="form"><input id="scopeIn" value="${esc(p.scope||"")}" placeholder="驗證範圍" aria-label="驗證範圍"><button class="btn" id="scopeBtn">更新範圍</button></div>
-    <div class="form"><button class="btn primary" id="xls2">匯出 SoA Excel</button><button class="btn" id="jsonOut">匯出專案檔（JSON）</button><button class="btn" id="jsonIn">匯入專案檔</button><button class="btn" id="xlsxIn">從 Excel 匯入</button></div>`}
-    ${p?cycleBox(p):""}
-    ${p?`<div style="border-top:1px solid var(--line);margin-top:16px;padding-top:14px;display:grid;gap:8px" id="indBox">
-      <h3 style="margin:0">產業與業務特性</h3>
-      <label style="display:grid;gap:4px;font-size:13px;color:var(--muted)">產業<select id="pInd">${industryOptions(p.industry||"")}</select></label>
-      <div class="fchips">${featureChips(projFeatures(p),"pF")}</div>
-      <div class="form" style="margin-top:4px;align-items:center"><button class="btn primary" id="indSave">套用</button><span class="fcount" id="pCount"></span></div>
-      ${p.sample?`<p class="note" style="margin:0">範例中的調整不會儲存。</p>`:""}
-    </div>`:""}
-    <p class="note" style="margin-top:14px">專案檔可在其他電腦匯入繼續編輯。Excel 包含適用性聲明、風險登錄表、風險評鑑準則、連動檢查、條款 4–10 檢核、統計摘要與修改紀錄；「從 Excel 匯入」會建立新專案。</p>
-  </div></div>
-  ${p&&compareOpen?comparePanel(p):""}
-  ${p?docPanel(p):""}
-  <div class="panel" style="margin-top:18px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center"><div style="flex:1 1 280px"><h3 style="margin:0 0 2px">Excel 與文件範本</h3><span class="note">SoA、風險評鑑表與其他 ISMS 文件範本，在 Excel 填好後可用「從 Excel 匯入」檢查。</span></div><button class="btn" data-goto="docs">前往文件範本</button></div>
-  ${p&&!p.sample?`<div class="panel" style="margin-top:18px" id="storePanel"><div class="secthead"><h3>備份與儲存狀態</h3></div>
+  const ind=p?`<div class="panel" id="indBox"><h3>產業與業務特性</h3>
+      <p class="note" style="margin:0 0 10px">用來標示附錄 A 的建議重點與相關法規，只做標示，不會改變判定。</p>
+      <label class="lbl">產業<select id="pInd">${industryOptions(p.industry||"")}</select></label>
+      <div class="fchips" style="margin-top:10px">${featureChips(projFeatures(p),"pF")}</div>
+      <div class="form" style="align-items:center"><button class="btn primary" id="indSave">套用</button><span class="fcount" id="pCount"></span></div>
+      ${p.sample?`<p class="note" style="margin:8px 0 0">範例中的調整不會儲存。</p>`:""}
+    </div>`:"";
+  const store=p&&!p.sample?`<div class="panel" id="storePanel"><h3>備份與儲存狀態</h3>
     <ul class="kvlist">
       <li><span>上次匯出專案檔</span><b>${p.lastBackupAt?fmtDate(p.lastBackupAt)+" "+fmtTime(new Date(p.lastBackupAt)):"從未"}</b></li>
       <li><span>之後的修改筆數</span><b>${p.changesSinceBackup||0}</b></li>
       <li><span>瀏覽器持久儲存</span><b id="persistVal">檢查中</b></li>
       <li><span>本工具資料大小</span><b id="usageVal">檢查中</b></li>
     </ul>
-    <p class="note" style="margin-top:10px">修改超過 ${BACKUP_CHANGES} 筆或距上次備份超過 ${BACKUP_DAYS} 天時，頁面上方會提醒備份。「持久儲存」啟用後，瀏覽器在空間不足時較不會自動清除本工具的資料，但手動清除瀏覽資料仍會刪除，請定期匯出。</p>
-  </div>`:""}
+    <p class="note" style="margin:10px 0 0">修改超過 ${BACKUP_CHANGES} 筆或距上次備份超過 ${BACKUP_DAYS} 天時，頁面上方會提醒備份。清除瀏覽資料會刪除本工具的資料，請定期匯出專案檔。</p>
+  </div>`:"";
+  $("#view-projects").innerHTML=`<h2>專案管理</h2><p class="lede">切換與設定專案、建立新年度、匯出與備份。資料自動儲存在這個瀏覽器，換電腦或清除瀏覽資料前請先匯出專案檔。</p>
+  <div class="grid2 pgrid"><div class="pcol">
+    <div class="panel"><div class="secthead"><h3>我的專案</h3><button class="btn" id="pNew" style="margin-left:auto">＋ 新專案</button><button class="btn" id="jsonIn">匯入專案檔</button><button class="btn" id="xlsxIn">從 Excel 匯入</button></div>
+      ${list.length?projRows(list,"projects"):`<div class="pempty">還沒有自己的專案。可以建立新專案，或匯入之前匯出的專案檔、填好的 SoA／風險評鑑 Excel。</div>`}
+    </div>
+    ${!p?"":p.sample?`<div class="panel"><h3>目前專案：${esc(p.name)}</h3><p class="note">這是範例專案，不能重新命名或匯出專案檔。想保留內容，請先複製成自己的專案。</p>
+      <div class="form"><button class="btn primary" id="pCopy">以此範例建立我的專案</button><button class="btn" id="xls2">匯出 SoA Excel</button></div></div>`:
+    `<div class="panel"><h3>目前專案</h3>
+      <div class="pform">
+        <label class="lbl">專案名稱<span class="form" style="margin:0"><input id="renameIn" value="${esc(p.name)}"><button class="btn" id="renameBtn">重新命名</button></span></label>
+        <label class="lbl">驗證範圍<span class="form" style="margin:0"><input id="scopeIn" value="${esc(p.scope||"")}" placeholder="例如：總部資訊系統與客服中心"><button class="btn" id="scopeBtn">更新範圍</button></span></label>
+      </div>
+      <div class="form"><button class="btn primary" id="xls2">匯出 SoA Excel</button><button class="btn" id="jsonOut">匯出專案檔（JSON）</button></div>
+      <p class="note" style="margin:10px 0 0">Excel 包含適用性聲明、風險登錄表、風險評鑑準則、連動檢查、條款 4–10 檢核、統計摘要與修改紀錄。專案檔可在其他電腦匯入繼續編輯。</p>
+    </div>`}
+  </div>
+  <div class="pcol">
+    ${p?cycleBox(p):""}
+    ${store}
+  </div></div>
+  ${p&&compareOpen?comparePanel(p):""}
+  ${p?`<div class="grid2e">${ind}${docPanel(p)}</div>`:""}
   ${p?peoplePanel(p):""}
   ${p?`<div class="panel" style="margin-top:18px"><div class="secthead"><h3>最近修改</h3><span class="note">共 ${(p.log||[]).length} 筆，顯示最近 30 筆。完整紀錄會一併匯出到 Excel。</span></div>
     ${historyHTML((p.log||[]).slice(-30).reverse(),true)}</div>`:""}`;
@@ -830,7 +834,7 @@ function compareBases(p){
 }
 function cycleBox(p){
   const can=compareBases(p).length>0;
-  return `<div style="border-top:1px solid var(--line);margin-top:16px;padding-top:14px;display:grid;gap:8px" id="cycBox">
+  return `<div class="panel" id="cycBox" style="display:grid;gap:8px">
     <h3 style="margin:0">年度循環</h3>
     ${p.period||p.baseline?`<p class="note" style="margin:0">${p.period?"本專案："+esc(p.period):""}${p.period&&p.baseline?"｜":""}${p.baseline?`比較基準：${esc(p.baseline.label)}（${fmtDate(p.baseline.at)} 保存）`:""}</p>`:""}
     <p class="note" style="margin:0">每年重新評估風險、更新 SoA、準備管理審查時，可以從這個專案建立新年度，再和去年比較差異。</p>

@@ -121,7 +121,7 @@ npm test
 2. 進入 Settings → Pages，Source 選 `Deploy from a branch`，分支選 `main`、資料夾選 `/ (root)`
 3. 數分鐘後即可在 `https://coloplay1.github.io/isms-mapper/` 開啟
 
-> 資料存在各使用者自己的瀏覽器。換電腦或清除瀏覽資料前，請先在「專案與備份」匯出專案檔。
+> 資料存在各使用者自己的瀏覽器。換電腦或清除瀏覽資料前，請先在「專案管理」匯出專案檔。
 
 ## 安全設計
 
