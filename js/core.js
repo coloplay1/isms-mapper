@@ -98,6 +98,8 @@ function sanitizeProject(raw){
   p.cases=Array.isArray(raw.cases)?raw.cases.slice(0,300).map(sanitizeCase).filter(c=>c&&!seenCase.has(c.id)&&seenCase.add(c.id)):[];
   p.criteria=sanitizeCriteria(raw.criteria)||legacyCriteria(raw);
   p.doc=sanitizeDoc(raw.doc);
+  p.period=str(raw.period,20);
+  const base=sanitizeBaseline(raw.baseline);if(base)p.baseline=base;
   p.lastBackupAt=Date.now();p.changesSinceBackup=0;
   return p;
 }
@@ -210,6 +212,7 @@ function sanitizeRisk(raw){
   r.controls=Array.isArray(raw.controls)?[...new Set(raw.controls.filter(c=>ANNEX_MAP[c]))]:[];
   r.due=/^\d{4}-\d{2}(-\d{2})?$/.test(raw.due)?raw.due:"";
   r.accepted=raw.accepted===true;
+  if(raw.reassess===true)r.reassess=true;   // 建立新年度時沿用去年分數，待重新評估
   return r;
 }
 

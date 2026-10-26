@@ -4,7 +4,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const FILES = ['js/data/controls.js', 'js/data/cases.js', 'js/data/rules.js', 'js/data/docs.js', 'js/core.js', 'js/workbook.js'];
+const FILES = ['js/data/controls.js', 'js/data/cases.js', 'js/data/rules.js', 'js/data/docs.js', 'js/core.js', 'js/workbook.js', 'js/cycle.js'];
 const NAMES = ['THEMES', 'ANNEX', 'ANNEX_MAP', 'CLAUSES', 'CLAUSE_MAP', 'CASES', 'SYN', 'FEATURES', 'FEATURE_MAP',
   'INDUSTRIES', 'INDUSTRY_MAP', 'LAWS', 'DEV_ONLY', 'STATUS', 'APP', 'FIELD_LABEL', 'BACKUP_DAYS', 'BACKUP_CHANGES',
   'MAX_IMPORT_BYTES', 'search', 'expand', 'norm', 'baseFocus', 'focusMap', 'naCandidates', 'lawsFor',
@@ -13,7 +13,8 @@ const NAMES = ['THEMES', 'ANNEX', 'ANNEX_MAP', 'CLAUSES', 'CLAUSE_MAP', 'CASES',
   'nextRiskId', 'risksByControl', 'riskChecks', 'sanitizeRisk', 'POLICIES', 'CRITERIA_PRESETS', 'presetCriteria', 'sanitizeCriteria',
   'riskCriteria', 'policyOf', 'criteriaText', 'STATUS_ALIAS', 'REASON_CODES', 'sanitizeDoc', 'docLine', 'parseDocLine', 'reasonCodes',
   'parseControlCodes', 'buildWorkbook', 'importWorkbook', 'parseCriteria', 'normHead', 'mapColumns', 'IMPORT_COLS',
-  'DOCS', 'DOC_LAYERS', 'DOC_REQUIREMENTS', 'DOC_MAP', 'sanitizeCase', 'nextCaseId', 'parseRefCodes', 'splitKeywords'];
+  'DOCS', 'DOC_LAYERS', 'DOC_REQUIREMENTS', 'DOC_MAP', 'sanitizeCase', 'nextCaseId', 'parseRefCodes', 'splitKeywords',
+  'snapshotProject', 'sanitizeBaseline', 'bumpVersion', 'nextPeriod', 'rolloverProject', 'compareProjects', 'buildComparisonWorkbook'];
 
 function load() {
   const src = FILES.map(f => `// ---- ${f}\n` + fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');

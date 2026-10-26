@@ -772,6 +772,7 @@ function renderProjects(){
     `<div class="form" style="margin-top:0"><input id="renameIn" value="${esc(p.name)}" aria-label="專案名稱"><button class="btn" id="renameBtn">重新命名</button></div>
     <div class="form"><input id="scopeIn" value="${esc(p.scope||"")}" placeholder="驗證範圍" aria-label="驗證範圍"><button class="btn" id="scopeBtn">更新範圍</button></div>
     <div class="form"><button class="btn primary" id="xls2">匯出 SoA Excel</button><button class="btn" id="jsonOut">匯出專案檔（JSON）</button><button class="btn" id="jsonIn">匯入專案檔</button><button class="btn" id="xlsxIn">從 Excel 匯入</button></div>`}
+    ${p?cycleBox(p):""}
     ${p?`<div style="border-top:1px solid var(--line);margin-top:16px;padding-top:14px;display:grid;gap:8px" id="indBox">
       <h3 style="margin:0">產業與業務特性</h3>
       <label style="display:grid;gap:4px;font-size:13px;color:var(--muted)">產業<select id="pInd">${industryOptions(p.industry||"")}</select></label>
@@ -781,6 +782,7 @@ function renderProjects(){
     </div>`:""}
     <p class="note" style="margin-top:14px">專案檔可在其他電腦匯入繼續編輯。Excel 包含適用性聲明、風險登錄表、風險評鑑準則、連動檢查、條款 4–10 檢核、統計摘要與修改紀錄；「從 Excel 匯入」會建立新專案。</p>
   </div></div>
+  ${p&&compareOpen?comparePanel(p):""}
   ${p?docPanel(p):""}
   <div class="panel" style="margin-top:18px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center"><div style="flex:1 1 280px"><h3 style="margin:0 0 2px">Excel 與文件範本</h3><span class="note">SoA、風險評鑑表與其他 ISMS 文件範本，在 Excel 填好後可用「從 Excel 匯入」檢查。</span></div><button class="btn" data-goto="docs">前往文件範本</button></div>
   ${p&&!p.sample?`<div class="panel" style="margin-top:18px" id="storePanel"><div class="secthead"><h3>備份與儲存狀態</h3></div>
@@ -809,8 +811,112 @@ function renderProjects(){
   on("renameBtn",()=>{const n=$("#renameIn").value.trim();if(n){cur().name=n;save();render();toast("已重新命名")}});
   on("scopeBtn",()=>{cur().scope=$("#scopeIn").value.trim();save();toast("已更新驗證範圍")});
   on("xls2",exportExcel);
+  on("cyNew",openRolloverDrawer);
+  on("cyCmp",()=>{compareOpen=!compareOpen;renderProjects();if(compareOpen){const el=$("#cmpPanel");if(el)el.scrollIntoView({block:"start"})}});
+  on("cmpClose",()=>{compareOpen=false;renderProjects()});
+  on("cmpXls",exportComparison);
+  const cs=$("#cmpBase");if(cs)cs.addEventListener("change",()=>{cmpBase=cs.value;renderProjects();$("#cmpBase").focus()});
   on("jsonOut",exportJSON);
   on("jsonIn",()=>$("#importFile").click());
+}
+/* ---------- 年度循環 ---------- */
+let compareOpen=false,cmpBase="baseline";
+function compareBases(p){
+  const out=[];
+  if(p.baseline)out.push({id:"baseline",label:`${p.baseline.label}（建立新年度時保存）`,base:p.baseline});
+  Object.values(S.projects).filter(x=>x.id!==p.id).sort((a,b)=>b.updated-a.updated)
+    .forEach(x=>out.push({id:x.id,label:`${x.name}${x.period?"｜"+x.period:""}`,base:{...x,label:x.period||x.name}}));
+  return out;
+}
+function cycleBox(p){
+  const can=compareBases(p).length>0;
+  return `<div style="border-top:1px solid var(--line);margin-top:16px;padding-top:14px;display:grid;gap:8px" id="cycBox">
+    <h3 style="margin:0">年度循環</h3>
+    ${p.period||p.baseline?`<p class="note" style="margin:0">${p.period?"本專案："+esc(p.period):""}${p.period&&p.baseline?"｜":""}${p.baseline?`比較基準：${esc(p.baseline.label)}（${fmtDate(p.baseline.at)} 保存）`:""}</p>`:""}
+    <p class="note" style="margin:0">每年重新評估風險、更新 SoA、準備管理審查時，可以從這個專案建立新年度，再和去年比較差異。</p>
+    <div class="form" style="margin-top:0"><button class="btn" id="cyNew">建立新年度</button><button class="btn" id="cyCmp" ${can?"":`disabled data-tip="需要去年的快照或另一個專案"`} aria-expanded="${compareOpen}">${compareOpen?"收合比較":"與去年比較"}</button></div>
+  </div>`;
+}
+function openRolloverDrawer(){
+  const p=cur();if(!p)return;
+  const np=nextPeriod(p,new Date());
+  const nRisk=(p.risks||[]).filter(r=>inherentScore(r)).length;
+  const nVer=Object.values(p.controls||{}).filter(v=>v.status===3).length+Object.values(p.clauses||{}).filter(v=>v.status===3).length;
+  const d=sanitizeDoc(p.doc);
+  const host=$("#drawerHost");
+  host.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="建立新年度">
+    <button class="btn x" data-close>關閉</button>
+    <div class="code">條款 6.1、9.3</div><h2>建立新年度</h2>
+    <p class="lede">以「${esc(p.name)}」為基礎複製一份新專案，原專案保持不變。新專案會保存去年的快照，之後可以直接比較兩年的差異。</p>
+    <dl>
+      <div><dt>新專案名稱</dt><dd><input id="roName" value="${esc(np.name)}" maxlength="120"></dd></div>
+      <div><dt>新年度標示</dt><dd><input id="roPer" value="${esc(np.period)}" maxlength="20"></dd></div>
+      <div><dt>去年標示</dt><dd><input id="roPrev" value="${esc(np.prevLabel)}" maxlength="20"></dd></div>
+    </dl>
+    <h3>會自動處理</h3>
+    <ul class="rolist">
+      <li>保留適用性、納入或排除理由、實施方式、負責人與風險內容</li>
+      <li>${nVer?`<b>${nVer}</b> 項「已驗證」改為「已實施」，`:"「已驗證」改為「已實施」，"}提醒今年重新收集證據</li>
+      <li>${nRisk?`<b>${nRisk}</b> 項風險`:"風險"}保留去年分數作為起點，標示「待重新評估」；擁有者核准需重新取得</li>
+      <li>文件版次 ${esc(d.ver||"（未填）")} → ${esc(bumpVersion(d.ver)||"（未填）")}，日期與核准日期清空，狀態改回「草案」</li>
+      <li>修改紀錄從新年度開始重新記錄</li>
+    </ul>
+    <div style="display:flex;gap:8px;margin-top:18px"><button class="btn primary" id="roGo">建立</button><button class="btn" data-close>取消</button></div>
+  </aside>`;
+  host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeDrawer));
+  $("#roGo").addEventListener("click",()=>{
+    const {project:np2,summary:sm}=rolloverProject(p,{name:$("#roName").value.trim()||np.name,period:$("#roPer").value.trim(),prevLabel:$("#roPrev").value.trim()});
+    S.projects[np2.id]=np2;S.activeId=np2.id;copying=false;cmpBase="baseline";compareOpen=false;
+    $("#drawerHost").innerHTML="";save();resetBuilt();tab="projects";render();window.scrollTo(0,0);ensurePersist();
+    toast(`已建立「${np2.name}」：${sm.downgraded+sm.clauses} 項改回已實施、${sm.reassess} 項風險待重新評估`);
+  });
+  $("#roName").focus();
+}
+function currentBase(p){
+  const list=compareBases(p);
+  return list.find(x=>x.id===cmpBase)||list[0]||null;
+}
+function cmpTable(head,rows,empty){
+  return rows.length?`<div class="table-wrap"><table class="cmptable"><thead><tr>${head.map(h=>`<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,k)=>`<td${k===0?' class="code"':""}>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`:`<p class="note">${empty}</p>`;
+}
+function comparePanel(p){
+  const list=compareBases(p),b=currentBase(p);if(!b)return "";
+  const d=compareProjects(b.base,p),ps=d.planStats;
+  const sign=n=>n>0?`<span class="up">+${n}</span>`:n<0?`<span class="down">${n}</span>`:`<span class="saved">0</span>`;
+  const code=c=>`<button class="ref mono" data-open="${c}">${c}</button>`;
+  const rid=r=>(p.risks||[]).some(x=>x.id===r)?`<button class="ref mono" data-risk="${r}">${r}</button>`:`<span class="mono">${r}</span>`;
+  const blk=(title,n,body)=>`<details class="cmpblk" ${n&&n<=12?"open":""}><summary><b>${title}</b><span class="count">${n} 項</span></summary>${body}</details>`;
+  const res={"已完成":"ok","進行中":"","逾期未完成":"warn","狀態未填":"","風險已移除":""};
+  const st=[...d.statusUp.map(x=>[code(x.code),esc(x.name),x.from,x.to,`<span class="up">進步</span>`]),
+    ...d.statusDown.map(x=>[code(x.code),esc(x.name),x.from,x.to,x.from==="已驗證"&&x.to==="已實施"?`<span class="saved">待重新驗證</span>`:`<span class="down">退步</span>`])];
+  const rk=[...d.added.map(r=>[rid(r.id),"新增",esc(r.title),"—",lvlBadge(inherentScore(r))]),
+    ...d.removed.map(r=>[rid(r.id),"移除",esc(r.title),lvlBadge(inherentScore(r)),"—"]),
+    ...d.changed.map(x=>[rid(x.id),x.dir==="up"?`<span class="down">分數上升</span>`:`<span class="up">分數下降</span>`,esc(x.title),lvlBadge(x.from)+(x.rFrom!==x.rTo?`<div class="saved">殘餘 ${x.rFrom||"—"}</div>`:""),lvlBadge(x.to)+(x.rFrom!==x.rTo?`<div class="saved">殘餘 ${x.rTo||"—"}</div>`:"")])];
+  return `<div class="panel" style="margin-top:18px" id="cmpPanel">
+    <div class="secthead"><h3>年度比較</h3><span class="note">管理審查（9.3.2 f）風險評鑑結果與處理計畫狀態的輸入資料</span></div>
+    <div class="filters">
+      <label class="cmpsel">比較基準<select id="cmpBase">${list.map(x=>`<option value="${esc(x.id)}" ${x.id===b.id?"selected":""}>${esc(x.label)}</option>`).join("")}</select></label>
+      <button class="btn primary" id="cmpXls" style="margin-left:auto">匯出比較 Excel</button><button class="btn" id="cmpClose">收合</button>
+    </div>
+    ${d.criteriaChanged?`<p class="warnhint">兩個年度的風險準則不同，等級統計以本期準則計算。</p>`:""}
+    <div class="table-wrap cmpsum"><table class="cmptable sum"><thead><tr><th>項目</th><th>${esc(d.base.label)}</th><th>${esc(d.cur.label)}</th><th>增減</th></tr></thead><tbody>
+      ${d.summary.map(r=>`<tr><td>${esc(r.label)}</td><td class="num">${r.from}</td><td class="num">${r.to}</td><td class="num">${sign(r.diff)}</td></tr>`).join("")}
+
+    </tbody></table></div>
+    <p class="cmpplan"><b>去年處理計畫</b>共 ${ps.total} 項：完成 ${ps.done}、進行中 ${ps.open}、<span class="${ps.overdue?"down":""}">逾期 ${ps.overdue}</span>${ps.unknown?`、狀態未填 ${ps.unknown}`:""}、風險已移除 ${ps.removed}</p>
+    ${blk("適用性變更",d.appChanges.length,cmpTable(["編號","控制措施",d.base.label,d.cur.label,"本期理由"],d.appChanges.map(x=>[code(x.code),esc(x.name),x.from,x.to,esc(x.reason)||`<span class="warnhint" style="display:inline">未填理由</span>`]),"適用性沒有變更。"))}
+    ${blk("實施狀態變化",st.length,cmpTable(["編號","控制措施",d.base.label,d.cur.label,"變化"],st,"實施狀態沒有變化。"))}
+    ${blk("風險變更",rk.length,cmpTable(["編號","類型","風險",d.base.label,d.cur.label],rk,"風險沒有增刪，分數也沒有變動。"))}
+    ${blk("去年處理計畫追蹤",d.plans.length,cmpTable(["編號","風險","處理計畫","預計完成","結果"],d.plans.map(x=>[rid(x.id),esc(x.title),esc(x.plan),esc(x.due),`<span class="rstate ${res[x.result]}">${x.result}</span>`]),"去年沒有需要處理的風險。"))}
+    <p class="note" style="margin-top:12px">Excel 包含比較摘要、適用性變更、實施狀態變化、風險變更與處理計畫追蹤，可附在管理審查會議紀錄。前次決議處理情形、內外部議題變化、稽核結果等其他輸入請另行準備。</p>
+  </div>`;
+}
+function exportComparison(){
+  if(typeof writeXlsxFile!=="function"){toast("Excel 元件沒有載入，請確認 vendor/write-excel-file.min.js 存在");return}
+  const p=cur(),b=currentBase(p);if(!b)return;
+  writeXlsxFile(buildComparisonWorkbook(p,b.base)).toBlob()
+    .then(blob=>saveFile(`年度比較_${safeName(p.name)}_${new Date().toISOString().slice(0,10)}.xlsx`,blob,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+    .catch(err=>{console.error(err);toast("Excel 產生失敗："+(err&&err.message||err))});
 }
 function goNew(){tab="home";render();window.scrollTo(0,0);const n=$("#hName");if(n)n.focus()}
 function resetBuilt(){["annex"].forEach(v=>delete $("#view-"+v).dataset.built)}
@@ -1231,6 +1337,7 @@ function renderRisks(){
       ${info.length?`<details class="ckinfo"><summary>${info.length} 項控制措施的理由寫「依風險評鑑結果」，但沒有風險引用</summary><ul class="cklist">${info.map(checkRow).join("")}</ul></details>`:""}
     </div>
   </div>
+  ${list.some(r=>r.reassess)?`<p class="note reassess">${list.filter(r=>r.reassess).length} 項風險沿用 ${p.baseline?esc(p.baseline.label):"去年"}的評估，待重新評估。打開風險確認可能性與衝擊後，按「已重新評估」。</p>`:""}
   ${riskView.cell?`<div class="filters" style="margin-top:18px"><span class="count">篩選：${riskView.mode==="res"?"殘餘":"固有"}風險 可能性 ${riskView.cell.split("-")[0]} × 衝擊 ${riskView.cell.split("-")[1]}（${shown.length} 項）</span><button class="chip" id="mxClear">清除篩選</button></div>`:""}
   <div class="table-wrap" style="margin-top:${riskView.cell?8:18}px"><table class="rtable"><thead><tr><th style="width:70px">編號</th><th>風險</th><th style="width:120px">風險擁有者</th><th style="width:84px">固有</th><th style="width:70px">處理</th><th>控制措施</th><th style="width:84px">殘餘</th><th style="width:96px">狀態</th></tr></thead><tbody>
   ${shown.map(r=>`<tr>
@@ -1241,7 +1348,7 @@ function renderRisks(){
     <td>${r.treat?esc(TREATMENTS.find(t=>t.v===r.treat).label):`<span class="saved">未決定</span>`}${r.status?`<div class="saved">${esc(r.status)}</div>`:""}</td>
     <td><div class="rcodes">${(r.controls||[]).slice(0,5).map(c=>{const a=ctl(c).app;return `<button class="rc ${a==="N"?"bad":a===""?"undec":""}" data-open="${c}" data-tip="${c} ${esc(ANNEX_MAP[c].name)}｜SoA：${APP.find(x=>x.v===a).label}">${c}</button>`}).join("")}${(r.controls||[]).length>5?`<span class="saved">+${r.controls.length-5}</span>`:""}</div></td>
     <td>${lvlBadge(residualScore(r))}</td>
-    <td>${riskState(r,checks)}</td></tr>`).join("")||`<tr><td colspan="8"><div class="empty">${list.length?"這一格沒有風險。":"還沒有風險。可以按「新增風險」，或到案例搜尋把情境加入風險登錄表。"}</div></td></tr>`}
+    <td>${r.reassess?`<span class="rstate warn">待重新評估</span>`:riskState(r,checks)}</td></tr>`).join("")||`<tr><td colspan="8"><div class="empty">${list.length?"這一格沒有風險。":"還沒有風險。可以按「新增風險」，或到案例搜尋把情境加入風險登錄表。"}</div></td></tr>`}
   </tbody></table></div>`;
   const on=(id,fn)=>{const el=$("#"+id);if(el)el.addEventListener("click",fn)};
   on("rNew",()=>{const r=newRisk();renderRisks();openRiskDrawer(r.id)});
@@ -1277,6 +1384,7 @@ function openRiskDrawer(id){
       <div><dt>風險擁有者</dt><dd><input id="rOwner" data-owner autocomplete="off" value="${esc(r.owner)}" placeholder="對這個風險負責、核准處理方式的人"></dd></div>
     </dl>
     <h3>評估（6.1.2）</h3>
+    ${r.reassess?`<div class="reabox" id="rReBox"><span>沿用 ${cur().baseline?esc(cur().baseline.label):"去年"}的評估，請依今年情況確認可能性與衝擊。</span><button class="btn" id="rRe">已重新評估</button></div>`:""}
     <div class="r2"><label>可能性${levelSelect("rL",r.l,LIKELIHOOD)}</label><label>衝擊${levelSelect("rI",r.i,IMPACT)}</label><div class="rscore" id="rS"></div></div>
     <h3 style="margin-top:16px">處理（6.1.3）</h3>
     <dl>
@@ -1313,7 +1421,9 @@ function openRiskDrawer(id){
   };
   const set=(f,v)=>{if(r[f]===v)return;r[f]=v;touchRisk();refresh()};
   [["rTitle","title"],["rAsset","asset"],["rThreat","threat"],["rVuln","vuln"],["rExist","existing"],["rOwner","owner"],["rPlan","plan"],["rDue","due"]].forEach(([id,f])=>$("#"+id).addEventListener("input",e=>set(f,e.target.value)));
-  [["rL","l"],["rI","i"],["rRL","rl"],["rRI","ri"]].forEach(([id,f])=>$("#"+id).addEventListener("change",e=>set(f,Number(e.target.value))));
+  const reDone=()=>{if(!r.reassess)return;delete r.reassess;touchRisk();const b=$("#rReBox");if(b)b.remove()};
+  [["rL","l"],["rI","i"],["rRL","rl"],["rRI","ri"]].forEach(([id,f])=>$("#"+id).addEventListener("change",e=>{set(f,Number(e.target.value));if(f==="l"||f==="i")reDone()}));
+  const rb=$("#rRe");if(rb)rb.addEventListener("click",reDone);
   $("#rTreat").addEventListener("change",e=>set("treat",e.target.value));
   $("#rStat").addEventListener("change",e=>set("status",e.target.value));
   $("#rAcc2").addEventListener("change",e=>set("accepted",e.target.checked));

@@ -55,16 +55,21 @@ const TREAT_EXPORT={mitigate:"降低",accept:"接受",transfer:"移轉",avoid:"�
 
 /* ---------- 匯出 ---------- */
 /* 回傳 write-excel-file 的工作表陣列：[{sheet, data, columns, stickyRowsCount}] */
-function buildWorkbook(p,opts={}){
-  const now=opts.now||new Date();
-  const ctl=code=>(p.controls||{})[code]||{app:"",status:0,owner:"",evidence:"",reason:""};
-  const cls=code=>(p.clauses||{})[code]||{status:0,owner:"",evidence:""};
+/* 工作表共用的儲存格格式；top() 是每張表上方的標題、文件管制列與組織／範圍 */
+function sheetKit(p){
   const H=t=>({value:String(t),fontWeight:"bold",backgroundColor:"#DCEBEE",wrap:true});
   const V=v=>v===null||v===undefined||v===""?null:(typeof v==="number"?{value:v,type:Number}:{value:String(v),wrap:true});
   const W=a=>a.map(w=>({width:w}));
   const table=(head,rows)=>[head.map(H),...rows.map(r=>r.map(V))];
   const T=v=>v?{value:String(v)}:null;   // 表頭與註記不換行，讓文字延伸到右側空白儲存格
   const top=title=>[[{value:title,fontWeight:"bold",fontSize:14}],[T(docLine(p))],[T(`${p.org||p.name||""}${p.scope?"｜驗證範圍："+p.scope:""}`)],[]];
+  return {H,V,W,table,T,top};
+}
+function buildWorkbook(p,opts={}){
+  const now=opts.now||new Date();
+  const ctl=code=>(p.controls||{})[code]||{app:"",status:0,owner:"",evidence:"",reason:""};
+  const cls=code=>(p.clauses||{})[code]||{status:0,owner:"",evidence:""};
+  const {H,V,W,table,T,top}=sheetKit(p);
   const FM=focusMap(p), rbc=risksByControl(p), risks=p.risks||[];
   const lvTxt=s=>s?`${s}（${riskLevel(s,p).label}）`:"";
 
