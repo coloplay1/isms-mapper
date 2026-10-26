@@ -586,3 +586,5 @@ footer a{margin-left:8px;color:var(--accent)}
 #themeSeg{overflow-x:auto;max-width:100%}
 #themeSeg button{white-space:nowrap}
 @media (max-width:980px){.lcin{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}.lcin .lcarr{display:none}.lcbox{min-width:0}.lcsrc{grid-column:1/-1}}
+.brand .tagline{font-family:var(--font-body);font-size:12px;color:var(--muted);letter-spacing:0;margin-left:6px;padding-left:10px;border-left:1px solid var(--line);white-space:nowrap}
+@media (max-width:1000px){.brand .tagline{display:none}}

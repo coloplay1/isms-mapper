@@ -1,5 +1,7 @@
 # ISMS 條款對照台
 
+**從工作情境到 SoA 的 ISO 27001 導入工具**
+
 [![單元測試](https://github.com/coloplay1/isms-mapper/actions/workflows/test.yml/badge.svg)](https://github.com/coloplay1/isms-mapper/actions/workflows/test.yml)
 
 依 ISO/IEC 27001:2022（含 2024 年氣候變遷增修 Amd 1:2024）架構設計的 ISMS（資訊安全管理系統）導入輔助工具。把日常工作情境對應到條款，登錄並評估風險，依風險結果完成附錄 A 適用性判定，並匯出適用性聲明（SoA）與風險登錄表 Excel。
