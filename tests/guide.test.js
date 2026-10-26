@@ -65,3 +65,12 @@ test('準則確認狀態：專案檔保留；舊版專案與 Excel 匯入有準�
   assert.equal(A.sanitizeProject({ controls: {}, risks: [{ id: 'R-001' }] }).criteriaOk, true);
   assert.equal(A.sanitizeProject({ controls: {} }).criteriaOk, false);
 });
+
+test('每一項建議都對應到路線圖的某一步', () => {
+  const steps = A.roadmapSteps({ ...A.blankProject('X', '') }, NOW);
+  const all = steps.flatMap(s => s.keys);
+  const src = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'js/guide.js'), 'utf8');
+  const used = [...src.matchAll(/key:"(\w+)"/g)].map(m => m[1]);
+  assert.ok(used.length >= 15);
+  for (const k of used) assert.ok(all.includes(k), k);
+});

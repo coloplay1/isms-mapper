@@ -65,21 +65,21 @@ function roadmapSteps(p,now){
   if(!p)return [];
   const f=guideFacts(p,now);
   const steps=[
-    {n:1,title:"決定驗證範圍與業務特性",clause:"4.3",tab:"projects",done:f.scope&&f.profile,
+    {n:1,keys:["scope"],short:"範圍",title:"決定驗證範圍與業務特性",clause:"4.3",tab:"projects",done:f.scope&&f.profile,
       detail:f.scope?(f.profile?"已填寫範圍與產業特性":"已填寫範圍，尚未選擇產業或業務特性"):"尚未填寫驗證範圍"},
-    {n:2,title:"訂定風險評鑑準則",clause:"6.1.2 a",tab:"risks",open:"criteria",done:f.criteria,
+    {n:2,keys:["criteria"],short:"準則",title:"訂定風險評鑑準則",clause:"6.1.2 a",tab:"risks",open:"criteria",done:f.criteria,
       detail:(f.criteria?"":"尚未確認，目前是預設值：")+criteriaText(p)},
-    {n:3,title:"識別與評估風險",clause:"6.1.2",tab:"risks",done:f.risks>0&&!f.unscored&&!f.reassess,
+    {n:3,keys:["noRisk","unscored","reassess"],short:"風險",title:"識別與評估風險",clause:"6.1.2",tab:"risks",done:f.risks>0&&!f.unscored&&!f.reassess,
       detail:!f.risks?"還沒有登錄風險":[f.unscored&&`${f.unscored} 項未評估`,f.reassess&&`${f.reassess} 項沿用去年分數，待重新評估`].filter(Boolean).join("、")||`已評估 ${f.risks} 項風險`},
-    {n:4,title:"決定風險處理與適用性（SoA）",clause:"6.1.3",tab:"annex",done:f.risks>0&&!f.undecided&&!f.noReason&&!f.conflicts&&!f.riskWarn,
+    {n:4,keys:["undecided","noReason","conflicts","riskWarn"],short:"SoA",title:"決定風險處理與適用性（SoA）",clause:"6.1.3",tab:"annex",done:f.risks>0&&!f.undecided&&!f.noReason&&!f.conflicts&&!f.riskWarn,
       detail:[f.undecided&&`${f.undecided} 項未判定`,f.noReason&&`${f.noReason} 項缺排除理由`,f.conflicts&&`${f.conflicts} 項衝突`,f.riskWarn&&`${f.riskWarn} 項風險處理待確認`].filter(Boolean).join("、")||"適用性與風險處理一致"},
-    {n:5,title:"核准 SoA 與風險處理計畫",clause:"6.1.3 e、f",tab:"projects",done:f.docApproved&&!f.needApproval&&f.applicable>0,
+    {n:5,keys:["needApproval","approve"],short:"核准",title:"核准 SoA 與風險處理計畫",clause:"6.1.3 e、f",tab:"projects",done:f.docApproved&&!f.needApproval&&f.applicable>0,
       detail:[!f.docApproved&&"文件狀態尚未改為「已核准」",f.needApproval&&`${f.needApproval} 項殘餘風險待擁有者核准`].filter(Boolean).join("、")||"已核准"},
-    {n:6,title:"落實控制措施並收集證據",clause:"8.1、附錄 A",tab:"annex",done:f.applicable>0&&!f.notStarted,
+    {n:6,keys:["notStarted","noOwner"],short:"落實",title:"落實控制措施並收集證據",clause:"8.1、附錄 A",tab:"annex",done:f.applicable>0&&!f.notStarted,
       detail:f.applicable?`已實施 ${f.implemented}／${f.applicable} 項`:"尚無適用的控制措施"},
-    {n:7,title:"完成管理系統條款、內部稽核與管理審查",clause:"4–10、9.2、9.3",tab:"clauses",done:f.clausesDone===f.clausesTotal,
+    {n:7,keys:["clauses"],short:"稽核",title:"完成管理系統條款、內部稽核與管理審查",clause:"4–10、9.2、9.3",tab:"clauses",done:f.clausesDone===f.clausesTotal,
       detail:`條款已完成 ${f.clausesDone}／${f.clausesTotal} 項｜內部稽核${f.auditDone?"已完成":"未完成"}｜管理審查${f.reviewDone?"已完成":"未完成"}`},
-    {n:8,title:"改善事項結案",clause:"10.1、10.2",tab:"improve",done:f.auditDone&&!f.actOpen,
+    {n:8,keys:["actOverdue","actVerify"],short:"改善",title:"改善事項結案",clause:"10.1、10.2",tab:"improve",done:f.auditDone&&!f.actOpen,
       detail:f.actOpen?`${f.actOpen} 項未結案${f.actOverdue?`、${f.actOverdue} 項逾期`:""}`:(f.auditDone?"所有改善事項已結案":"內部稽核後登錄發現事項")}
   ];
   const cur=steps.find(s=>!s.done);if(cur)cur.current=true;

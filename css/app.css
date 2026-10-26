@@ -468,19 +468,25 @@ table.cmptable.sum th{white-space:nowrap}
 .nextlist li.first.err .nnum{background:var(--seal);color:#fff}
 .nextlist .ntext{flex:1 1 320px;display:grid;line-height:1.5}
 .nextlist .ntext span{font-size:13px;color:var(--muted)}
-/* 導入路線圖 */
-.roadbar{display:flex;align-items:center;gap:12px;margin-bottom:16px}
-.roadbar .track{flex:1;height:10px;background:var(--s0);border-radius:5px;overflow:hidden}
-.roadbar .track div{height:100%;background:var(--s3);border-radius:5px}
-.road{list-style:none;margin:0;padding:0;display:grid;gap:8px}
-.road>li{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 16px}
-.road>li.current{border:2px solid var(--accent);padding:13px 16px}
-.road .rdot{width:28px;height:28px;border-radius:50%;border:2px solid var(--muted);color:var(--muted);display:grid;place-items:center;font-size:13px;font-weight:600;flex:none}
-.road li.done .rdot{background:var(--s3);border-color:var(--s3);color:#fff}
-.road li.current .rdot{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.road .rbody{flex:1 1 320px;display:grid;gap:2px}
-.road .rhead{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
-.road .rcl{font-size:12px;color:var(--muted)}
-.road .rdetail{font-size:13px;color:var(--muted)}
-.road .rnext{margin:6px 0 0;padding-left:18px;font-size:13px}
-.road .ract{display:flex;align-items:center;gap:12px}
+/* 導入進度：步驟圖示 */
+.stepper{list-style:none;margin:6px 0 12px;padding:0;display:grid;grid-template-columns:repeat(8,minmax(0,1fr))}
+.stepper li{position:relative;display:flex;justify-content:center}
+.stepper li::before{content:"";position:absolute;top:21px;right:50%;width:100%;height:3px;background:var(--line);z-index:0}
+.stepper li:first-child::before{display:none}
+.stepper li.done::before,.stepper li.current::before{background:var(--s3)}
+.stepper button{position:relative;z-index:1;display:grid;justify-items:center;gap:4px;background:none;border:0;padding:0 2px 4px;cursor:pointer;font:inherit;color:var(--muted);min-width:44px}
+.stepper .sdot{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:15px;background:var(--surface);border:2px solid var(--muted);color:var(--muted)}
+.stepper li.done .sdot{background:var(--s3);border-color:var(--s3);color:#fff}
+.stepper li.current .sdot{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.stepper li.sel .sdot{box-shadow:0 0 0 4px var(--accent-soft)}
+.stepper li.sel .slab{color:var(--ink);font-weight:700}
+.stepper .slab{font-size:13px;white-space:nowrap}
+.stepper button:focus-visible{outline:none}
+.stepper button:focus-visible .sdot{outline:2px solid var(--focus);outline-offset:3px}
+@media (max-width:620px){.stepper{grid-template-columns:repeat(4,minmax(0,1fr));row-gap:10px}.stepper li:nth-child(5)::before{display:none}}
+.sdetail{display:grid;gap:4px;background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.sdetail .sdhead{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
+.sdetail .rcl{font-size:12px;color:var(--muted)}
+.sdetail .rdetail{font-size:13px;color:var(--muted)}
+.sdetail .rnext{margin:2px 0;padding-left:18px;font-size:13px}
+.sdetail>div:last-child{margin-top:6px}

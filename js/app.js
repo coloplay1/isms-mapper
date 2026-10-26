@@ -193,7 +193,7 @@ function saveSoon(){clearTimeout(saveTimer);saveTimer=setTimeout(save,300)}
 function cur(){return isSample(S.activeId)?SAMPLES[S.activeId]:(S.projects[S.activeId]||null)}
 function ctl(code){const p=cur();if(!p)return {app:"",status:0,owner:"",evidence:"",reason:""};return p.controls[code]||(p.controls[code]={app:"",status:0,owner:"",evidence:"",reason:""})}
 function cls(code){const p=cur();if(!p)return {status:0,owner:"",evidence:""};return p.clauses[code]||(p.clauses[code]={status:0,owner:"",evidence:""})}
-function newProject(name,org,scope,start,industry,features){
+function newProject(name,org,scope,start,industry,features){roadSel=null;
   const p=blankProject(name||"未命名專案",org);p.scope=scope||"";p.industry=industry||"";p.features=features||[];p.people=[];p.risks=[];p.criteria=presetCriteria("four");p.criteriaOk=false;p.doc=sanitizeDoc({});
   if(start==="all")ANNEX.forEach(c=>p.controls[c.code]={app:"Y",status:0,owner:"",evidence:"",reason:""});
   S.projects[p.id]=p;S.activeId=p.id;save();resetBuilt();ensurePersist();return p;
@@ -207,7 +207,7 @@ function endPreview(){
   S.activeId=back;save();resetBuilt();tab=back?"overview":"home";render();window.scrollTo(0,0);
   toast(back?`已結束預覽，回到「${S.projects[back].name}」`:"已結束預覽");
 }
-function openProject(id,toTab){if(isSample(id)&&!isSample(S.activeId))previewFrom=S.activeId;
+function openProject(id,toTab){roadSel=null;if(isSample(id)&&!isSample(S.activeId))previewFrom=S.activeId;
   else if(isSample(id)&&isSample(S.activeId)&&id!==S.activeId)resetSample(S.activeId);
   else if(!isSample(id))previewFrom=null;
   copying=false;const sd=SAMPLE_DEFS.find(d=>d.id===id);if(sd)sampleInd=sd.ind;editingId=null;S.activeId=id;pendingDelete=null;save();resetBuilt();tab=toTab||"overview";render();window.scrollTo(0,0)}
@@ -375,15 +375,16 @@ let tab="overview";
 const filt={theme:"all",status:"all",q:""};
 let searchQ="";
 
-const NEEDS_PROJECT=new Set(["overview","roadmap","risks","annex","clauses","improve"]);
+const NEEDS_PROJECT=new Set(["overview","risks","annex","clauses","improve"]);
 function render(){
+  if(!document.getElementById("view-"+tab))tab="overview";   // 已移除的分頁（例如舊版的路線圖）
   if(!cur()&&NEEDS_PROJECT.has(tab))tab="home";
   refreshFocus();refreshOwnerList();personEdit=personDel=null;
   renderProjSel(); renderSaved(); renderSampleBanner();
   document.querySelectorAll("#tabs button").forEach(b=>{b.setAttribute("aria-selected",b.dataset.tab===tab);
     b.setAttribute("aria-disabled",!cur()&&NEEDS_PROJECT.has(b.dataset.tab))});
-  ["home","overview","roadmap","search","risks","annex","clauses","improve","docs","projects"].forEach(v=>$("#view-"+v).hidden=v!==tab);
-  ({home:renderHome,overview:renderOverview,search:renderSearch,risks:renderRisks,annex:renderAnnex,docs:renderDocs,clauses:renderClauses,improve:renderImprove,roadmap:renderRoadmap,projects:renderProjects})[tab]();
+  ["home","overview","search","risks","annex","clauses","improve","docs","projects"].forEach(v=>$("#view-"+v).hidden=v!==tab);
+  ({home:renderHome,overview:renderOverview,search:renderSearch,risks:renderRisks,annex:renderAnnex,docs:renderDocs,clauses:renderClauses,improve:renderImprove,projects:renderProjects})[tab]();
 }
 function renderProjSel(){
   const sel=$("#projSel");
@@ -585,35 +586,35 @@ document.addEventListener("click",e=>{const g=e.target.closest("[data-goto]");if
 /* ---------- 下一步建議（總覽上方）與導入路線圖 ---------- */
 let nextAll=false;
 function stepBtn(x,primary,label){return `<button class="btn ${primary?"primary":""}" data-goto="${x.tab}"${x.filter?` data-gofilter="${x.filter}"`:""}${x.open?` data-openx="${x.open}"`:""}>${esc(label||x.cta||"前往")}</button>`}
+let roadSel=null;   // 步驟圖示中選取的步驟（null = 目前步驟）
 function nextCard(p){
-  const list=nextSteps(p),road=roadmapSteps(p),done=road.filter(s=>s.done).length,cur=road.find(s=>s.current);
+  const list=nextSteps(p),road=roadmapSteps(p),done=road.filter(s=>s.done).length,curStep=road.find(s=>s.current);
+  const sel=road.find(s=>s.n===roadSel)||curStep||road[road.length-1];
   const shown=nextAll?list:list.slice(0,3);
-  return `<section class="nextcard" aria-label="下一步建議">
-    <div class="secthead"><h3>下一步建議</h3><span class="note">依專案目前的資料自動產生，處理完會換下一項</span>
-      <button class="chip" data-goto="roadmap" style="margin-left:auto">導入路線圖 ${done}／${road.length}${cur?"｜目前：步驟 "+cur.n:""}</button></div>
+  const rel=sel.done?[]:list.filter(x=>sel.keys.includes(x.key));
+  const state=st=>st.done?"已完成":st.current?"目前步驟":"未完成";
+  return `<section class="nextcard" aria-label="導入進度與下一步建議">
+    <div class="secthead"><h3>導入進度</h3><span class="note">${done}／${road.length} 步完成。點圓點可查看每一步的狀況</span></div>
+    <ol class="stepper">${road.map(st=>`<li class="${st.done?"done":""}${st.current?" current":""}${st===sel?" sel":""}">
+      <button type="button" data-road="${st.n}" aria-pressed="${st===sel}" aria-label="步驟 ${st.n} ${esc(st.title)}：${state(st)}">
+      <span class="sdot" aria-hidden="true">${st.done?"✓":st.n}</span><span class="slab">${esc(st.short)}</span></button></li>`).join("")}</ol>
+    <div class="sdetail" aria-live="polite">
+      <div class="sdhead"><b>步驟 ${sel.n}　${esc(sel.title)}</b><span class="mono rcl">${esc(sel.clause)}</span><span class="rstate ${sel.done?"ok":sel.current?"warn":""}">${state(sel)}</span></div>
+      <span class="rdetail">${esc(sel.detail)}</span>
+      ${rel.length?`<ul class="rnext">${rel.map(x=>`<li>${esc(x.title)}</li>`).join("")}</ul>`:""}
+      <div>${stepBtn(sel,!sel.done,sel.done?"查看":sel.current?"繼續":"前往")}</div>
+    </div>
+    <div class="secthead" style="margin-top:18px"><h3>下一步建議</h3><span class="note">依專案目前的資料自動產生，處理完會換下一項</span></div>
     ${list.length?`<ol class="nextlist">${shown.map((x,k)=>`<li class="${x.sev}${k===0?" first":""}"><span class="nnum">${k+1}</span>
       <span class="ntext"><b>${esc(x.title)}</b><span>${esc(x.desc)}</span></span>${stepBtn(x,k===0)}</li>`).join("")}</ol>
       ${list.length>3?`<button class="chip" id="nextMore" aria-expanded="${nextAll}">${nextAll?"收合":`查看全部 ${list.length} 項建議`}</button>`:""}`
     :`<p class="note" style="margin:0">目前沒有待辦。記得定期匯出專案檔備份；明年可以在「專案管理」建立新年度。</p>`}
+    <details class="ckinfo"><summary>進度怎麼判斷</summary><p class="note" style="margin:6px 0 0">範圍與產業特性已填寫、風險準則已確認、風險都已評估、附錄 A 都已判定且與風險一致、文件狀態改為「已核准」、適用項目都已實施、條款 4–10 都已實施、內部稽核後的改善事項都已結案。順序可以交錯進行；這只是進度提示，是否符合標準仍以稽核判斷為準。</p></details>
   </section>`;
 }
-document.addEventListener("click",e=>{if(e.target.closest("#nextMore")){nextAll=!nextAll;render()}});
-function renderRoadmap(){
-  const p=cur(),road=roadmapSteps(p),done=road.filter(s=>s.done).length,list=nextSteps(p);
-  const pct=Math.round(done/road.length*100);
-  $("#view-roadmap").innerHTML=`<h2>導入路線圖</h2>
-  <p class="lede">從決定範圍到改善結案的 8 個步驟，對應 ISO/IEC 27001 的條款順序。工具依專案資料自動判斷每一步是否完成，順序可以交錯進行，不必等前一步全部做完。</p>
-  <div class="roadbar"><div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="${road.length}" aria-valuenow="${done}" aria-label="導入進度"><div style="width:${pct}%"></div></div><b>${done}／${road.length} 完成</b></div>
-  <ol class="road">${road.map(st=>{const rel=st.current?list.filter(x=>x.tab===st.tab).slice(0,3):[];
-    return `<li class="${st.done?"done":st.current?"current":""}">
-    <span class="rdot" aria-label="${st.done?"已完成":st.current?"目前步驟":"未完成"}">${st.done?"✓":st.n}</span>
-    <div class="rbody"><div class="rhead"><b>${st.n}. ${esc(st.title)}</b><span class="mono rcl">${esc(st.clause)}</span></div>
-      <span class="rdetail">${esc(st.detail)}</span>
-      ${rel.length?`<ul class="rnext">${rel.map(x=>`<li>${esc(x.title)}</li>`).join("")}</ul>`:""}</div>
-    <span class="ract">${st.done?`<span class="rstate ok">已完成</span>${stepBtn(st,false,"查看")}`:stepBtn(st,st.current,st.current?"繼續":"前往")}</span>
-  </li>`}).join("")}</ol>
-  <p class="note" style="margin-top:14px">判斷依據：範圍與產業特性已填寫、風險都已評估、附錄 A 都已判定且與風險一致、文件狀態改為「已核准」、適用項目都已實施、條款 4–10 都已實施、內部稽核後的改善事項都已結案。這只是進度提示，是否符合標準仍以稽核判斷為準。</p>`;
-}
+document.addEventListener("click",e=>{
+  if(e.target.closest("#nextMore")){nextAll=!nextAll;render();return}
+  const r=e.target.closest("[data-road]");if(r){roadSel=+r.dataset.road;renderOverview();const b=document.querySelector(`[data-road="${roadSel}"]`);if(b)b.focus()}});
 function renderOverview(){
   const c=counts(), p=cur();
   const pct=c.app?Math.round(c.impl/c.app*100):0;
