@@ -97,6 +97,8 @@ function sanitizeProject(raw){
   const seenCase=new Set();
   p.cases=Array.isArray(raw.cases)?raw.cases.slice(0,300).map(sanitizeCase).filter(c=>c&&!seenCase.has(c.id)&&seenCase.add(c.id)):[];
   p.criteria=sanitizeCriteria(raw.criteria)||legacyCriteria(raw);
+  // 準則是否經使用者確認（新專案帶入的預設值不算）；舊版專案與 Excel 匯入有準則或風險時視為已確認
+  p.criteriaOk=typeof raw.criteriaOk==="boolean"?raw.criteriaOk:!!(sanitizeCriteria(raw.criteria)||(Array.isArray(raw.risks)&&raw.risks.length));
   p.doc=sanitizeDoc(raw.doc);
   p.period=str(raw.period,20);
   p.actions=sanitizeActions(raw.actions);

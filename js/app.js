@@ -139,7 +139,7 @@ function buildSample(d){
     p.controls[c.code]={app:"Y",status:st<0?3:st,owner:st>=d.ownerFrom?ow:"",evidence:st>=2?c.ev.split("、")[0]:"",reason:REASONS_IN[0]};
   });
   CLAUSES.forEach((c,i)=>{const st=d.cl(i);p.clauses[c.code]={status:st,owner:st?"資安小組":"",evidence:st>=2?c.ev:""}});
-  p.criteria=presetCriteria(d.criteria||"four");p.doc=sanitizeDoc(d.doc);
+  p.criteria=presetCriteria(d.criteria||"four");p.criteriaOk=true;p.doc=sanitizeDoc(d.doc);
   p.risks=(d.risks||[]).map(([ci,asset,cia,ow,l,i,treat,rl,ri,accepted,plan],k)=>{const c=CASES[ci];
     return {...blankRisk("R-"+String(k+1).padStart(3,"0")),title:c.t,threat:c.s,asset,cia,owner:ow>=0?d.owners[ow]:"",l,i,treat,rl,ri,accepted,plan,
       controls:treat==="mitigate"?c.r.filter(x=>ANNEX_MAP[x]&&!na.has(x)):[]}});
@@ -194,7 +194,7 @@ function cur(){return isSample(S.activeId)?SAMPLES[S.activeId]:(S.projects[S.act
 function ctl(code){const p=cur();if(!p)return {app:"",status:0,owner:"",evidence:"",reason:""};return p.controls[code]||(p.controls[code]={app:"",status:0,owner:"",evidence:"",reason:""})}
 function cls(code){const p=cur();if(!p)return {status:0,owner:"",evidence:""};return p.clauses[code]||(p.clauses[code]={status:0,owner:"",evidence:""})}
 function newProject(name,org,scope,start,industry,features){
-  const p=blankProject(name||"未命名專案",org);p.scope=scope||"";p.industry=industry||"";p.features=features||[];p.people=[];p.risks=[];p.criteria=presetCriteria("four");p.doc=sanitizeDoc({});
+  const p=blankProject(name||"未命名專案",org);p.scope=scope||"";p.industry=industry||"";p.features=features||[];p.people=[];p.risks=[];p.criteria=presetCriteria("four");p.criteriaOk=false;p.doc=sanitizeDoc({});
   if(start==="all")ANNEX.forEach(c=>p.controls[c.code]={app:"Y",status:0,owner:"",evidence:"",reason:""});
   S.projects[p.id]=p;S.activeId=p.id;save();resetBuilt();ensurePersist();return p;
 }
@@ -580,10 +580,11 @@ document.addEventListener("click",e=>{const g=e.target.closest("[data-goto]");if
   if(g.dataset.focusfilter){filt.status="focus";filt.theme="all";delete $("#view-annex").dataset.built}
   if(g.dataset.gofilter){filt.status=g.dataset.gofilter;filt.theme="all";filt.q="";delete $("#view-annex").dataset.built}
   tab=g.dataset.goto;render();window.scrollTo(0,0);
-  if(g.dataset.anchor){const a=document.getElementById(g.dataset.anchor);if(a)a.scrollIntoView({block:"start"})}});
+  if(g.dataset.anchor){const a=document.getElementById(g.dataset.anchor);if(a)a.scrollIntoView({block:"start"})}
+  if(g.dataset.openx==="criteria")openCriteriaDrawer()});
 /* ---------- 下一步建議（總覽上方）與導入路線圖 ---------- */
 let nextAll=false;
-function stepBtn(x,primary){return `<button class="btn ${primary?"primary":""}" data-goto="${x.tab}"${x.filter?` data-gofilter="${x.filter}"`:""}>${esc(x.cta||"前往")}</button>`}
+function stepBtn(x,primary,label){return `<button class="btn ${primary?"primary":""}" data-goto="${x.tab}"${x.filter?` data-gofilter="${x.filter}"`:""}${x.open?` data-openx="${x.open}"`:""}>${esc(label||x.cta||"前往")}</button>`}
 function nextCard(p){
   const list=nextSteps(p),road=roadmapSteps(p),done=road.filter(s=>s.done).length,cur=road.find(s=>s.current);
   const shown=nextAll?list:list.slice(0,3);
@@ -609,7 +610,7 @@ function renderRoadmap(){
     <div class="rbody"><div class="rhead"><b>${st.n}. ${esc(st.title)}</b><span class="mono rcl">${esc(st.clause)}</span></div>
       <span class="rdetail">${esc(st.detail)}</span>
       ${rel.length?`<ul class="rnext">${rel.map(x=>`<li>${esc(x.title)}</li>`).join("")}</ul>`:""}</div>
-    ${st.done?`<span class="rstate ok">已完成</span>`:`<button class="btn ${st.current?"primary":""}" data-goto="${st.tab}">${st.current?"繼續":"前往"}</button>`}
+    <span class="ract">${st.done?`<span class="rstate ok">已完成</span>${stepBtn(st,false,"查看")}`:stepBtn(st,st.current,st.current?"繼續":"前往")}</span>
   </li>`}).join("")}</ol>
   <p class="note" style="margin-top:14px">判斷依據：範圍與產業特性已填寫、風險都已評估、附錄 A 都已判定且與風險一致、文件狀態改為「已核准」、適用項目都已實施、條款 4–10 都已實施、內部稽核後的改善事項都已結案。這只是進度提示，是否符合標準仍以稽核判斷為準。</p>`;
 }
@@ -1509,6 +1510,7 @@ function openCriteriaDrawer(){
       <button class="btn x" data-close>關閉</button>
       <div class="code">條款 6.1.2 a</div><h2>風險評鑑準則</h2>
       <p class="lede">風險分數 = 可能性 × 衝擊（1–25）。設定每個等級的分數上限與處理原則，連動檢查會依此判斷是否需要處理或核准。準則應經管理階層核准。</p>
+      ${p.criteriaOk?"":`<p class="warnhint" style="margin:0 0 10px">目前是新專案帶入的預設準則。確認符合組織可接受的風險程度（必要時調整）後按「確認並套用」，路線圖才會標為完成。</p>`}
       <label style="display:grid;gap:4px;font-size:13px;color:var(--muted)">套用預設組合<select id="cPreset"><option value="">（自訂）</option>${Object.entries(CRITERIA_PRESETS).map(([k,x])=>`<option value="${k}">${x.label}</option>`).join("")}</select></label>
       <table class="crit"><thead><tr><th>等級名稱</th><th>分數範圍</th><th>處理原則</th><th></th></tr></thead><tbody>
       ${lv.map((l,k)=>`<tr><td><input data-k="${k}" data-f="label" value="${esc(l.label)}" maxlength="10"></td>
@@ -1518,7 +1520,7 @@ function openCriteriaDrawer(){
       </tbody></table>
       ${lv.length<4?`<button class="btn" id="cAdd">＋ 增加等級</button>`:""}
       <p class="${err?"warnhint":"note"}" style="margin-top:12px">${err||"預覽："+esc(criteriaText({criteria:c}))}</p>
-      <div style="display:flex;gap:8px;margin-top:14px"><button class="btn primary" id="cSave" ${c?"":"disabled"}>套用</button><button class="btn" data-close>取消</button></div>
+      <div style="display:flex;gap:8px;margin-top:14px"><button class="btn primary" id="cSave" ${c?"":"disabled"}>${p.criteriaOk?"套用":"確認並套用"}</button><button class="btn" data-close>取消</button></div>
     </aside>`;
     host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeDrawer));
     $("#cPreset").addEventListener("change",e=>{if(e.target.value){lv=presetCriteria(e.target.value).levels;draw()}});
@@ -1528,7 +1530,7 @@ function openCriteriaDrawer(){
     host.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>{lv.splice(+b.dataset.del,1);lv[lv.length-1].max=25;draw()}));
     const add=$("#cAdd");if(add)add.addEventListener("click",()=>{const last=lv[lv.length-1],prev=lv.length>1?lv[lv.length-2].max:0;
       last.max=Math.min(24,Math.max(prev+1,Math.round((prev+25)/2)));lv.push({label:"新等級",max:25,policy:"treat"});draw()});
-    $("#cSave").addEventListener("click",()=>{const c=sanitizeCriteria({levels:lv});if(!c)return;p.criteria=c;touchRisk();closeDrawer();toast("已套用風險準則："+criteriaText(p))});
+    $("#cSave").addEventListener("click",()=>{const c=sanitizeCriteria({levels:lv});if(!c)return;p.criteria=c;p.criteriaOk=true;touchRisk();closeDrawer();toast("已套用風險準則："+criteriaText(p))});
   };
   draw();
 }

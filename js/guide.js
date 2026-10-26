@@ -32,7 +32,7 @@ function guideFacts(p,now){
     docApproved:sanitizeDoc(p.doc).status==="已核准",
     scope:!!String(p.scope||"").trim(),
     profile:!!p.industry||projFeatures(p).length>0,
-    criteria:!!p.criteria
+    criteria:!!p.criteria&&p.criteriaOk!==false
   };
 }
 
@@ -44,6 +44,7 @@ function nextSteps(p,now){
   add(f.actOverdue,{key:"actOverdue",sev:"err",title:`追蹤 ${f.actOverdue} 項逾期的改善事項`,desc:"超過預計完成日仍未完成，稽核時會被追問（10.2）",tab:"improve",cta:"開啟改善追蹤"});
   add(f.conflicts,{key:"conflicts",sev:"err",title:`處理 ${f.conflicts} 項風險與 SoA 的衝突`,desc:"例如被風險引用的控制措施卻判為不適用，或不可接受的風險直接接受",tab:"risks",cta:"前往風險評鑑"});
   add(f.reassess,{key:"reassess",sev:"warn",title:`重新評估 ${f.reassess} 項沿用去年分數的風險`,desc:"建立新年度時保留了去年的可能性與衝擊，請依今年情況確認（6.1.2）",tab:"risks",cta:"前往風險評鑑"});
+  add(!f.criteria,{key:"criteria",sev:"warn",title:"確認風險評鑑準則",desc:"新專案先帶入預設的四級準則，請確認符合組織可接受的風險程度（6.1.2 a）",tab:"risks",open:"criteria",cta:"確認準則"});
   add(!f.risks,{key:"noRisk",sev:"warn",title:"登錄第一個風險",desc:"適用性要依風險評鑑結果決定（6.1.3）。可以從案例搜尋一鍵建立",tab:"risks",cta:"前往風險評鑑"});
   add(f.unscored,{key:"unscored",sev:"warn",title:`評估 ${f.unscored} 項風險的可能性與衝擊`,desc:"還沒有分數，就無法判斷要不要處理（6.1.2 d）",tab:"risks",cta:"前往風險評鑑"});
   add(f.undecided,{key:"undecided",sev:"warn",title:`判定 ${f.undecided} 項控制措施的適用性`,desc:"SoA 需要列出每一項適用或不適用，以及理由（6.1.3 d）",tab:"annex",filter:"undec",cta:"前往附錄 A"});
@@ -66,8 +67,8 @@ function roadmapSteps(p,now){
   const steps=[
     {n:1,title:"決定驗證範圍與業務特性",clause:"4.3",tab:"projects",done:f.scope&&f.profile,
       detail:f.scope?(f.profile?"已填寫範圍與產業特性":"已填寫範圍，尚未選擇產業或業務特性"):"尚未填寫驗證範圍"},
-    {n:2,title:"訂定風險評鑑準則",clause:"6.1.2 a",tab:"risks",done:f.criteria,
-      detail:"目前："+criteriaText(p)},
+    {n:2,title:"訂定風險評鑑準則",clause:"6.1.2 a",tab:"risks",open:"criteria",done:f.criteria,
+      detail:(f.criteria?"":"尚未確認，目前是預設值：")+criteriaText(p)},
     {n:3,title:"識別與評估風險",clause:"6.1.2",tab:"risks",done:f.risks>0&&!f.unscored&&!f.reassess,
       detail:!f.risks?"還沒有登錄風險":[f.unscored&&`${f.unscored} 項未評估`,f.reassess&&`${f.reassess} 項沿用去年分數，待重新評估`].filter(Boolean).join("、")||`已評估 ${f.risks} 項風險`},
     {n:4,title:"決定風險處理與適用性（SoA）",clause:"6.1.3",tab:"annex",done:f.risks>0&&!f.undecided&&!f.noReason&&!f.conflicts&&!f.riskWarn,

@@ -483,3 +483,4 @@ table.cmptable.sum th{white-space:nowrap}
 .road .rcl{font-size:12px;color:var(--muted)}
 .road .rdetail{font-size:13px;color:var(--muted)}
 .road .rnext{margin:6px 0 0;padding-left:18px;font-size:13px}
+.road .ract{display:flex;align-items:center;gap:12px}

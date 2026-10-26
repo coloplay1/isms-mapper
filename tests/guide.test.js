@@ -8,7 +8,7 @@ const allClauses = st => Object.fromEntries(A.CLAUSES.map(c => [c.code, { status
 const keys = p => A.nextSteps(p, NOW).map(x => x.key);
 
 test('新專案：建議登錄風險、判定適用性，路線圖停在第 1 步', () => {
-  const p = { ...A.blankProject('新', ''), criteria: A.presetCriteria('four') };
+  const p = { ...A.blankProject('新', ''), criteria: A.presetCriteria('four'), criteriaOk: false };
   const k = keys(p);
   assert.ok(k.includes('noRisk'));
   assert.ok(k.includes('undecided'));
@@ -16,7 +16,9 @@ test('新專案：建議登錄風險、判定適用性，路線圖停在第 1 �
   const road = A.roadmapSteps(p, NOW);
   assert.equal(road.length, 8);
   assert.equal(road.find(s => s.current).n, 1);
-  assert.equal(road[1].done, true, '已有預設準則');
+  assert.equal(road[1].done, false, '預設準則尚未確認');
+  assert.ok(k.includes('criteria'));
+  assert.equal(A.roadmapSteps({ ...p, criteriaOk: true }, NOW)[1].done, true);
 });
 
 test('建議依急迫程度排序：逾期與衝突在前', () => {
@@ -54,4 +56,12 @@ test('改善結案要先做過內部稽核；SoA 核准看文件狀態', () => {
 
 test('沒有開啟專案時回傳空清單', () => {
   for (const p of [null, undefined]) { assert.deepEqual(A.nextSteps(p), []); assert.deepEqual(A.roadmapSteps(p), []); }
+});
+
+test('準則確認狀態：專案檔保留；舊版專案與 Excel 匯入有準則或風險時視為已確認', () => {
+  assert.equal(A.sanitizeProject({ controls: {}, criteria: A.presetCriteria('four'), criteriaOk: false }).criteriaOk, false);
+  assert.equal(A.sanitizeProject({ controls: {}, criteriaOk: true }).criteriaOk, true);
+  assert.equal(A.sanitizeProject({ controls: {}, criteria: A.presetCriteria('three') }).criteriaOk, true);
+  assert.equal(A.sanitizeProject({ controls: {}, risks: [{ id: 'R-001' }] }).criteriaOk, true);
+  assert.equal(A.sanitizeProject({ controls: {} }).criteriaOk, false);
 });
