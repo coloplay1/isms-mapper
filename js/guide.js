@@ -116,6 +116,8 @@ function riskStages(p,now){
       value:`已決定 ${need.filter(r=>r.treat).length}／${need.length}${treatPend.length?`・待確認 ${treatPend.length}`:""}`,pending:treatPend,note:"處理方式或控制措施待確認"},
     {id:"accept",name:"風險接受",en:"Acceptance",clause:"6.1.3 f",done:scored.length>0&&!treatPend.length&&!accPend.length,
       value:accPend.length?`待處理 ${accPend.length}`:"殘餘風險已核准或可接受",pending:accPend,note:"殘餘風險待評估或核准"},
+    {id:"consult",name:"溝通與諮詢",en:"Communication & Consultation",clause:"5.3、7.4",side:true,done:risks.length>0&&risks.every(r=>String(r.owner||"").trim()),
+      value:`風險擁有者已指定 ${risks.filter(r=>String(r.owner||"").trim()).length}／${risks.length}`,pending:ids(r=>!String(r.owner||"").trim()),note:"未指定風險擁有者"},
     {id:"monitor",name:"監督與審查",en:"Monitoring & Review",clause:"8.2、9.1",side:true,done:!risks.some(r=>r.reassess)&&!late.length,
       value:`待重新評估 ${risks.filter(r=>r.reassess).length}・計畫逾期 ${late.length}`,pending:[...new Set([...ids(r=>r.reassess),...late])],note:"待重新評估或處理計畫逾期"}
   ];

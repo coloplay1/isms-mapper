@@ -440,7 +440,7 @@ function renderHome(){
     <section class="intro">
       <h2>從哪裡開始？</h2>
       <p class="lede">依 ISO/IEC 27001:2022 架構，把日常工作對應到條款、評估風險並完成適用性聲明（SoA）。所有資料只存在這個瀏覽器，不會上傳。</p>
-      <p class="guidehint">第一次使用？<a href="docs/user-guide.pdf" target="_blank" rel="noopener">看使用指南（PDF，14 頁）</a>，依熟悉程度分成第一次導入、已有 Excel 資料、年度維運三條路線。</p>
+      <p class="guidehint">第一次使用？<a href="docs/user-guide.pdf" target="_blank" rel="noopener">看使用指南（PDF，15 頁）</a>，依熟悉程度分成第一次導入、已有 Excel 資料、年度維運三條路線。</p>
     </section>
     ${mine.length?`<section><div class="secthead"><h3>我的專案</h3><span class="note">${mine.length} 個，依最近修改排序</span></div>${projRows(mine,"home")}</section>`:""}
     <div class="homegrid">
@@ -1350,13 +1350,20 @@ document.addEventListener("click",e=>{const o=e.target.closest("[data-open]");if
 const riskView={mode:"in",cell:null,stage:null};
 /* 風險管理流程圖：對應 ISO/IEC 27005 的流程，每一步顯示進度，點一下篩選卡在這一步的風險 */
 function riskFlowHTML(p){
-  const st=riskStages(p),main=st.filter(x=>!x.side),side=st.find(x=>x.side);
+  const st=riskStages(p),g=id=>st.find(x=>x.id===id);
   const box=x=>{const n=x.pending.length,cls=x.done?"done":n&&!x.info?"todo":"";const sel=riskView.stage===x.id;
     return `<button class="rfbox ${cls} ${sel?"sel":""}" data-rstage="${x.id}" aria-pressed="${sel}" ${n||x.id==="eval"?"":"disabled"} data-tip="${esc(x.clause)}${n?`｜${n} 項${x.note}，點一下篩選`:""}">
       <span class="rfn">${esc(x.name)}${x.done?` <span class="rfok" aria-label="已完成">✓</span>`:""}</span><span class="rfen">${esc(x.en)}</span><span class="rfv">${esc(x.value)}</span></button>`};
+  const arr=`<span class="rfarr" aria-hidden="true">→</span>`;
+  const done=st.filter(x=>!x.side&&x.done).length,total=st.filter(x=>!x.side).length;
   return `<div class="rflow" aria-label="風險管理流程">
-    <div class="rfrow">${main.map((x,k)=>(k?`<span class="rfarr" aria-hidden="true">→</span>`:"")+box(x)).join("")}</div>
-    <div class="rfside">${box(side)}<span class="rfloop">每年與重大變更時重新評估，結果回到風險識別</span></div>
+    <div class="rfhead"><b>風險管理流程</b><span class="note">ISO/IEC 27005、ISO 31000｜${done}／${total} 步完成。點有紅色標示的步驟，下方清單只列出卡在那一步的風險</span></div>
+    <div class="rfrow">${box(g("ctx"))}${arr}
+      <div class="rfgroup"><span class="rfglab">風險評鑑（Risk assessment，6.1.2）</span><div class="rfgin">${box(g("ident"))}${arr}${box(g("anal"))}${arr}${box(g("eval"))}</div></div>${arr}
+      <div class="rfgroup"><span class="rfglab">風險處理（Risk treatment，6.1.3）</span><div class="rfgin">${box(g("treat"))}${arr}${box(g("accept"))}</div></div>
+    </div>
+    <div class="rfbands">${box(g("consult"))}${box(g("monitor"))}</div>
+    <p class="rfloop">溝通與諮詢、監督與審查貫穿每一個步驟；每年與重大變更時重新評估，結果回到風險識別。</p>
   </div>`;
 }
 function risks(){const p=cur();if(!p)return [];if(!Array.isArray(p.risks))p.risks=[];return p.risks}

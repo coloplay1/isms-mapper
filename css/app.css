@@ -547,10 +547,19 @@ footer a{margin-left:8px;color:var(--accent)}
 .rfen{font-size:11px;color:var(--muted)}
 .rfv{font-size:12px;color:var(--muted);margin-top:2px}
 .rfbox.todo .rfv{color:var(--seal)}
-.rfside{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.rfside .rfbox{flex:0 1 260px}
-.rfloop{font-size:12px;color:var(--muted)}
-@media (max-width:860px){.rfrow{flex-wrap:wrap}.rfarr{display:none}.rfbox{flex:1 1 140px}}
+.rfhead{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
+.rfhead .note{margin:0}
+.rfgroup{flex:3 1 0;display:grid;gap:4px;border:1px dashed var(--line);border-radius:8px;padding:6px;min-width:0}
+.rfgroup:last-child{flex:2 1 0}
+.rfglab{font-size:11.5px;color:var(--accent);font-weight:600;padding-left:2px}
+.rfgin{display:flex;gap:4px;align-items:stretch}
+.rfrow>.rfbox{flex:1 1 0;align-self:end}
+.rfbands{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rfbands .rfbox{border-top-width:1px;border-left:3px solid var(--line)}
+.rfbands .rfbox.done{border-left-color:var(--s3)}
+.rfbands .rfbox.todo{border-left-color:var(--seal)}
+.rfloop{font-size:12px;color:var(--muted);margin:0}
+@media (max-width:980px){.rfrow{flex-direction:column;align-items:stretch;overflow:visible}.rfrow>.rfbox{align-self:stretch;flex:none}.rfgroup,.rfgroup:last-child{flex:none}.rfgin{flex-wrap:wrap}.rfgin .rfbox{flex:1 1 130px}.rfarr{display:none}.rfbands{grid-template-columns:1fr}}
 /* 產品／服務生命週期 */
 .lcwrap{margin-bottom:14px}
 .lcwrap summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}

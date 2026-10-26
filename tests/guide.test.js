@@ -102,4 +102,6 @@ test('風險管理流程：各步驟的進度與卡住的風險', () => {
   assert.deepEqual(st.accept.pending, ['R-004'], '殘餘 6 分屬需核准');
   assert.deepEqual(st.monitor.pending, ['R-004']);
   assert.equal(st.monitor.side, true);
+  assert.deepEqual(st.consult.pending, ['R-002'], '溝通與諮詢：未指定擁有者');
+  assert.equal(st.consult.side, true);
 });
