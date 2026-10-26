@@ -74,3 +74,13 @@ test('每一項建議都對應到路線圖的某一步', () => {
   assert.ok(used.length >= 15);
   for (const k of used) assert.ok(all.includes(k), k);
 });
+
+test('風險引用但未判定的控制措施有專屬建議，不和一般待確認事項重複', () => {
+  const p = { ...A.blankProject('X', ''), scope: '總部', criteriaOk: true, criteria: A.presetCriteria('four'),
+    risks: [{ ...A.blankRisk('R-001'), title: 't', owner: '甲', l: 3, i: 3, treat: 'mitigate', controls: ['A.5.18', 'A.5.15'], rl: 1, ri: 1 }] };
+  const list = A.nextSteps(p, NOW);
+  const rc = list.find(x => x.key === 'riskCtl');
+  assert.match(rc.title, /2 項/);
+  assert.ok(!list.some(x => x.key === 'riskWarn'), '未判定不再重複算進風險處理待確認');
+  assert.ok(list.findIndex(x => x.key === 'riskCtl') < list.findIndex(x => x.key === 'undecided'));
+});

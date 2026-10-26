@@ -144,3 +144,13 @@ test('可能性與衝擊的定義：格式檢查、匯出到準則工作表、�
   assert.deepEqual(back.scale, p.scale);
   assert.equal(A.sanitizeProject(JSON.parse(JSON.stringify(p))).scale.i[4], A.SCALE_REF.i[4]);
 });
+
+test('匯出再匯入保留產業與業務特性（統計摘要）', () => {
+  const p = { ...A.blankProject('X', '甲'), industry: 'saas', features: ['cloud', 'dev'],
+    controls: { 'A.5.1': { app: 'Y', status: 2, owner: '', evidence: '', reason: '' } } };
+  const plain = A.buildWorkbook(p).map(x => ({ sheet: x.sheet, data: x.data.map(r => r.map(c => c && typeof c === 'object' ? c.value : c)) }));
+  const back = A.sanitizeProject(A.importWorkbook(plain, {}).raw);
+  assert.equal(back.industry, 'saas');
+  assert.equal(A.importWorkbook(plain, {}).raw.projName, 'X');
+  for (const f of ['cloud', 'dev']) assert.ok(back.features.includes(f), f);
+});

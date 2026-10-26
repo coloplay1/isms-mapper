@@ -21,7 +21,8 @@ function guideFacts(p,now){
     unscored:risks.filter(r=>!inherentScore(r)).length,
     reassess:risks.filter(r=>r.reassess).length,
     conflicts:checks.filter(c=>c.sev==="err").length,
-    riskWarn:checks.filter(c=>c.sev==="warn"&&!["needApproval","noScore"].includes(c.kind)).length,
+    riskWarn:checks.filter(c=>c.sev==="warn"&&!["needApproval","noScore","undecided"].includes(c.kind)).length,
+    riskCtl:new Set(checks.filter(c=>c.kind==="undecided").map(c=>c.code)).size,
     needApproval:k("needApproval"),
     clausesTotal:CLAUSES.length,
     clausesDone:CLAUSES.filter(c=>cl(c.code)>=2).length,
@@ -49,6 +50,7 @@ function nextSteps(p,now){
   add(f.criteria&&!f.scaleDefs,{key:"scaleDefs",sev:"info",title:"寫下可能性與衝擊各級的定義",desc:"例如「每年一次」「中斷 1 天」，不同的人評分才會一致，也會匯出到風險評鑑準則",tab:"risks",open:"criteria",cta:"填寫定義"});
   add(!f.risks,{key:"noRisk",sev:"warn",title:"登錄第一個風險",desc:"適用性要依風險評鑑結果決定（6.1.3）。按「新增風險」可從常見情境挑選",tab:"risks",cta:"前往風險評鑑"});
   add(f.unscored,{key:"unscored",sev:"warn",title:`評估 ${f.unscored} 項風險的可能性與衝擊`,desc:"還沒有分數，就無法判斷要不要處理（6.1.2 d）",tab:"risks",cta:"前往風險評鑑"});
+  add(f.riskCtl,{key:"riskCtl",sev:"warn",title:`把 ${f.riskCtl} 項風險選定的控制措施設為適用`,desc:"風險要用這些控制措施處理，SoA 卻還沒判定；在風險評鑑的連動檢查可一次設為適用",tab:"risks",cta:"前往風險評鑑"});
   add(f.undecided,{key:"undecided",sev:"warn",title:`判定 ${f.undecided} 項控制措施的適用性`,desc:"SoA 需要列出每一項適用或不適用，以及理由（6.1.3 d）",tab:"annex",filter:"undec",cta:"前往附錄 A"});
   add(f.noReason,{key:"noReason",sev:"warn",title:`補填 ${f.noReason} 項排除理由`,desc:"標為不適用卻沒有理由，是稽核最常開的缺失之一",tab:"annex",filter:"noreason",cta:"前往補填"});
   add(f.riskWarn,{key:"riskWarn",sev:"warn",title:`確認 ${f.riskWarn} 項風險處理的待辦`,desc:"例如尚未決定處理方式、沒有選定控制措施或殘餘風險未評估",tab:"risks",cta:"前往風險評鑑"});
@@ -73,7 +75,7 @@ function roadmapSteps(p,now){
       detail:(f.criteria?"":"尚未確認，目前是預設值：")+criteriaText(p)+(f.scaleDefs?"｜已寫可能性與衝擊定義":"｜尚未寫可能性與衝擊定義")},
     {n:3,keys:["noRisk","unscored","reassess"],short:"風險",title:"識別與評估風險",clause:"6.1.2",tab:"risks",done:f.risks>0&&!f.unscored&&!f.reassess,
       detail:!f.risks?"還沒有登錄風險":[f.unscored&&`${f.unscored} 項未評估`,f.reassess&&`${f.reassess} 項沿用去年分數，待重新評估`].filter(Boolean).join("、")||`已評估 ${f.risks} 項風險`},
-    {n:4,keys:["undecided","noReason","conflicts","riskWarn"],short:"SoA",title:"決定風險處理與適用性（SoA）",clause:"6.1.3",tab:"annex",done:f.risks>0&&!f.undecided&&!f.noReason&&!f.conflicts&&!f.riskWarn,
+    {n:4,keys:["riskCtl","undecided","noReason","conflicts","riskWarn"],short:"SoA",title:"決定風險處理與適用性（SoA）",clause:"6.1.3",tab:"annex",done:f.risks>0&&!f.undecided&&!f.noReason&&!f.conflicts&&!f.riskWarn,
       detail:[f.undecided&&`${f.undecided} 項未判定`,f.noReason&&`${f.noReason} 項缺排除理由`,f.conflicts&&`${f.conflicts} 項衝突`,f.riskWarn&&`${f.riskWarn} 項風險處理待確認`].filter(Boolean).join("、")||"適用性與風險處理一致"},
     {n:5,keys:["needApproval","approve"],short:"核准",title:"核准 SoA 與風險處理計畫",clause:"6.1.3 e、f",tab:"projects",done:f.docApproved&&!f.needApproval&&f.applicable>0,
       detail:[!f.docApproved&&"文件狀態尚未改為「已核准」",f.needApproval&&`${f.needApproval} 項殘餘風險待擁有者核准`].filter(Boolean).join("、")||"已核准"},

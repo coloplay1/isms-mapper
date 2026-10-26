@@ -345,7 +345,7 @@ async function importExcelFile(f){
   try{
     const sheets=await readXlsxFile(f);
     const {raw,report}=importWorkbook(sheets,{name:f.name.replace(/\.xlsx$/i,"")});
-    if(raw.org)raw.name=raw.org;
+    raw.name=raw.projName||raw.org||raw.name;   // 本工具匯出的檔案保留原專案名稱，其他檔案用組織名稱
     const p=sanitizeProject(raw);
     S.projects[p.id]=p;S.activeId=p.id;save();resetBuilt();tab="overview";render();window.scrollTo(0,0);
     showImportReport(p,report);
@@ -941,7 +941,7 @@ function openRolloverDrawer(){
   $("#roGo").addEventListener("click",()=>{
     const {project:np2,summary:sm}=rolloverProject(p,{name:$("#roName").value.trim()||np.name,period:$("#roPer").value.trim(),prevLabel:$("#roPrev").value.trim()});
     S.projects[np2.id]=np2;S.activeId=np2.id;copying=false;cmpBase="baseline";compareOpen=false;
-    $("#drawerHost").innerHTML="";save();resetBuilt();tab="projects";render();window.scrollTo(0,0);ensurePersist();
+    $("#drawerHost").innerHTML="";save();resetBuilt();tab="overview";render();window.scrollTo(0,0);ensurePersist();
     toast(`已建立「${np2.name}」：${sm.downgraded+sm.clauses} 項改回已實施、${sm.reassess} 項風險待重新評估${sm.carried?`、${sm.carried} 項改善事項帶入`:""}`);
   });
   $("#roName").focus();
@@ -1402,8 +1402,18 @@ function openRiskPicker(){
 function riskFromCase(idx){
   const c=/^C-/.test(idx)?customCases().find(x=>x.id===idx):CASES[+idx];if(!c||!cur())return;
   const r=newRisk({title:c.t,threat:c.s,controls:c.r.filter(x=>ANNEX_MAP[x])});
+  Object.defineProperty(r,"fromCase",{value:true,enumerable:false});   // 只在這次開啟時提示，不存檔
   tab="risks";render();window.scrollTo(0,0);openRiskDrawer(r.id);
   toast(`已建立 ${r.id}，請評估可能性與衝擊`);
+}
+/* 一次把所有風險引用、但 SoA 尚未判定的控制措施設為適用（可復原） */
+function applyAllRiskToSoA(){
+  const codes=[...new Set(riskChecks(cur()).filter(c=>c.kind==="undecided").map(c=>c.code))];if(!codes.length)return;
+  const before=codes.map(c=>({c,reason:ctl(c).reason}));
+  codes.forEach(code=>{const v=ctl(code);setField(code,"app","Y",{silent:true});
+    if(!splitReasons(v.reason).includes(RISK_REASON))setField(code,"reason",[...splitReasons(v.reason),RISK_REASON].join(SEP),{silent:true})});
+  undoToast(`${codes.length} 項設為適用，理由：${RISK_REASON}`,()=>{before.forEach(({c,reason})=>{setField(c,"reason",reason,{silent:true});setField(c,"app","",{silent:true})});render()});
+  render();
 }
 /* 把風險引用、但 SoA 尚未判定的控制措施設為適用，並補上納入理由（使用者按下才執行） */
 function applyRiskToSoA(code){
@@ -1458,7 +1468,7 @@ function renderRisks(){
       <div class="seg" id="mxSeg" style="margin-left:auto"><button data-mode="in" aria-pressed="${riskView.mode==="in"}">固有風險</button><button data-mode="res" aria-pressed="${riskView.mode==="res"}">殘餘風險</button></div></div>
       ${riskMatrix(riskView.mode)}
       <p class="note" style="margin:10px 0 0">粗框內為可接受的等級。點有數字的格子可篩選下方清單。</p></div>
-    <div class="panel"><h3>連動檢查</h3>
+    <div class="panel"><div class="secthead"><h3>連動檢查</h3>${(()=>{const u=[...new Set(issues.filter(c=>c.kind==="undecided").map(c=>c.code))];return u.length>1?`<button class="btn" id="ckApplyAll" style="margin-left:auto">全部設為適用（${u.length} 項）</button>`:""})()}</div>
       ${issues.length?`<ul class="cklist">${ck.map(checkRow).join("")}</ul>${issues.length>6?`<button class="chip" id="ckMore" style="margin-top:8px">${showAllChecks?"收合":"顯示全部 "+issues.length+" 項"}</button>`:""}`:
         `<p class="note">${list.length?"風險評鑑與 SoA 沒有發現不一致。":"新增風險後，這裡會檢查風險評鑑與 SoA 是否一致。"}</p>`}
       ${info.length?`<details class="ckinfo"><summary>${info.length} 項控制措施的理由寫「依風險評鑑結果」，但沒有風險引用</summary><ul class="cklist">${info.map(checkRow).join("")}</ul></details>`:""}
@@ -1482,6 +1492,7 @@ function renderRisks(){
   on("rNew",openRiskPicker);
   on("rXls",exportExcel);
   on("ckMore",()=>{showAllChecks=!showAllChecks;renderRisks()});
+  on("ckApplyAll",applyAllRiskToSoA);
   on("mxClear",()=>{riskView.cell=null;renderRisks()});
   on("rCrit",openCriteriaDrawer);
   $("#mxSeg").addEventListener("click",e=>{const b=e.target.closest("[data-mode]");if(!b)return;riskView.mode=b.dataset.mode;riskView.cell=null;renderRisks()});
@@ -1503,11 +1514,12 @@ function openRiskDrawer(id){
     <div class="code">${r.id}　風險登錄</div>
     <h3 class="rstep"><span>1</span>識別</h3>
     <dl>
-      <div><dt>風險描述</dt><dd><input id="rTitle" value="${esc(r.title)}" placeholder="例如：離職員工帳號未停用，資料遭不當存取"></dd></div>
+      <div><dt>風險描述</dt><dd><input id="rTitle" value="${esc(r.title)}" placeholder="例如：離職員工帳號未停用，資料遭不當存取"><div class="saved" style="margin-top:4px;white-space:normal">寫成「可能發生」的事件；已發生的事件請登錄在改善追蹤，並作為評估可能性的依據。</div></dd></div>
       <div><dt>相關資產</dt><dd><input id="rAsset" value="${esc(r.asset)}" placeholder="例如：CRM 系統、AD 帳號"></dd></div>
       <div><dt>風險擁有者</dt><dd><input id="rOwner" data-owner autocomplete="off" value="${esc(r.owner)}" placeholder="對這個風險負責、核准處理方式的人"></dd></div>
     </dl>
     <details class="rmore" ${r.threat||r.vuln||r.existing||r.cia?"open":""}><summary>更多細節<span class="saved">威脅、脆弱性、現有控制、影響（選填，風險評鑑表會用到）</span></summary>
+    ${r.fromCase?`<p class="note" style="margin:6px 0 0">「威脅」帶入的是案例的情境範例，請改寫成貴公司可能遇到的情況。</p>`:""}
     <dl>
       <div><dt>威脅</dt><dd><textarea id="rThreat" rows="2" placeholder="可能發生什麼事，例如：離職人員不當存取">${esc(r.threat)}</textarea></dd></div>
       <div><dt>脆弱性</dt><dd><textarea id="rVuln" rows="2" placeholder="為什麼會發生，例如：離職帳號未即時停用">${esc(r.vuln||"")}</textarea></dd></div>

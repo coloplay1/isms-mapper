@@ -198,6 +198,11 @@ function importWorkbook(sheets,opts={}){
     if(!Array.isArray(data))continue;
     if(!raw.doc)for(const row of data.slice(0,5)){for(const c of row||[]){const d=parseDocLine(c);if(d){raw.doc=d;break}}if(raw.doc)break}
     if(!raw.org)for(const row of data.slice(0,5)){const t=cellText((row||[])[0]);const m=t.match(/^(.+?)｜驗證範圍：(.+)$/);if(m){const ph=x=>/^（.*）$/.test(x)?"":x;raw.org=ph(m[1]);raw.scope=ph(m[2]);break}}
+    // 統計摘要的「產業」「業務特性」列
+    for(const row of data.slice(0,12)){const k=cellText((row||[])[0]),v=cellText((row||[])[1]);if(!v)continue;
+      if(k==="專案"&&!raw.projName)raw.projName=v.slice(0,120);
+      if(k==="產業"&&!raw.industry){const ind=INDUSTRIES.find(x=>x.label===v);if(ind)raw.industry=ind.id}
+      if(k==="業務特性"&&!raw.features){raw.features=FEATURES.filter(f=>f.id!=="manual"&&v.includes(f.label)).map(f=>f.id)/* 標籤本身可能含「、」，所以用包含比對 */}}
     const hs=findHeader(data,IMPORT_COLS.soa.code);
     const ms=hs>=0?mapColumns(data[hs],IMPORT_COLS.soa):null;
     // 沒有「適用性」欄的表（例如修訂對照、證據清單）不當成 SoA
