@@ -1250,11 +1250,18 @@ document.addEventListener("click",e=>{chartHit(e)});
 document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&chartHit(e))e.preventDefault()});
 
 /* ================= DRAWER ================= */
+/* 開啟詳情時，在畫面上標出被點的方格或按鈕（浮在遮罩之上、側欄之下），讓人知道看的是哪一項 */
+function markPicked(code){
+  document.querySelectorAll(".picked").forEach(el=>el.classList.remove("picked"));
+  const view=document.getElementById("view-"+tab);if(!view)return;
+  view.querySelectorAll(`[data-open="${CSS.escape(code)}"]`).forEach(el=>el.classList.add("picked"));
+}
 function openDrawer(code,fromList){
   if(!fromList)lastList=null;
   const isA=!!ANNEX_MAP[code]; const c=isA?ANNEX_MAP[code]:CLAUSE_MAP[code]; if(!c)return;
   const v=isA?ctl(code):cls(code);
   const rel=[...CASES,...customCases()].filter(x=>x.r.includes(code));
+  markPicked(code);
   const host=$("#drawerHost");
   host.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${esc(c.name)}">
     <button class="btn x" data-close>關閉</button>

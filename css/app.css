@@ -261,7 +261,7 @@ tr.isna td:not(.keep){opacity:.55}
 .note{font-size:13px;color:var(--muted);max-width:70ch}
 .banner{background:var(--accent-soft);border-radius:6px;padding:8px 12px;font-size:13px;margin-bottom:14px}
 /* drawer */
-.scrim{position:fixed;inset:0;background:rgba(10,20,22,.45);z-index:20}
+.scrim{position:fixed;inset:0;background:rgba(10,20,22,.45);z-index:19}
 .drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--surface);z-index:21;overflow-y:auto;padding:calc(20px + env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) 20px;border-left:1px solid var(--line)}
 .drawer .x{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px))}
 .drawer .code{font-family:var(--font-mono);color:var(--accent);font-size:14px}
@@ -503,3 +503,7 @@ table.cmptable.sum th{white-space:nowrap}
 .drawer .rscore{flex-wrap:wrap}
 .drawer .sdef{flex-basis:100%;font-size:12px}
 .drawer table.crit.scale th:first-child{white-space:nowrap}
+/* 開啟詳情時被點的項目：浮在遮罩之上 */
+.picked{position:relative;z-index:20;outline:3px solid #fff;outline-offset:1px;box-shadow:0 0 0 6px var(--accent)!important}
+.cell.picked{transform:scale(1.15)}
+@media (prefers-reduced-motion:no-preference){.cell.picked{transition:transform .12s}}
