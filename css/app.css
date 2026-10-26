@@ -490,3 +490,10 @@ table.cmptable.sum th{white-space:nowrap}
 .sdetail .rdetail{font-size:13px;color:var(--muted)}
 .sdetail .rnext{margin:2px 0;padding-left:18px;font-size:13px}
 .sdetail>div:last-child{margin-top:6px}
+/* 首頁：建立新專案與其他入口並排 */
+.homegrid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:18px;align-items:start}
+.homegrid .starts{grid-template-columns:minmax(0,1fr)}
+.homegrid #createPanel{margin:0}
+.chead{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px}
+.chead h3{margin:2px 0 2px}
+@media (max-width:860px){.homegrid{grid-template-columns:minmax(0,1fr)}}

@@ -424,16 +424,12 @@ function renderHome(){
     <section class="intro">
       <h2>從哪裡開始？</h2>
       <p class="lede">依 ISO/IEC 27001:2022 架構，把日常工作對應到條款、評估風險並完成適用性聲明（SoA）。所有資料只存在這個瀏覽器，不會上傳。</p>
-      <div class="starts">
-        ${start("","＋","建立新專案","從零開始，逐項判定附錄 A 是否適用",`<button class="btn primary" data-jump="createPanel">開始建立</button>`)}
-        ${start("","⇪","匯入既有資料","已有 SoA、風險評鑑表，或之前匯出的專案檔",`<div class="sbtns"><button class="btn" id="hXlsx">從 Excel 匯入</button><button class="btn" id="hImport">匯入專案檔</button></div>`)}
-        ${start("","⬇","下載文件範本",`政策、程序、表單與紀錄共 ${nDocs} 份，依五層架構整理`,`<button class="btn" data-goto="docs">查看範本</button>`)}
-      </div>
     </section>
     ${mine.length?`<section><div class="secthead"><h3>我的專案</h3><span class="note">${mine.length} 個，依最近修改排序</span></div>${projRows(mine,"home")}</section>`:""}
+    <div class="homegrid">
     <section class="panel" id="createPanel">
-      <h3>建立新專案</h3>
-      <p class="note" style="margin:0 0 12px">一個專案代表一家公司或一次稽核。建立後會進入附錄 A 逐項確認，修改會自動儲存。</p>
+      <div class="chead"><span class="sicon" aria-hidden="true">＋</span><div><h3>建立新專案</h3>
+      <p class="note" style="margin:0">一個專案代表一家公司或一次稽核。建立後會進入附錄 A 逐項確認，修改會自動儲存。</p></div></div>
       <form id="homeForm" class="cform">
         <label>專案名稱<input id="hName" required placeholder="例如：2027 年度 ISMS 驗證"></label>
         <label>組織名稱<input id="hOrg" placeholder="選填"></label>
@@ -451,6 +447,11 @@ function renderHome(){
         <div class="wide actions"><button class="btn primary">建立專案</button></div>
       </form>
     </section>
+    <div class="starts">
+      ${start("","⇪","匯入既有資料","已有 SoA、風險評鑑表，或之前匯出的專案檔，匯入後會建立新專案並檢查內容",`<div class="sbtns"><button class="btn" id="hXlsx">從 Excel 匯入</button><button class="btn" id="hImport">匯入專案檔</button></div>`)}
+      ${start("","⬇","下載文件範本",`政策、程序、表單與紀錄共 ${nDocs} 份，依五層架構整理`,`<button class="btn" data-goto="docs">查看範本</button>`)}
+    </div>
+    </div>
     <section id="samplePanel">
       <div class="secthead"><h3>範例專案</h3><span class="note">選擇產業，查看同產業的公司在三個導入階段的樣子。範例中的修改不會儲存，也可以複製成自己的專案。</span></div>
       <div class="seg indseg" id="indSeg" role="tablist" aria-label="範例產業">${SAMPLE_INDS.map(i=>`<button role="tab" data-sind="${i}" aria-pressed="${i===sampleInd}" aria-selected="${i===sampleInd}">${esc(INDUSTRY_MAP[i].label)}</button>`).join("")}</div>
@@ -470,7 +471,7 @@ function renderHome(){
   $("#hXlsx").addEventListener("click",()=>$("#xlsxFile").click());
   v.querySelectorAll("[data-jump]").forEach(b=>b.addEventListener("click",()=>{const t=document.getElementById(b.dataset.jump);if(!t)return;
     t.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
-    if(b.dataset.jump==="createPanel")setTimeout(()=>$("#hName").focus({preventScroll:true}),300)}));
+  }));
   wireIndustry(v,"hInd","hF","hCount");
   v.querySelectorAll("[data-home-open]").forEach(b=>b.addEventListener("click",()=>openProject(b.dataset.homeOpen)));
   v.querySelectorAll("[data-end-preview]").forEach(b=>b.addEventListener("click",endPreview));
