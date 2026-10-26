@@ -1336,10 +1336,20 @@ function lvlBadge(score){
   if(!score)return `<span class="rk rk-none">未評估</span>`;
   const l=riskLevel(score,cur());return `<span class="rk rk-${l.id}">${score} ${esc(l.label)}</span>`;
 }
+/* 「進度」是使用者填的處理狀態；「檢查」是風險與 SoA 連動檢查的結果，兩者分開顯示 */
+function riskProgress(r){
+  if(!inherentScore(r))return `<span class="muted">待評估</span>`;
+  if(r.treat==="accept")return r.accepted?`<span class="rstate ok">已核准接受</span>`:`<span class="muted">接受</span>`;
+  if(!r.treat)return `<span class="muted">—</span>`;
+  return r.status==="已完成"?`<span class="rstate ok">已完成</span>`:r.status?esc(r.status):`<span class="muted">未設定</span>`;
+}
 function riskState(r,checks){
-  const n=checks.filter(c=>c.rid===r.id&&c.sev!=="info").length;
-  if(!inherentScore(r))return `<span class="saved">待評估</span>`;
-  return n?`<span class="rstate warn">待處理 ${n}</span>`:`<span class="rstate ok">✓ 完成</span>`;
+  if(r.reassess)return `<span class="rstate warn">待重新評估</span>`;
+  const mine=checks.filter(c=>c.rid===r.id&&c.sev!=="info");
+  if(!inherentScore(r))return `<span class="muted">—</span>`;
+  const tag=r.id+(r.title?"「"+r.title+"」":"");
+  const tip=mine.map(c=>c.msg.replace(tag,"").trim()).join("；");
+  return mine.length?`<button class="rstate warn rchk" data-risk="${r.id}" data-tip="${esc(tip)}">待確認 ${mine.length}</button>`:`<span class="rstate ok">✓ 無問題</span>`;
 }
 function touchRisk(){const p=cur();if(!p)return;p.updated=Date.now();
   if(!p.sample){p.changesSinceBackup=(p.changesSinceBackup||0)+1;if(p.changesSinceBackup%5===0)renderBackupBanner()}
@@ -1422,16 +1432,17 @@ function renderRisks(){
   </div>
   ${list.some(r=>r.reassess)?`<p class="note reassess">${list.filter(r=>r.reassess).length} 項風險沿用 ${p.baseline?esc(p.baseline.label):"去年"}的評估，待重新評估。打開風險確認可能性與衝擊後，按「已重新評估」。</p>`:""}
   ${riskView.cell?`<div class="filters" style="margin-top:18px"><span class="count">篩選：${riskView.mode==="res"?"殘餘":"固有"}風險 可能性 ${riskView.cell.split("-")[0]} × 衝擊 ${riskView.cell.split("-")[1]}（${shown.length} 項）</span><button class="chip" id="mxClear">清除篩選</button></div>`:""}
-  <div class="table-wrap" style="margin-top:${riskView.cell?8:18}px"><table class="rtable"><thead><tr><th style="width:70px">編號</th><th>風險</th><th style="width:120px">風險擁有者</th><th style="width:84px">固有</th><th style="width:70px">處理</th><th>控制措施</th><th style="width:84px">殘餘</th><th style="width:96px">狀態</th></tr></thead><tbody>
+  <div class="table-wrap" style="margin-top:${riskView.cell?8:18}px"><table class="rtable"><thead><tr><th style="width:70px">編號</th><th>風險</th><th style="width:120px">風險擁有者</th><th style="width:84px">固有</th><th style="width:70px">處理方式</th><th>控制措施</th><th style="width:84px">殘餘</th><th style="width:96px">進度</th><th style="width:96px">檢查<span class="saved" style="display:block;font-weight:400">與 SoA 連動</span></th></tr></thead><tbody>
   ${shown.map(r=>`<tr>
     <td class="code"><button data-risk="${r.id}">${r.id}</button></td>
     <td class="name"><button class="rtitle" data-risk="${r.id}">${esc(r.title||"（未命名風險）")}</button>${r.asset?`<div class="saved">${esc(r.asset)}${r.cia?"｜"+[...r.cia].map(x=>({C:"機密性",I:"完整性",A:"可用性"})[x]).join("、"):""}</div>`:""}</td>
     <td>${esc(r.owner)||`<span class="muted">未指定</span>`}</td>
     <td>${lvlBadge(inherentScore(r))}</td>
-    <td>${r.treat?esc(TREATMENTS.find(t=>t.v===r.treat).label):`<span class="saved">未決定</span>`}${r.status?`<div class="saved">${esc(r.status)}</div>`:""}</td>
+    <td>${r.treat?esc(TREATMENTS.find(t=>t.v===r.treat).label):`<span class="muted">未決定</span>`}</td>
     <td><div class="rcodes">${(r.controls||[]).slice(0,5).map(c=>{const a=ctl(c).app;return `<button class="rc ${a==="N"?"bad":a===""?"undec":""}" data-open="${c}" data-tip="${c} ${esc(ANNEX_MAP[c].name)}｜SoA：${APP.find(x=>x.v===a).label}">${c}</button>`}).join("")}${(r.controls||[]).length>5?`<span class="saved">+${r.controls.length-5}</span>`:""}</div></td>
     <td>${lvlBadge(residualScore(r))}</td>
-    <td>${r.reassess?`<span class="rstate warn">待重新評估</span>`:riskState(r,checks)}</td></tr>`).join("")||`<tr><td colspan="8"><div class="empty">${list.length?"這一格沒有風險。":"還沒有風險。可以按「新增風險」，或到案例搜尋把情境加入風險登錄表。"}</div></td></tr>`}
+    <td>${riskProgress(r)}</td>
+    <td>${riskState(r,checks)}</td></tr>`).join("")||`<tr><td colspan="9"><div class="empty">${list.length?"這一格沒有風險。":"還沒有風險。可以按「新增風險」，或到案例搜尋把情境加入風險登錄表。"}</div></td></tr>`}
   </tbody></table></div>`;
   const on=(id,fn)=>{const el=$("#"+id);if(el)el.addEventListener("click",fn)};
   on("rNew",()=>{const r=newRisk();renderRisks();openRiskDrawer(r.id)});
@@ -1475,7 +1486,7 @@ function openRiskDrawer(id){
       <div><dt>選定的控制措施</dt><dd id="rCtl"></dd></div>
       <div><dt>處理計畫</dt><dd><textarea id="rPlan" rows="2" placeholder="要做什麼、需要哪些資源">${esc(r.plan)}</textarea></dd></div>
       <div><dt>預計完成</dt><dd><input id="rDue" value="${esc(r.due)}" placeholder="例如 2026-12-31 或 2026-12"></dd></div>
-      <div><dt>處理狀態</dt><dd><select id="rStat">${RISK_STATUS.map(x=>`<option value="${x}" ${x===(r.status||"")?"selected":""}>${x||"未設定"}</option>`).join("")}</select></dd></div>
+      <div id="rStatRow" ${r.treat==="accept"?"hidden":""}><dt>處理狀態</dt><dd><select id="rStat">${RISK_STATUS.map(x=>`<option value="${x}" ${x===(r.status||"")?"selected":""}>${x||"未設定"}</option>`).join("")}</select></dd></div>
     </dl>
     <h3>殘餘風險</h3>
     <div class="r2"><label>可能性${levelSelect("rRL",r.rl,LIKELIHOOD)}</label><label>衝擊${levelSelect("rRI",r.ri,IMPACT)}</label><div class="rscore" id="rRS"></div></div>
@@ -1503,12 +1514,15 @@ function openRiskDrawer(id){
       ${hits.length?`<div class="hints" style="margin:6px 0 0">${hits.map(addBtn).join("")}</div>`:""}`;
     const qi=$("#rcQ");qi.addEventListener("input",()=>{const pos=qi.selectionStart;renderCtl(qi.value);const n=$("#rcQ");n.focus();n.setSelectionRange(pos,pos)});
   };
-  const set=(f,v)=>{if(r[f]===v)return;r[f]=v;touchRisk();refresh()};
+  // 詳細頁開著時，背景的風險表與矩陣同步更新
+  let bgPending=false;
+  const bg=()=>{if(bgPending||tab!=="risks")return;bgPending=true;requestAnimationFrame(()=>{bgPending=false;renderRisks()})};
+  const set=(f,v)=>{if(r[f]===v)return;r[f]=v;touchRisk();refresh();bg()};
   [["rTitle","title"],["rAsset","asset"],["rThreat","threat"],["rVuln","vuln"],["rExist","existing"],["rOwner","owner"],["rPlan","plan"],["rDue","due"]].forEach(([id,f])=>$("#"+id).addEventListener("input",e=>set(f,e.target.value)));
   const reDone=()=>{if(!r.reassess)return;delete r.reassess;touchRisk();const b=$("#rReBox");if(b)b.remove()};
   [["rL","l"],["rI","i"],["rRL","rl"],["rRI","ri"]].forEach(([id,f])=>$("#"+id).addEventListener("change",e=>{set(f,Number(e.target.value));if(f==="l"||f==="i")reDone()}));
   const rb=$("#rRe");if(rb)rb.addEventListener("click",reDone);
-  $("#rTreat").addEventListener("change",e=>set("treat",e.target.value));
+  $("#rTreat").addEventListener("change",e=>{set("treat",e.target.value);$("#rStatRow").hidden=r.treat==="accept"});
   $("#rStat").addEventListener("change",e=>set("status",e.target.value));
   $("#rAcc2").addEventListener("change",e=>set("accepted",e.target.checked));
   host.querySelectorAll("[data-cia]").forEach(b=>b.addEventListener("change",()=>set("cia",[...host.querySelectorAll("[data-cia]:checked")].map(x=>x.dataset.cia).join(""))));
