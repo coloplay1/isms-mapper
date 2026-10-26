@@ -375,15 +375,15 @@ let tab="overview";
 const filt={theme:"all",status:"all",q:""};
 let searchQ="";
 
-const NEEDS_PROJECT=new Set(["overview","risks","annex","clauses","improve"]);
+const NEEDS_PROJECT=new Set(["overview","roadmap","risks","annex","clauses","improve"]);
 function render(){
   if(!cur()&&NEEDS_PROJECT.has(tab))tab="home";
   refreshFocus();refreshOwnerList();personEdit=personDel=null;
   renderProjSel(); renderSaved(); renderSampleBanner();
   document.querySelectorAll("#tabs button").forEach(b=>{b.setAttribute("aria-selected",b.dataset.tab===tab);
     b.setAttribute("aria-disabled",!cur()&&NEEDS_PROJECT.has(b.dataset.tab))});
-  ["home","overview","search","risks","annex","clauses","improve","docs","projects"].forEach(v=>$("#view-"+v).hidden=v!==tab);
-  ({home:renderHome,overview:renderOverview,search:renderSearch,risks:renderRisks,annex:renderAnnex,docs:renderDocs,clauses:renderClauses,improve:renderImprove,projects:renderProjects})[tab]();
+  ["home","overview","roadmap","search","risks","annex","clauses","improve","docs","projects"].forEach(v=>$("#view-"+v).hidden=v!==tab);
+  ({home:renderHome,overview:renderOverview,search:renderSearch,risks:renderRisks,annex:renderAnnex,docs:renderDocs,clauses:renderClauses,improve:renderImprove,roadmap:renderRoadmap,projects:renderProjects})[tab]();
 }
 function renderProjSel(){
   const sel=$("#projSel");
@@ -581,6 +581,38 @@ document.addEventListener("click",e=>{const g=e.target.closest("[data-goto]");if
   if(g.dataset.gofilter){filt.status=g.dataset.gofilter;filt.theme="all";filt.q="";delete $("#view-annex").dataset.built}
   tab=g.dataset.goto;render();window.scrollTo(0,0);
   if(g.dataset.anchor){const a=document.getElementById(g.dataset.anchor);if(a)a.scrollIntoView({block:"start"})}});
+/* ---------- 下一步建議（總覽上方）與導入路線圖 ---------- */
+let nextAll=false;
+function stepBtn(x,primary){return `<button class="btn ${primary?"primary":""}" data-goto="${x.tab}"${x.filter?` data-gofilter="${x.filter}"`:""}>${esc(x.cta||"前往")}</button>`}
+function nextCard(p){
+  const list=nextSteps(p),road=roadmapSteps(p),done=road.filter(s=>s.done).length,cur=road.find(s=>s.current);
+  const shown=nextAll?list:list.slice(0,3);
+  return `<section class="nextcard" aria-label="下一步建議">
+    <div class="secthead"><h3>下一步建議</h3><span class="note">依專案目前的資料自動產生，處理完會換下一項</span>
+      <button class="chip" data-goto="roadmap" style="margin-left:auto">導入路線圖 ${done}／${road.length}${cur?"｜目前：步驟 "+cur.n:""}</button></div>
+    ${list.length?`<ol class="nextlist">${shown.map((x,k)=>`<li class="${x.sev}${k===0?" first":""}"><span class="nnum">${k+1}</span>
+      <span class="ntext"><b>${esc(x.title)}</b><span>${esc(x.desc)}</span></span>${stepBtn(x,k===0)}</li>`).join("")}</ol>
+      ${list.length>3?`<button class="chip" id="nextMore" aria-expanded="${nextAll}">${nextAll?"收合":`查看全部 ${list.length} 項建議`}</button>`:""}`
+    :`<p class="note" style="margin:0">目前沒有待辦。記得定期匯出專案檔備份；明年可以在「專案管理」建立新年度。</p>`}
+  </section>`;
+}
+document.addEventListener("click",e=>{if(e.target.closest("#nextMore")){nextAll=!nextAll;render()}});
+function renderRoadmap(){
+  const p=cur(),road=roadmapSteps(p),done=road.filter(s=>s.done).length,list=nextSteps(p);
+  const pct=Math.round(done/road.length*100);
+  $("#view-roadmap").innerHTML=`<h2>導入路線圖</h2>
+  <p class="lede">從決定範圍到改善結案的 8 個步驟，對應 ISO/IEC 27001 的條款順序。工具依專案資料自動判斷每一步是否完成，順序可以交錯進行，不必等前一步全部做完。</p>
+  <div class="roadbar"><div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="${road.length}" aria-valuenow="${done}" aria-label="導入進度"><div style="width:${pct}%"></div></div><b>${done}／${road.length} 完成</b></div>
+  <ol class="road">${road.map(st=>{const rel=st.current?list.filter(x=>x.tab===st.tab).slice(0,3):[];
+    return `<li class="${st.done?"done":st.current?"current":""}">
+    <span class="rdot" aria-label="${st.done?"已完成":st.current?"目前步驟":"未完成"}">${st.done?"✓":st.n}</span>
+    <div class="rbody"><div class="rhead"><b>${st.n}. ${esc(st.title)}</b><span class="mono rcl">${esc(st.clause)}</span></div>
+      <span class="rdetail">${esc(st.detail)}</span>
+      ${rel.length?`<ul class="rnext">${rel.map(x=>`<li>${esc(x.title)}</li>`).join("")}</ul>`:""}</div>
+    ${st.done?`<span class="rstate ok">已完成</span>`:`<button class="btn ${st.current?"primary":""}" data-goto="${st.tab}">${st.current?"繼續":"前往"}</button>`}
+  </li>`}).join("")}</ol>
+  <p class="note" style="margin-top:14px">判斷依據：範圍與產業特性已填寫、風險都已評估、附錄 A 都已判定且與風險一致、文件狀態改為「已核准」、適用項目都已實施、條款 4–10 都已實施、內部稽核後的改善事項都已結案。這只是進度提示，是否符合標準仍以稽核判斷為準。</p>`;
+}
 function renderOverview(){
   const c=counts(), p=cur();
   const pct=c.app?Math.round(c.impl/c.app*100):0;
@@ -605,6 +637,7 @@ function renderOverview(){
   $("#view-overview").innerHTML=`
     <h2>${esc(p.name)}</h2>
     <p class="lede">${p.scope?`驗證範圍：${esc(p.scope)}。`:""}附錄 A 共 93 項控制措施的適用與執行狀況。滑過圖表可看數字，點熱圖方格可查看說明並更新狀態。</p>
+    ${nextCard(p)}
     <div class="stats">
       <div class="stat"><b>${c.app}</b><span>適用控制措施</span></div>
       <div class="stat"><b>${c.na}</b><span>不適用</span></div>

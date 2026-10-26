@@ -456,3 +456,30 @@ table.cmptable.sum th{white-space:nowrap}
 .astate.s2{color:var(--ink)}
 .astate.s3{color:var(--s3)}
 .drawer .r2x{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* 下一步建議 */
+.nextcard{background:var(--surface);border:2px solid var(--accent);border-radius:10px;padding:18px 20px;margin-bottom:22px}
+.nextcard .secthead{flex-wrap:wrap}
+.nextlist{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:8px}
+.nextlist li{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.nextlist li.first{background:var(--accent-soft);border-color:transparent}
+.nextlist .nnum{width:28px;height:28px;border-radius:50%;border:2px solid var(--accent);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
+.nextlist li.first .nnum{background:var(--accent);color:var(--accent-ink)}
+.nextlist li.err .nnum{border-color:var(--seal);color:var(--seal)}
+.nextlist li.first.err .nnum{background:var(--seal);color:#fff}
+.nextlist .ntext{flex:1 1 320px;display:grid;line-height:1.5}
+.nextlist .ntext span{font-size:13px;color:var(--muted)}
+/* 導入路線圖 */
+.roadbar{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.roadbar .track{flex:1;height:10px;background:var(--s0);border-radius:5px;overflow:hidden}
+.roadbar .track div{height:100%;background:var(--s3);border-radius:5px}
+.road{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.road>li{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 16px}
+.road>li.current{border:2px solid var(--accent);padding:13px 16px}
+.road .rdot{width:28px;height:28px;border-radius:50%;border:2px solid var(--muted);color:var(--muted);display:grid;place-items:center;font-size:13px;font-weight:600;flex:none}
+.road li.done .rdot{background:var(--s3);border-color:var(--s3);color:#fff}
+.road li.current .rdot{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.road .rbody{flex:1 1 320px;display:grid;gap:2px}
+.road .rhead{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
+.road .rcl{font-size:12px;color:var(--muted)}
+.road .rdetail{font-size:13px;color:var(--muted)}
+.road .rnext{margin:6px 0 0;padding-left:18px;font-size:13px}
