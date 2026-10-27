@@ -39,7 +39,7 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background
 main{padding-block:22px 60px}
 h2{font-family:var(--font-display);font-size:22px;margin:0 0 4px;text-wrap:balance}
 h3{font-size:15px;margin:0 0 10px;font-weight:700}
-.lede{color:var(--muted);margin:0 0 18px;max-width:65ch}
+.lede{color:var(--muted);margin:0 0 18px}
 select,input,textarea{font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0}
 select:focus,input:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .btn{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:6px;padding:6px 12px;cursor:pointer;white-space:nowrap}
@@ -258,7 +258,7 @@ tr.isna td:not(.keep){opacity:.55}
 .prow .meta small{color:var(--muted)}
 .form{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .form input{flex:1 1 200px}
-.note{font-size:13px;color:var(--muted);max-width:70ch}
+.note{font-size:13px;color:var(--muted)}
 .banner{background:var(--accent-soft);border-radius:6px;padding:8px 12px;font-size:13px;margin-bottom:14px}
 /* drawer */
 .scrim{position:fixed;inset:0;background:rgba(10,20,22,.45);z-index:19}
