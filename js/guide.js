@@ -104,7 +104,7 @@ function riskStages(p,now){
   const late=ids(r=>r.due&&r.status!=="已完成"&&r.treat&&r.treat!=="accept"&&(r.due.length===7?r.due+"-31":r.due)<today);
   const ctxOk=!!String(p.scope||"").trim()&&p.criteriaOk!==false;
   const treatPend=ckIds(["noTreat","noControl","acceptTreat","conflict","undecided"]),accPend=ckIds(["noResidual","residualTreat","needApproval"]);
-  return [
+  const st=[
     {id:"ctx",name:"建立全景",en:"Context",clause:"4、6.1.2 a",done:ctxOk,value:ctxOk?"範圍與準則已確認":"範圍或準則待確認",pending:[]},
     {id:"ident",name:"風險識別",en:"Identification",clause:"6.1.2 c",done:risks.length>0&&!ckIds(["noOwner"]).length,value:`${risks.length} 項`,
       pending:ids(r=>!String(r.owner||"").trim()),note:"未指定擁有者"},
@@ -124,4 +124,10 @@ function riskStages(p,now){
     {id:"monitor",name:"監督與審查",en:"Monitoring & Review",clause:"8.2、9.1",side:true,done:risks.length>0&&!risks.some(r=>r.reassess)&&!late.length,
       value:`待重新評估 ${risks.filter(r=>r.reassess).length}・計畫逾期 ${late.length}`,pending:[...new Set([...ids(r=>r.reassess),...late])],note:"待重新評估或處理計畫逾期"}
   ];
+  /* 還沒有可處理的風險時，後續步驟顯示「尚未開始」，避免一排 0 看起來像已經沒問題 */
+  const idle=(id,msg)=>{const x=st.find(y=>y.id===id);x.idle=true;x.value=msg};
+  if(!risks.length){idle("anal","新增風險後開始");idle("eval","新增風險後開始");idle("treat","新增風險後開始");idle("accept","新增風險後開始");idle("monitor","新增風險後開始")}
+  else if(!scored.length){idle("eval","評分後開始");idle("treat","評分後開始");idle("accept","評分後開始")}
+  const nx=st.find(x=>!x.side&&!x.done);if(nx)nx.next=true;
+  return st;
 }

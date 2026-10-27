@@ -1376,9 +1376,9 @@ function rfInfoHTML(x){
 }
 function riskFlowHTML(p){
   const st=riskStages(p),g=id=>st.find(x=>x.id===id);
-  const box=x=>{const n=x.pending.length,cls=x.neutral?"neutral":x.done?"done":n&&!x.info?"todo":"";const sel=riskView.stage===x.id;
+  const box=x=>{const n=x.pending.length,cls=(x.neutral?"neutral":x.done?"done":x.idle?"idle":n&&!x.info?"todo":"")+(x.next?" next":"");const sel=riskView.stage===x.id;
     return `<button class="rfbox ${cls} ${sel?"sel":""}" data-rstage="${x.id}" aria-pressed="${sel}" aria-expanded="${sel}">
-      <span class="rfn">${esc(x.name)}${x.done?` <span class="rfok" aria-label="已完成">✓</span>`:""}</span><span class="rfen">${esc(x.en)}</span><span class="rfv">${esc(x.value)}</span></button>`};
+      <span class="rfn">${esc(x.name)}${x.done?` <span class="rfok" aria-label="已完成">✓</span>`:""}${x.next?` <span class="rfnext">下一步</span>`:""}</span><span class="rfen">${esc(x.en)}</span><span class="rfv">${esc(x.value)}</span></button>`};
   const arr=`<span class="rfarr" aria-hidden="true">→</span>`;
   const done=st.filter(x=>!x.side&&x.done).length,total=st.filter(x=>!x.side).length;
   return `<div class="rflow" aria-label="風險管理流程">

@@ -106,3 +106,11 @@ test('風險管理流程：各步驟的進度與卡住的風險', () => {
   assert.equal(st.record.done, false, '尚未匯出、文件未核准');
   assert.equal(A.riskStages({ ...p, lastExcelAt: NOW, doc: { status: '已核准' } }, NOW).find(s => s.id === 'record').done, true);
 });
+
+test('沒有風險時，風險流程後續步驟顯示尚未開始並標出下一步', () => {
+  const st = Object.fromEntries(A.riskStages({ scope: '總部', criteriaOk: true, risks: [] }, Date.now()).map(s => [s.id, s]));
+  for (const id of ['anal', 'eval', 'treat', 'accept', 'monitor']) assert.equal(st[id].idle, true, id);
+  assert.equal(st.accept.value, '新增風險後開始');
+  assert.equal(st.ident.next, true);
+  assert.ok(!st.ctx.next);
+});
