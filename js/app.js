@@ -465,6 +465,7 @@ function renderHome(){
       <div id="pp-look" role="tabpanel" aria-labelledby="pk-look" ${pick==="look"?"":"hidden"}>
         <p class="note" style="margin:0 0 10px">選擇產業，查看同產業的公司在三個導入階段的樣子。範例中的修改不會儲存，也可以複製成自己的專案。</p>
         <div class="seg indseg" id="indSeg" role="tablist" aria-label="範例產業">${SAMPLE_INDS.map(i=>`<button role="tab" data-sind="${i}" aria-pressed="${i===sampleInd}" aria-selected="${i===sampleInd}">${esc(INDUSTRY_MAP[i].label)}</button>`).join("")}</div>
+        <ul class="lgmini" aria-label="進度條圖例">${SEGS.map(x=>`<li><i class="${x.k==="na"?"na":x.k==="undec"?"undec":""}" style="${x.k.startsWith("s")?`background:var(--${x.k})`:""}"></i>${x.label}</li>`).join("")}</ul>
         <div class="samples" id="sampleCards">${samplesOf(sampleInd).map(d=>{const p=SAMPLES[d.id],st=sampleStats(p);return `<article class="scard ${d.id===S.activeId?"active":""}">
           <span class="stage">${esc(d.stage)}</span><h4>${esc(d.name)}</h4><p>${esc(d.desc)}</p>
           ${stackBar(st.t,93)}
