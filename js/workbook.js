@@ -124,6 +124,40 @@ function buildWorkbook(p,opts={}){
   ];
 }
 
+/* 稽核用 SoA：只放正式文件需要的 8 欄，統計用公式，在 Excel 修改後會自動更新。
+   產業建議、關聯風險、常見證據等工作資訊留在完整工作底稿（buildWorkbook）。 */
+function buildAuditWorkbook(p){
+  const ctl=code=>(p.controls||{})[code]||{app:"",status:0,evidence:"",reason:"",impl:""};
+  const {H,V,W,T}=sheetKit(p);
+  const known=new Set(Object.values(REASON_CODES));
+  const theme=c=>{const t=THEMES.find(x=>x.id===c.theme);return `A.${t.id} ${t.name}`};
+  const rows=ANNEX.map(c=>{const v=ctl(c.code),rs=splitReasons(v.reason);
+    const note=v.app==="N"?rs.join("；"):[v.impl||"",...rs.filter(r=>!known.has(r))].filter(Boolean).join("；");
+    return [theme(c),c.code,c.name,v.app?APP.find(a=>a.v===v.app).label:"",v.app==="Y"?reasonCodes(v.reason):"",
+      v.app==="N"?"不適用":v.app==="Y"?STATUS[v.status].label:"",note,v.evidence||""].map(V)});
+  const HEAD=5,first=HEAD+1,last=HEAD+ANNEX.length,S="'適用性聲明SoA'!";
+  const soaData=[[{value:"適用性聲明（Statement of Applicability）　ISO/IEC 27001:2022 附錄 A",fontWeight:"bold",fontSize:14}],[T(docLine(p))],
+    [T(`${p.org||p.name||""}${p.scope?"｜驗證範圍："+p.scope:""}`)],
+    [T("理由代碼：RA 風險評鑑結果、LR 法律或法規、CO 契約或客戶要求、BP 營運需求與業界最佳實務")],
+    ["主題","控制措施編號","控制措施","適用性","理由代碼","執行狀態","實施方式／排除理由","證據位置／對應文件"].map(H),...rows,
+    [],[T("控制措施名稱為工具自撰摘要，不含 ISO/IEC 27001 原文。")],[],
+    ["編製","","審查","","核准",""].map((t,k)=>k%2?null:H(t)),["日期","","日期","","日期",""].map((t,k)=>k%2?null:H(t))];
+  const F=f=>({value:f,type:"Formula"});
+  const rng=col=>`${S}$${col}$${first}:$${col}$${last}`;
+  const cnt=(col,val)=>F(`COUNTIF(${rng(col)},"${val}")`);
+  const stat=[[{value:"適用性聲明統計",fontWeight:"bold",fontSize:14}],[T("數字以公式計算，修改「適用性聲明SoA」後會自動更新")],[],
+    [H("一、適用性"),H("數量")],[V("適用"),cnt("D","適用")],[V("不適用"),cnt("D","不適用")],
+    [V("未決定"),F(`COUNTA(${rng("B")})-COUNTIF(${rng("D")},"適用")-COUNTIF(${rng("D")},"不適用")`)],[V("控制措施總數"),F(`COUNTA(${rng("B")})`)],[],
+    [H("二、執行狀態（適用項目）"),H("數量")],...STATUS.map(s=>[V(s.label),cnt("F",s.label)]),[],
+    [H("三、依主題"),H("控制措施數"),H("適用"),H("已實施或已驗證")],
+    ...THEMES.map(t=>{const k=`A.${t.id} ${t.name}`;return [V(k),cnt("A",k),F(`COUNTIFS(${rng("A")},"${k}",${rng("D")},"適用")`),
+      F(`COUNTIFS(${rng("A")},"${k}",${rng("F")},"已實施")+COUNTIFS(${rng("A")},"${k}",${rng("F")},"已驗證")`)]})];
+  return [
+    {sheet:"適用性聲明SoA",data:soaData,columns:W([14,12,24,8,10,10,40,24]),stickyRowsCount:HEAD},
+    {sheet:"SoA統計",data:stat,columns:W([26,12,10,16])}
+  ];
+}
+
 /* ---------- 匯入 ---------- */
 /* 欄位名稱的各種寫法（去除空白與括號內文字後比對） */
 const IMPORT_COLS={
@@ -151,7 +185,8 @@ function colReport(sheet,type,row,m){
   return {sheet,kind:L.kind,
     mapped:Object.entries(m).sort((a,b)=>a[1]-b[1]).map(([f,k])=>({from:cellText(row[k]),to:L.f[f]||f})),
     ignored:(row||[]).map((h,k)=>used.has(k)?"":cellText(h)).filter(Boolean),
-    missing:L.important.filter(f=>!(f in m)).map(f=>L.f[f])};
+    // 理由寫在「理由代碼」欄或「實施方式／排除理由」合併欄時，不算缺少理由欄
+    missing:L.important.filter(f=>!(f in m)&&!(type==="soa"&&f==="reason"&&("codes" in m||"impl" in m))).map(f=>L.f[f])};
 }
 function normHead(h){return String(h??"").replace(/[（(][^）)]*[）)]/g,"").replace(/\s+/g,"").replace(/／/g,"/")}
 function cellText(v){

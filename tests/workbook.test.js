@@ -171,3 +171,31 @@ test('匯入結果列出欄位對應、未使用的欄位與沒找到的重要�
 test('找不到可匯入的表時，錯誤訊息列出檢查過的工作表', () => {
   assert.throws(() => A.importWorkbook([{ sheet: '封面', data: [['公司名稱']] }, { sheet: '清單', data: [['項目', '說明']] }]), /已檢查工作表：封面、清單/);
 });
+
+test('稽核用 SoA：8 欄正式格式、排除理由放在同一欄、統計用公式', () => {
+  const p = { ...A.blankProject('X', '甲公司'), scope: '總部', controls: {} };
+  p.controls['A.5.1'] = { app: 'Y', status: 2, owner: '王', evidence: 'POL-01', reason: '依風險評鑑結果，需處理已識別的風險；集團規定', impl: '每年審查' };
+  p.controls['A.8.4'] = { app: 'N', status: 0, owner: '', evidence: '', reason: '範圍內沒有此業務或活動', impl: '' };
+  const [soa, stat] = A.buildAuditWorkbook(p);
+  const head = soa.data[4].map(c => c.value);
+  assert.deepEqual(head, ['主題', '控制措施編號', '控制措施', '適用性', '理由代碼', '執行狀態', '實施方式／排除理由', '證據位置／對應文件']);
+  const row = code => soa.data.find(r => r && r[1] && r[1].value === code).map(c => (c ? c.value : ''));
+  assert.deepEqual(row('A.5.1'), ['A.5 組織控制', 'A.5.1', A.ANNEX_MAP['A.5.1'].name, '適用', 'RA', '已實施', '每年審查；集團規定', 'POL-01']);
+  assert.deepEqual(row('A.8.4').slice(3, 7), ['不適用', '', '不適用', '範圍內沒有此業務或活動']);
+  assert.equal(soa.data.filter(r => r && r[1] && /^A\.\d\.\d+$/.test(r[1].value)).length, 93);
+  const formulas = stat.data.flat().filter(c => c && c.type === 'Formula');
+  assert.ok(formulas.length >= 10);
+  assert.ok(formulas.every(c => !c.value.startsWith('=') && c.value.includes("'適用性聲明SoA'!$")));
+  assert.ok(formulas.some(c => c.value === `COUNTIF('適用性聲明SoA'!$D$6:$D$98,"適用")`));
+});
+
+test('稽核用 SoA 可以再匯入，適用性、狀態、理由與證據都讀得回來', () => {
+  const p = { ...A.blankProject('X', ''), controls: {} };
+  p.controls['A.5.1'] = { app: 'Y', status: 3, owner: '', evidence: 'POL-01', reason: '法律或法規要求', impl: '' };
+  p.controls['A.8.4'] = { app: 'N', status: 0, owner: '', evidence: '', reason: '範圍內沒有此業務或活動', impl: '' };
+  const { raw, report } = A.importWorkbook(asRead(A.buildAuditWorkbook(p)));
+  assert.equal(report.controls, 93);
+  assert.deepEqual([raw.controls['A.5.1'].app, raw.controls['A.5.1'].status, raw.controls['A.5.1'].reason, raw.controls['A.5.1'].evidence], ['Y', 3, '法律或法規要求', 'POL-01']);
+  assert.deepEqual([raw.controls['A.8.4'].app, raw.controls['A.8.4'].reason], ['N', '範圍內沒有此業務或活動']);
+  assert.deepEqual(report.columns[0].missing, ['負責人'], '理由在代碼欄與合併欄，不算缺少');
+});

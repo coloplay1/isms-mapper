@@ -331,13 +331,14 @@ async function saveFile(filename, data, mime){
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();
   setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);toast("已匯出 "+filename);
 }
-function exportExcel(){
+/* kind：audit＝稽核用 SoA（精簡 8 欄＋公式統計）；其他＝完整工作底稿 */
+function exportExcel(kind){
   refreshFocus();
   if(typeof writeXlsxFile!=="function"){toast("Excel 元件沒有載入，請確認 vendor/write-excel-file.min.js 存在");return}
-  const p=cur();
-  writeXlsxFile(buildWorkbook(p)).toBlob()
+  const p=cur(),audit=kind==="audit";
+  writeXlsxFile(audit?buildAuditWorkbook(p):buildWorkbook(p)).toBlob()
     .then(blob=>{if(!p.sample){p.lastExcelAt=Date.now();save();if(tab==="risks")renderRisks()}return blob})
-    .then(blob=>saveFile(`SoA_${safeName(p.name)}_${new Date().toISOString().slice(0,10)}.xlsx`,blob,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+    .then(blob=>saveFile(`${audit?"SoA_稽核用":"ISMS工作底稿"}_${safeName(p.name)}_${new Date().toISOString().slice(0,10)}.xlsx`,blob,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
     .catch(err=>{console.error(err);toast("Excel 產生失敗："+(err&&err.message||err))});
 }
 /* 從 Excel（本工具範本、匯出檔，或欄位名稱相近的自訂 SoA／風險表）建立新專案 */
@@ -768,7 +769,7 @@ function renderAnnex(){
         <div class="seg" id="themeSeg"><button data-th="all" aria-pressed="true">全部</button>${THEMES.map(t=>`<button data-th="${t.id}" aria-pressed="false">A.${t.id} ${t.name}</button>`).join("")}</div>
         <select id="stFilter" aria-label="狀態篩選"><option value="all">所有狀態</option><option value="undec">未決定適用性</option><option value="N">不適用</option>${STATUS.map(s=>`<option value="${s.v}">${s.label}</option>`).join("")}<option value="new">2022 新增</option><option value="noreason">不適用但未填理由</option><option value="focus">產業建議重點</option><option value="nacand">可能不適用候選</option><option value="risk">有風險引用</option><option value="riskissue">風險連動待確認</option></select>
         <input id="qFilter" class="grow" type="search" placeholder="篩選編號、名稱或負責人">
-        <button class="btn primary" id="xlsBtn">匯出 SoA Excel</button>
+        <button class="btn primary" id="xlsBtn" data-tip="正式文件格式，8 欄＋公式統計，可直接提供稽核">匯出稽核用 SoA</button><button class="btn" id="xlsFull" data-tip="含產業建議、關聯風險、風險登錄表、連動檢查等工作資訊">匯出工作底稿</button>
       </div>
       <div class="table-wrap"><table style="min-width:960px"><thead><tr><th>編號</th><th>控制措施</th><th style="width:112px">適用性</th><th style="min-width:220px">納入／排除理由</th><th style="width:136px">執行狀態</th><th style="width:140px">負責人</th><th style="min-width:170px">證據位置</th></tr></thead><tbody id="annexBody"></tbody></table></div>
       <div class="filters" style="margin-top:8px"><span class="count" id="annexCount"></span></div>`;
@@ -779,7 +780,7 @@ function renderAnnex(){
     $("#lcWrap").addEventListener("toggle",e=>{lcOpen=e.target.open});
     $("#lcStrip").addEventListener("click",e=>{const b=e.target.closest("[data-lc]");if(!b)return;filt.lc=filt.lc===b.dataset.lc?"":b.dataset.lc;renderAnnexRows()});
     $("#qFilter").addEventListener("input",e=>{filt.q=e.target.value;renderAnnexRows()});
-    $("#xlsBtn").addEventListener("click",exportExcel);
+    $("#xlsBtn").addEventListener("click",()=>exportExcel("audit"));$("#xlsFull").addEventListener("click",()=>exportExcel());
     $("#annexBody").addEventListener("change",onAnnexEdit);
     $("#annexBody").addEventListener("input",e=>{if(e.target.matches("input,textarea"))onAnnexEdit(e)});
   }
@@ -886,14 +887,14 @@ function renderProjects(){
       ${list.length?projRows(list,"projects"):`<div class="pempty">還沒有自己的專案。可以建立新專案，或匯入之前匯出的專案檔、填好的 SoA／風險評鑑 Excel。</div>`}
     </div>
     ${!p?"":p.sample?`<div class="panel"><h3>目前專案：${esc(p.name)}</h3><p class="note">這是範例專案，不能重新命名或匯出專案檔。想保留內容，請先複製成自己的專案。</p>
-      <div class="form"><button class="btn primary" id="pCopy">以此範例建立我的專案</button><button class="btn" id="xls2">匯出 SoA Excel</button></div></div>`:
+      <div class="form"><button class="btn primary" id="pCopy">以此範例建立我的專案</button><button class="btn" id="xls2">匯出稽核用 SoA</button><button class="btn" id="xlsFull2">匯出工作底稿</button></div></div>`:
     `<div class="panel"><h3>目前專案</h3>
       <div class="pform">
         <label class="lbl">專案名稱<span class="form" style="margin:0"><input id="renameIn" value="${esc(p.name)}"><button class="btn" id="renameBtn">重新命名</button></span></label>
         <label class="lbl">驗證範圍<span class="form" style="margin:0"><input id="scopeIn" value="${esc(p.scope||"")}" placeholder="例如：總部資訊系統與客服中心"><button class="btn" id="scopeBtn">更新範圍</button></span></label>
       </div>
-      <div class="form"><button class="btn primary" id="xls2">匯出 SoA Excel</button><button class="btn" id="jsonOut">匯出專案檔（JSON）</button></div>
-      <p class="note" style="margin:10px 0 0">Excel 包含適用性聲明、風險登錄表、風險評鑑準則、連動檢查、條款 4–10 檢核、統計摘要與修改紀錄。專案檔可在其他電腦匯入繼續編輯。</p>
+      <div class="form"><button class="btn primary" id="xls2">匯出稽核用 SoA</button><button class="btn" id="xlsFull2">匯出工作底稿</button><button class="btn" id="jsonOut">匯出專案檔（JSON）</button></div>
+      <p class="note" style="margin:10px 0 0"><b>稽核用 SoA</b>：正式文件格式（主題、編號、名稱、適用性、理由代碼、執行狀態、實施方式／排除理由、證據位置），統計用公式計算，可直接提供稽核。<b>工作底稿</b>：另含產業建議、關聯風險、風險登錄表、風險評鑑準則、連動檢查、改善追蹤、條款 4–10 檢核、統計摘要與修改紀錄，供內部追蹤。專案檔可在其他電腦匯入繼續編輯。</p>
     </div>`}
   </div>
   <div class="pcol">
@@ -918,7 +919,7 @@ function renderProjects(){
   on("pCopy",()=>{copying=true;tab="overview";render();window.scrollTo(0,0)});
   on("renameBtn",()=>{const n=$("#renameIn").value.trim();if(n){cur().name=n;save();render();toast("已重新命名")}});
   on("scopeBtn",()=>{cur().scope=$("#scopeIn").value.trim();save();toast("已更新驗證範圍")});
-  on("xls2",exportExcel);
+  on("xls2",()=>exportExcel("audit"));on("xlsFull2",()=>exportExcel());
   on("cyNew",openRolloverDrawer);
   on("cyCmp",()=>{compareOpen=!compareOpen;renderProjects();if(compareOpen){const el=$("#cmpPanel");if(el)el.scrollIntoView({block:"start"})}});
   on("cmpClose",()=>{compareOpen=false;renderProjects()});
@@ -1376,7 +1377,7 @@ const RF_INFO={
   treat:{what:"選擇處理方式（降低、移轉、避免、接受），選定控制措施並寫處理計畫與期限。選定的控制措施在 SoA 必須是適用。",acts:[["goto:annex","前往附錄 A"]]},
   accept:{what:"評估處理後的殘餘風險；仍屬需核准等級的，由風險擁有者核准接受（6.1.3 f）。",acts:[]},
   consult:{what:"風險評鑑的每一步都要與風險擁有者、管理階層及相關人員溝通：評估結果、處理計畫與殘餘風險由誰決定、如何告知（7.4 溝通）。工具無法判斷溝通是否做到，請以會議紀錄或核准紀錄佐證。",acts:[]},
-  record:{what:"保存風險評鑑與處理的文件化資訊（6.1.2、6.1.3、8.2、8.3），並向管理階層報告。匯出的 SoA Excel 含風險登錄表、風險評鑑準則與連動檢查，文件狀態改為「已核准」後即可作為紀錄。",acts:[["xls","匯出 SoA Excel"],["goto:projects","文件管制資訊"]]},
+  record:{what:"保存風險評鑑與處理的文件化資訊（6.1.2、6.1.3、8.2、8.3），並向管理階層報告。匯出的工作底稿 Excel 含風險登錄表、風險評鑑準則與連動檢查，文件狀態改為「已核准」後即可作為紀錄。",acts:[["xls","匯出工作底稿 Excel"],["goto:projects","文件管制資訊"]]},
   monitor:{what:"定期與重大變更時重新評估，追蹤處理計畫是否如期完成。每年可在專案管理建立新年度。",acts:[["goto:projects","前往年度循環"]]}
 };
 /* 依尚未涵蓋的業務特性與 CIA 面向，從常見情境挑出可一鍵加入的風險 */
@@ -1578,7 +1579,7 @@ function renderRisks(){
   <div class="filters">
     <button class="btn primary" id="rNew">＋ 新增風險</button>
     <span class="saved critline">風險準則：${esc(criteriaText(p))}</span><button class="btn" id="rCrit">調整準則</button>
-    <button class="btn" id="rXls" style="margin-left:auto">匯出 SoA Excel</button>
+    <button class="btn" id="rXls" style="margin-left:auto" data-tip="含風險登錄表、風險評鑑準則與連動檢查">匯出工作底稿 Excel</button>
   </div>
   ${riskFlowHTML(p)}
   <div class="grid2">
@@ -1609,7 +1610,7 @@ function renderRisks(){
   </tbody></table></div>`;
   const on=(id,fn)=>{const el=$("#"+id);if(el)el.addEventListener("click",fn)};
   on("rNew",openRiskPicker);
-  on("rXls",exportExcel);
+  on("rXls",()=>exportExcel());
   on("ckMore",()=>{showAllChecks=!showAllChecks;renderRisks()});
   on("ckApplyAll",applyAllRiskToSoA);
   on("mxClear",()=>{riskView.cell=null;renderRisks()});
@@ -1836,7 +1837,7 @@ function renderImprove(){
   <div class="filters">
     <button class="btn primary" id="aNew">＋ 新增改善事項</button>
     <div class="seg" id="aSeg">${[["open","未結案"],["late","逾期"],["verify","待確認有效"],["all","全部"]].map(([k,t])=>`<button data-af="${k}" aria-pressed="${actFilter===k}">${t}</button>`).join("")}</div>
-    <button class="btn" id="aXls" style="margin-left:auto">匯出 SoA Excel</button>
+    <button class="btn" id="aXls" style="margin-left:auto" data-tip="含改善追蹤工作表">匯出工作底稿 Excel</button>
   </div>
   <div class="stats">
     <div class="stat"><b>${st.open}</b><span>未結案</span></div>
@@ -1856,7 +1857,7 @@ function renderImprove(){
   </tbody></table></div>`;
   const on=(id,fn)=>{const el=$("#"+id);if(el)el.addEventListener("click",fn)};
   on("aNew",()=>{const a=newAction();renderImprove();openActionDrawer(a.id)});
-  on("aXls",exportExcel);
+  on("aXls",()=>exportExcel());
   $("#aHow").addEventListener("toggle",e=>{howtoOpen=e.target.open});
   $("#aSeg").addEventListener("click",e=>{const b=e.target.closest("[data-af]");if(!b)return;actFilter=b.dataset.af;renderImprove()});
 }

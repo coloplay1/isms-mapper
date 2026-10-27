@@ -143,7 +143,7 @@ function buildComparisonWorkbook(cur,base,opts={}){
     [T("a) 前次管理審查決議的處理情形：前次改善事項（含稽核發現與矯正措施）")],
     [T("f) 風險評鑑結果與風險處理計畫狀態：風險變更、處理計畫追蹤")],
     [T("d) 資訊安全績效（監督與量測結果）：實施狀態變化、本表摘要")],
-    [T("d) 不符合與矯正措施、稽核結果：前次改善事項；本期明細見 SoA Excel 的「改善追蹤」工作表")],
+    [T("d) 不符合與矯正措施、稽核結果：前次改善事項；本期明細見工作底稿 Excel 的「改善追蹤」工作表")],
     [T("其他輸入請另行準備：b) 內外部議題變化、c) 利害關係者需求與期望變化、d) 監督量測結果與目標達成情形、e) 利害關係者回饋、g) 持續改善機會")],
     ...(d.criteriaChanged?[[],[T(`注意：風險準則已變更（${d.base.label}：${criteriaText(base)}；${d.cur.label}：${criteriaText(cur)}），等級統計以本期準則計算。`)]]:[])];
   const appData=[...head("適用性變更"),...table(["控制措施編號","控制措施",d.base.label,d.cur.label,"本期納入或排除理由"],d.appChanges.map(x=>[x.code,x.name,x.from,x.to,x.reason]))];
