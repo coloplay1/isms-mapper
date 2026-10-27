@@ -105,7 +105,7 @@ svg path[data-lseg]:focus-visible,svg path[data-lphase]:focus-visible{outline:no
 .dot.undec{background:var(--surface2);box-shadow:inset 0 0 0 1px var(--muted)}
 .utoast{display:flex;align-items:center;gap:14px;padding:8px 8px 8px 16px}
 .utoast button{background:none;border:1px solid currentColor;color:inherit;border-radius:4px;padding:3px 10px;font:inherit;font-size:13px;cursor:pointer}
-input.warn{border-color:var(--seal);box-shadow:inset 0 0 0 1px var(--seal)}
+input.warn,textarea.warn{border-color:var(--seal);box-shadow:inset 0 0 0 1px var(--seal)}
 .warnhint{display:block;color:var(--seal);font-size:12px;margin-top:4px}
 .warnhint[hidden]{display:none}
 .alertrow{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline;width:100%;text-align:left;background:var(--surface2);border:1px solid var(--seal);border-radius:6px;padding:8px 12px;margin-bottom:12px;cursor:pointer;font:inherit;font-size:14px;color:var(--ink)}
@@ -600,3 +600,7 @@ footer a{margin-left:8px;color:var(--accent)}
 .idsug{flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.idsug .note{flex-basis:100%;margin:0}
 .ckjump{display:flex;align-items:center;gap:8px;width:100%;margin:6px 0 4px;padding:8px 12px;border:1px solid var(--line);border-left:4px solid var(--s1);border-radius:6px;background:var(--surface2);color:var(--ink);font:inherit;font-size:14px;cursor:pointer;text-align:left}.ckjump.err{border-left-color:var(--seal)}.ckjump span{margin-left:auto;color:var(--muted)}
 .ckh{font-size:15px;margin:16px 0 0}
+#annexBody textarea[data-reason]{display:block;width:100%;resize:none;overflow:hidden;line-height:1.45;min-height:34px}
+#annexBody select[data-f=app]{min-width:86px}#annexBody .stsel{min-width:110px}
+#annexBody input[data-f=owner]{min-width:124px}
+#annexBody td.name .saved{white-space:normal}

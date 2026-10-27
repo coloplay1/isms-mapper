@@ -763,7 +763,7 @@ function renderAnnex(){
         <input id="qFilter" class="grow" type="search" placeholder="篩選編號、名稱或負責人">
         <button class="btn primary" id="xlsBtn">匯出 SoA Excel</button>
       </div>
-      <div class="table-wrap"><table><thead><tr><th>編號</th><th>控制措施</th><th style="width:96px">適用性</th><th style="min-width:220px">納入／排除理由</th><th style="width:118px">執行狀態</th><th style="width:140px">負責人</th><th style="min-width:200px">證據位置</th></tr></thead><tbody id="annexBody"></tbody></table></div>
+      <div class="table-wrap"><table style="min-width:960px"><thead><tr><th>編號</th><th>控制措施</th><th style="width:112px">適用性</th><th style="min-width:220px">納入／排除理由</th><th style="width:136px">執行狀態</th><th style="width:140px">負責人</th><th style="min-width:170px">證據位置</th></tr></thead><tbody id="annexBody"></tbody></table></div>
       <div class="filters" style="margin-top:8px"><span class="count" id="annexCount"></span></div>`;
     v.dataset.built="1";
     $("#themeSeg").addEventListener("click",e=>{const b=e.target.closest("[data-th]");if(!b)return;filt.theme=b.dataset.th;
@@ -774,7 +774,7 @@ function renderAnnex(){
     $("#qFilter").addEventListener("input",e=>{filt.q=e.target.value;renderAnnexRows()});
     $("#xlsBtn").addEventListener("click",exportExcel);
     $("#annexBody").addEventListener("change",onAnnexEdit);
-    $("#annexBody").addEventListener("input",e=>{if(e.target.matches("input"))onAnnexEdit(e)});
+    $("#annexBody").addEventListener("input",e=>{if(e.target.matches("input,textarea"))onAnnexEdit(e)});
   }
   const sf=$("#stFilter");if(sf)sf.value=filt.status;
   renderAnnexRows();
@@ -785,7 +785,7 @@ function annexRow(c){
     <td class="code keep"><button data-open="${c.code}">${c.code}</button></td>
     <td class="name keep"><button class="fstar ${FM[c.code]?"on":""}" data-ftoggle="${c.code}" aria-pressed="${!!FM[c.code]}" aria-label="${FM[c.code]?"取消重點":"標為重點"}：${c.code}" data-tip="${FM[c.code]?"取消重點標示":"標為重點"}">${FM[c.code]?"★":"☆"}</button><span class="${FM[c.code]?"fname":""}">${esc(c.name)}</span>${c.isNew?'<span class="tag">2022 新增</span>':""}${FM[c.code]?`<span class="ftag" data-tip="${esc(FM[c.code].map(f=>FEATURE_MAP[f].label).join("、"))}">建議重點</span>`:""}${NAC[c.code]&&!v.app?`<span class="ctag" data-tip="${esc(NAC[c.code])}">可能不適用</span>`:""}${RBC[c.code]?`<span class="rtag ${v.app==="N"?"bad":""}" data-tip="${esc(RBC[c.code].map(id=>{const r=riskById(id);return id+" "+(r&&r.title||"")}).join("、"))}${v.app==="N"?"｜被風險引用卻判為不適用":""}">風險 ${RBC[c.code].length}</span>`:""}<div class="saved">${esc(c.desc)}</div></td>
     <td class="keep"><select data-f="app" aria-label="${c.code} 適用性">${APP.map(a=>`<option value="${a.v}" ${a.v===v.app?"selected":""}>${a.label}</option>`).join("")}</select></td>
-    <td class="keep"><input data-f="reason" data-reason="${c.code}" title="${esc(v.reason)}" autocomplete="off" class="${missingReason(v)?"warn":""}" aria-invalid="${missingReason(v)}" value="${esc(v.reason)}" placeholder="${v.app==="N"?"選擇排除理由（必填）":"選擇或輸入理由"}" aria-label="${c.code} 理由" ${missingReason(v)?'data-tip="不適用的項目需要排除理由，稽核時會檢查"':""}></td>
+    <td class="keep"><textarea rows="1" data-f="reason" data-reason="${c.code}" title="${esc(v.reason)}" autocomplete="off" class="${missingReason(v)?"warn":""}" aria-invalid="${missingReason(v)}" placeholder="${v.app==="N"?"選擇排除理由（必填）":"選擇或輸入理由"}" aria-label="${c.code} 理由" ${missingReason(v)?'data-tip="不適用的項目需要排除理由，稽核時會檢查"':""}>${esc(v.reason)}</textarea></td>
     <td><select data-f="status" class="stsel" style="border-left-color:${lvlColor(v.status)}" ${v.app==="N"?"disabled":""} aria-label="${c.code} 狀態">${STATUS.map(s=>`<option value="${s.v}" ${s.v===v.status?"selected":""}>${s.label}</option>`).join("")}</select></td>
     <td><input data-f="owner" data-owner autocomplete="off" value="${esc(v.owner)}" placeholder="選擇或輸入" ${v.app==="N"?"disabled":""} aria-label="${c.code} 負責人"></td>
     <td><input data-f="evidence" title="${esc(v.evidence)}" value="${esc(v.evidence)}" placeholder="${esc(c.ev.split("、")[0])}" ${v.app==="N"?"disabled":""} aria-label="${c.code} 證據"></td></tr>`;
@@ -819,15 +819,21 @@ function renderAnnexRows(){
     if(/^\d$/.test(filt.status)&&(v.app!=="Y"||v.status!==+filt.status))return false;
     if(q&&!norm(c.code+" "+c.name+" "+c.desc+" "+v.owner).includes(q))return false;
     return true});
+  requestAnimationFrame(()=>document.querySelectorAll("#annexBody textarea[data-reason]").forEach(fitReason));
   $("#annexBody").innerHTML=list.map(annexRow).join("")||`<tr><td colspan="7"><div class="empty">沒有符合篩選條件的控制措施。</div></td></tr>`;
   $("#annexCount").textContent=`顯示 ${list.length} / 93 項`;
 }
+/* 理由欄自動換行並依內容調整高度，長理由不會被截斷 */
+function fitReason(el){el.style.height="auto";el.style.height=el.scrollHeight+2+"px"}
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.defaultPrevented&&e.target.matches&&e.target.matches("textarea[data-reason]"))e.preventDefault()});
+window.addEventListener("resize",()=>{if(tab==="annex")document.querySelectorAll("#annexBody textarea[data-reason]").forEach(fitReason)});
 function onAnnexEdit(e){
   const el=e.target, tr=el.closest("tr[data-code]"); if(!tr||!el.dataset.f)return;
   const code=tr.dataset.code, f=el.dataset.f;
+  if(f==="reason"&&/\n/.test(el.value))el.value=el.value.replace(/\s*\n\s*/g," ");   // 理由維持單行文字，只是顯示時換行
   if(!setField(code,f,el.value))return;
-  if(f==="app"||f==="status"){const nr=document.createElement("tbody");nr.innerHTML=annexRow(ANNEX_MAP[code]);tr.replaceWith(nr.firstElementChild)}
-  else if(f==="reason"){const miss=missingReason(ctl(code));el.classList.toggle("warn",miss);el.setAttribute("aria-invalid",miss)}
+  if(f==="app"||f==="status"){const nr=document.createElement("tbody");nr.innerHTML=annexRow(ANNEX_MAP[code]);const row=nr.firstElementChild;tr.replaceWith(row);const ta=row.querySelector("textarea[data-reason]");if(ta)fitReason(ta)}
+  else if(f==="reason"){const miss=missingReason(ctl(code));el.classList.toggle("warn",miss);el.setAttribute("aria-invalid",miss);fitReason(el)}
 }
 function renderClauses(){
   const groups=[["4","組織前後環境"],["5","領導"],["6","規劃"],["7","支援"],["8","運作"],["9","績效評估"],["10","改善"]];
@@ -1996,4 +2002,4 @@ render();
   // 目前分頁在畫面外時捲進來
   t.addEventListener("click",()=>setTimeout(()=>{const b=t.querySelector('[aria-selected="true"]');if(b)b.scrollIntoView({block:"nearest",inline:"nearest"});upd()},0));
 })();
-document.addEventListener("input",e=>{const el=e.target;if(el.matches&&el.matches("input[data-reason],input[data-f=evidence]"))el.title=el.value});
+document.addEventListener("input",e=>{const el=e.target;if(el.matches&&el.matches("[data-reason],input[data-f=evidence]"))el.title=el.value});
