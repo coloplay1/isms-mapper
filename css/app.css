@@ -297,6 +297,7 @@ footer{font-size:12px;color:var(--muted);padding-block:0 30px}
 .ck{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;border:1px solid var(--line);border-left:4px solid var(--s1);border-radius:6px;padding:6px 10px;font-size:14px;background:var(--surface)}
 .ck.err{border-left-color:var(--seal)}
 .ck.info{border-left-color:var(--line)}
+.ck.ok{border-left-color:var(--s3)}
 .ck .ckmsg{flex:1 1 220px;min-width:0}
 .ck .ckact{display:flex;gap:6px;flex-wrap:wrap}
 .ck .btn{padding:2px 8px;font-size:13px}

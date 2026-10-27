@@ -1650,6 +1650,7 @@ function openRiskDrawer(id){
     <div id="rChecks"></div>
     <div style="margin-top:18px;display:flex;gap:8px"><button class="btn danger" id="rDel">刪除這個風險</button></div>
   </aside>`;
+  const applied={};   // 這次在詳細頁設為適用的控制措施 → 原本的理由（供復原）
   const refresh=()=>{
     const s=inherentScore(r),rs=residualScore(r),pl=x=>POLICIES.find(y=>y.v===policyOf(x,cur())).label;
     const df=(k,n)=>{const t=((cur().scale||{})[k]||[])[n-1];return n&&t?`${k==="l"?"可能性":"衝擊"} ${n}：${esc(t)}`:""};
@@ -1664,7 +1665,11 @@ function openRiskDrawer(id){
     $("#rApprText").textContent=r.treat==="accept"?"風險擁有者已核准接受此風險":"風險擁有者已核准處理計畫與殘餘風險";
     $("#rTreatHint").textContent=!s?"":r.treat?"":`目前 ${s} 分屬「${riskLevel(s,cur()).label}」：${pl(s)}`;
     const cks=riskChecks(cur()).filter(c=>c.rid===r.id);
-    $("#rChecks").innerHTML=cks.length?`<ul class="cklist" style="margin-top:14px">${cks.map(c=>`<li class="ck ${c.sev}"><span class="ckmsg">${esc(c.msg.replace(r.id+(r.title?"「"+r.title+"」":""),"").trim()||c.msg)}</span><span class="ckact">${c.kind==="undecided"?`<button class="btn" data-apply="${c.code}">設為適用</button>`:""}</span></li>`).join("")}</ul>`:"";
+    const und=cks.filter(c=>c.kind==="undecided").length;
+    const done=Object.keys(applied).filter(c=>ctl(c).app==="Y"&&(r.controls||[]).includes(c));
+    $("#rChecks").innerHTML=cks.length||done.length?`${und>1?`<div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn primary" data-dapplyall>全部設為適用（${und}）</button></div>`:""}
+      <ul class="cklist" style="margin-top:${und>1?8:14}px">${cks.map(c=>`<li class="ck ${c.sev}"><span class="ckmsg">${esc(c.msg.replace(r.id+(r.title?"「"+r.title+"」":""),"").trim()||c.msg)}</span><span class="ckact">${c.kind==="undecided"?`<button class="btn" data-dapply="${c.code}">設為適用</button>`:""}</span></li>`).join("")}
+      ${done.map(c=>`<li class="ck ok"><span class="ckmsg">✓ ${c} ${esc(ANNEX_MAP[c].name)} 已設為適用</span><span class="ckact"><button class="btn" data-dundo="${c}">復原</button></span></li>`).join("")}</ul>`:"";
   };
   const renderCtl=(q="")=>{
     const sel=r.controls||[];
@@ -1698,6 +1703,16 @@ function openRiskDrawer(id){
     if(x){r.controls=r.controls.filter(c=>c!==x.dataset.rmc);touchRisk();renderCtl($("#rcQ").value);refresh()}
   });
   $("#rDel").addEventListener("click",()=>deleteRisk(r.id));
+  /* 連動檢查：在詳細頁直接設為適用，設好的項目留在清單上並可復原 */
+  const applyOne=code=>{const v=ctl(code);if(v.app!=="")return false;applied[code]=v.reason;setField(code,"app","Y",{silent:true});
+    if(!splitReasons(v.reason).includes(RISK_REASON))setField(code,"reason",[...splitReasons(v.reason),RISK_REASON].join(SEP),{silent:true});return true};
+  const afterApply=()=>{renderCtl($("#rcQ")?$("#rcQ").value:"");refresh();if(tab==="risks")renderRisks();else render()};
+  $("#rChecks").addEventListener("click",e=>{
+    const one=e.target.closest("[data-dapply]"),all=e.target.closest("[data-dapplyall]"),un=e.target.closest("[data-dundo]");
+    if(one){if(applyOne(one.dataset.dapply))toast(`${one.dataset.dapply} 已設為適用，理由：${RISK_REASON}`);afterApply()}
+    if(all){const codes=[...new Set(riskChecks(cur()).filter(c=>c.rid===r.id&&c.kind==="undecided").map(c=>c.code))];const n=codes.filter(applyOne).length;if(n)toast(`${n} 項已設為適用，理由：${RISK_REASON}`);afterApply()}
+    if(un){const c=un.dataset.dundo;setField(c,"reason",applied[c]||"",{silent:true});setField(c,"app","",{silent:true});delete applied[c];toast(`${c} 已復原為未判定`);afterApply()}
+  });
   host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeDrawer));
   renderCtl();refresh();
   if(!r.title)$("#rTitle").focus();else host.querySelector(".x").focus();
