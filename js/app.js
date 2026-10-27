@@ -444,21 +444,33 @@ function sampleStats(p){
 }
 /* 使用指南的網址帶上目前版本號，更新 PDF 後瀏覽器不會沿用舊的快取 */
 const GUIDE_URL="docs/user-guide.pdf"+((((document.querySelector('script[src*="js/app.js"]')||{}).src||"").match(/\?v=[\w.]+/)||[""])[0]);
+let homePick=null;   // 首頁三選一目前的選項（null＝依有無專案決定）
 function renderHome(){
   const mine=Object.values(S.projects).sort((a,b)=>b.updated-a.updated);
   const nDocs=DOCS.filter(d=>d.status!=="planned").length;
   const start=(id,icon,t,d,extra="")=>`<div class="start" ${id?`id="${id}"`:""}><span class="sicon" aria-hidden="true">${icon}</span><div><h3>${t}</h3><p>${d}</p>${extra}</div></div>`;
+  // 首頁三選一：先看範例／建立專案／匯入既有資料；沒有專案時預設看範例
+  const pick=homePick||(mine.length?"create":"look");
+  const PICKS=[["look","▶","先看看能做什麼","選產業，打開範例公司看完整導入的樣子"],["create","＋","開始導入我們公司","建立專案，照「下一步建議」逐步完成"],["import","⇪","我已經有 SoA 或風險表","匯入 Excel 或專案檔，自動檢查缺漏"]];
   $("#view-home").innerHTML=`<div class="home2">
-    <section class="intro">
-      <h2>從哪裡開始？</h2>
-      <p class="lede">依 ISO/IEC 27001:2022 架構，把日常工作對應到條款、評估風險並完成適用性聲明（SoA）。所有資料只存在這個瀏覽器，不會上傳。</p>
-      <p class="guidehint">第一次使用？<a href="${GUIDE_URL}" target="_blank" rel="noopener">看使用指南（PDF，15 頁）</a>，依熟悉程度分成第一次導入、已有 Excel 資料、年度維運三條路線。</p>
-    </section>
     ${mine.length?`<section><div class="secthead"><h3>我的專案</h3><span class="note">${mine.length} 個，依最近修改排序</span></div>${projRows(mine,"home")}</section>`:""}
-    <div class="homegrid">
-    <section class="panel" id="createPanel">
-      <div class="chead"><span class="sicon" aria-hidden="true">＋</span><div><h3>建立新專案</h3>
-      <p class="note" style="margin:0">一個專案代表一家公司或一次稽核。建立後會進入總覽，依「下一步建議」逐步完成，修改會自動儲存。</p></div></div>
+    <section class="intro">
+      <h2>${mine.length?"還想做什麼？":"你想先做什麼？"}</h2>
+      <p class="note" style="margin:0">依 ISO/IEC 27001:2022，把日常工作對應到條款、完成風險評鑑與適用性聲明（SoA）。資料只存在這個瀏覽器，不會上傳。</p>
+      <div class="pick3" role="tablist" aria-label="開始方式">${PICKS.map(([k,ic,t,d])=>`<button role="tab" id="pk-${k}" data-hpick="${k}" aria-selected="${k===pick}" aria-controls="pp-${k}" class="${k===pick?"on":""}"><span class="pi" aria-hidden="true">${ic}</span><b>${t}</b><small>${d}</small></button>`).join("")}</div>
+      <div class="pickpanel">
+      <div id="pp-look" role="tabpanel" aria-labelledby="pk-look" ${pick==="look"?"":"hidden"}>
+        <p class="note" style="margin:0 0 10px">選擇產業，查看同產業的公司在三個導入階段的樣子。範例中的修改不會儲存，也可以複製成自己的專案。</p>
+        <div class="seg indseg" id="indSeg" role="tablist" aria-label="範例產業">${SAMPLE_INDS.map(i=>`<button role="tab" data-sind="${i}" aria-pressed="${i===sampleInd}" aria-selected="${i===sampleInd}">${esc(INDUSTRY_MAP[i].label)}</button>`).join("")}</div>
+        <div class="samples" id="sampleCards">${samplesOf(sampleInd).map(d=>{const p=SAMPLES[d.id],st=sampleStats(p);return `<article class="scard ${d.id===S.activeId?"active":""}">
+          <span class="stage">${esc(d.stage)}</span><h4>${esc(d.name)}</h4><p>${esc(d.desc)}</p>
+          ${stackBar(st.t,93)}
+          <div class="nums"><span><b>${st.impl}%</b>已實施</span><span><b>${st.undec}</b>未決定</span><span><b>${st.evid}</b>已驗證</span></div>
+          <div class="actions" style="display:flex;gap:8px"><button class="btn ${d.id===S.activeId?"":"primary"}" data-home-open="${d.id}">${d.id===S.activeId?"繼續預覽":"預覽"}</button>${d.id===S.activeId?`<button class="btn" data-end-preview>結束預覽</button>`:""}</div>
+        </article>`}).join("")}</div>
+      </div>
+      <div id="pp-create" role="tabpanel" aria-labelledby="pk-create" ${pick==="create"?"":"hidden"}>
+      <p class="note" style="margin:0 0 12px">一個專案代表一家公司或一次稽核。建立後會進入總覽，依「下一步建議」逐步完成，修改會自動儲存。</p>
       <form id="homeForm" class="cform">
         <label>專案名稱<input id="hName" required placeholder="例如：2027 年度 ISMS 驗證"></label>
         <label>組織名稱<input id="hOrg" placeholder="選填"></label>
@@ -475,21 +487,14 @@ function renderHome(){
         </fieldset>
         <div class="wide actions"><button class="btn primary">建立專案</button></div>
       </form>
-    </section>
-    <div class="starts">
-      ${start("","⇪","匯入既有資料","已有 SoA、風險評鑑表，或之前匯出的專案檔，匯入後會建立新專案並檢查內容",`<div class="sbtns"><button class="btn" id="hXlsx">從 Excel 匯入</button><button class="btn" id="hImport">匯入專案檔</button></div>`)}
-      ${start("","⬇","下載文件範本",`政策、程序、表單與紀錄共 ${nDocs} 份，依五層架構整理`,`<button class="btn" data-goto="docs">查看範本</button>`)}
-    </div>
-    </div>
-    <section id="samplePanel">
-      <div class="secthead"><h3>範例專案</h3><span class="note">選擇產業，查看同產業的公司在三個導入階段的樣子。範例中的修改不會儲存，也可以複製成自己的專案。</span></div>
-      <div class="seg indseg" id="indSeg" role="tablist" aria-label="範例產業">${SAMPLE_INDS.map(i=>`<button role="tab" data-sind="${i}" aria-pressed="${i===sampleInd}" aria-selected="${i===sampleInd}">${esc(INDUSTRY_MAP[i].label)}</button>`).join("")}</div>
-      <div class="samples" id="sampleCards">${samplesOf(sampleInd).map(d=>{const p=SAMPLES[d.id],st=sampleStats(p);return `<article class="scard ${d.id===S.activeId?"active":""}">
-        <span class="stage">${esc(d.stage)}</span><h4>${esc(d.name)}</h4><p>${esc(d.desc)}</p>
-        ${stackBar(st.t,93)}
-        <div class="nums"><span><b>${st.impl}%</b>已實施</span><span><b>${st.undec}</b>未決定</span><span><b>${st.evid}</b>已驗證</span></div>
-        <div class="actions" style="display:flex;gap:8px"><button class="btn ${d.id===S.activeId?"":"primary"}" data-home-open="${d.id}">${d.id===S.activeId?"繼續預覽":"預覽"}</button>${d.id===S.activeId?`<button class="btn" data-end-preview>結束預覽</button>`:""}</div>
-      </article>`}).join("")}</div>
+      </div>
+      <div id="pp-import" role="tabpanel" aria-labelledby="pk-import" ${pick==="import"?"":"hidden"}>
+        <p class="note" style="margin:0 0 12px">匯入後會建立新專案，並列出欄位對應與連動檢查結果。欄位名稱不同也能辨識，例如「是否適用」「選擇理由」「實施狀態」。</p>
+        <div class="sbtns"><button class="btn primary" id="hXlsx">從 Excel 匯入（SoA、風險評鑑表）</button><button class="btn" id="hImport">匯入專案檔（JSON）</button></div>
+        <p class="note" style="margin:12px 0 0">還沒有自己的格式？可下載<a href="${TPL_BASE}isms-soa-risk-template.xlsx" download>空白範本</a>或<a href="${TPL_BASE}isms-soa-risk-example.xlsx" download>填寫範例</a>，填好後再匯入。</p>
+      </div>
+      </div>
+      <p class="guidehint" style="margin:10px 0 0">不確定怎麼用？<a href="${GUIDE_URL}" target="_blank" rel="noopener">看使用指南（PDF，15 頁）</a>・<a href="#" data-goto="docs">下載 ${nDocs} 份文件範本</a></p>
     </section>
   </div>`;
   const v=$("#view-home");
@@ -498,9 +503,10 @@ function renderHome(){
     tab="overview";render();window.scrollTo(0,0);toast("已建立專案："+p.name+"，可依總覽的下一步建議開始")});
   $("#hImport").addEventListener("click",()=>$("#importFile").click());
   $("#hXlsx").addEventListener("click",()=>$("#xlsxFile").click());
-  v.querySelectorAll("[data-jump]").forEach(b=>b.addEventListener("click",()=>{const t=document.getElementById(b.dataset.jump);if(!t)return;
-    t.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
-  }));
+  v.querySelectorAll("[data-hpick]").forEach(b=>b.addEventListener("click",()=>{homePick=b.dataset.hpick;
+    v.querySelectorAll("[data-hpick]").forEach(x=>{const on=x===b;x.classList.toggle("on",on);x.setAttribute("aria-selected",on)});
+    ["look","create","import"].forEach(k=>$("#pp-"+k).hidden=k!==homePick);
+    if(homePick==="create")$("#hName").focus({preventScroll:true})}));
   wireIndustry(v,"hInd","hF","hCount");
   v.querySelectorAll("[data-home-open]").forEach(b=>b.addEventListener("click",()=>openProject(b.dataset.homeOpen)));
   v.querySelectorAll("[data-end-preview]").forEach(b=>b.addEventListener("click",endPreview));
@@ -607,7 +613,7 @@ function focusPanel(p){
       </div>
     </div></div>`;
 }
-document.addEventListener("click",e=>{const g=e.target.closest("[data-goto]");if(!g)return;
+document.addEventListener("click",e=>{const g=e.target.closest("[data-goto]");if(!g)return;if(g.tagName==="A")e.preventDefault();
   if(g.dataset.focusfilter){filt.status="focus";filt.theme="all";delete $("#view-annex").dataset.built}
   if(g.dataset.gofilter){filt.status=g.dataset.gofilter;filt.theme="all";filt.q="";delete $("#view-annex").dataset.built}
   if(g.dataset.openx==="ident")riskView.stage="ident";
@@ -1031,7 +1037,7 @@ function exportComparison(){
     .then(blob=>saveFile(`年度比較_${safeName(p.name)}_${new Date().toISOString().slice(0,10)}.xlsx`,blob,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
     .catch(err=>{console.error(err);toast("Excel 產生失敗："+(err&&err.message||err))});
 }
-function goNew(){tab="home";render();window.scrollTo(0,0);const n=$("#hName");if(n)n.focus()}
+function goNew(){homePick="create";tab="home";render();const n=$("#hName");if(n){n.focus({preventScroll:true});$("#pk-create").scrollIntoView({block:"start"})}}
 function resetBuilt(){["annex"].forEach(v=>delete $("#view-"+v).dataset.built)}
 $("#xlsxFile").addEventListener("change",e=>{const f=e.target.files[0];e.target.value="";if(f)importExcelFile(f)});
 function docPanel(p){

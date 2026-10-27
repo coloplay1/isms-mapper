@@ -607,3 +607,12 @@ footer a{margin-left:8px;color:var(--accent)}
 .colmap{margin-top:16px;border:1px solid var(--line);border-radius:6px;padding:8px 12px}.colmap summary{cursor:pointer;font-weight:700}.colmap summary .note{font-weight:400;margin-left:8px}
 .cmsheet{margin-top:12px}.cmsheet>b+.note{margin-left:8px}.colmap a{color:var(--accent)}.cmsheet ul{list-style:none;padding:0;margin:6px 0;display:grid;gap:2px;font-size:13px}.cmsheet li{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:baseline}.cmsheet li span:first-child{color:var(--muted);overflow-wrap:anywhere}.cmsheet p{margin:4px 0;font-size:13px}
 .ctxrow{flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}.ctxk{flex:0 0 6.5em;font-weight:700}.ctxrow input{flex:1 1 240px}.ctxv{flex:1 1 240px;font-size:14px}.ctxedit .ok{color:var(--s3)}.ctxedit .miss{color:var(--seal)}
+.pick3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0 0}
+.pick3 button{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;align-items:start;text-align:left;padding:14px 16px;border:1px solid var(--line);border-bottom:0;border-radius:10px 10px 0 0;background:var(--surface);color:var(--ink);font:inherit;cursor:pointer}
+.pick3 button:hover{border-color:var(--accent)}
+.pick3 .pi{grid-row:1/3;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-size:16px}
+.pick3 b{font-size:16px}.pick3 small{color:var(--muted);font-size:13px;line-height:1.5}
+.pick3 button.on{border-color:var(--accent);box-shadow:inset 0 3px 0 var(--accent);background:var(--surface2)}
+.pickpanel{border:1px solid var(--accent);border-radius:0 0 10px 10px;padding:18px;background:var(--surface2)}
+.pickpanel a{color:var(--accent)}
+@media (max-width:760px){.pick3{grid-template-columns:minmax(0,1fr);gap:8px}.pick3 button{border-bottom:1px solid var(--line);border-radius:10px}.pick3 button.on{border-color:var(--accent)}.pickpanel{border-radius:10px;margin-top:8px}}
