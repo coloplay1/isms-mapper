@@ -52,7 +52,7 @@ function rolloverProject(prev,opts={}){
   const p=sanitizeProject(src);
   const sum={downgraded:0,clauses:0,reassess:0,approvals:0,carried:0};
   p.id=uid();p.name=str(opts.name,120)||p.name;p.period=str(opts.period,20);
-  p.created=p.updated=now;p.log=[];p.identOk=false;
+  p.created=p.updated=now;p.log=[];p.identOk=false;p.archived=false;
   delete p.lastBackupAt;p.changesSinceBackup=0;
   // 已驗證代表「去年」查過證據，今年要重新收集，所以降為已實施
   for(const v of Object.values(p.controls))if(v.status===3){v.status=2;sum.downgraded++}

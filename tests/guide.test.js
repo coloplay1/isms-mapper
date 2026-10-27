@@ -141,3 +141,17 @@ test('風險流程依序完成：前一步未完成時後面不打勾', () => {
   assert.match(st.eval.value, /未評分 1/);
   assert.equal(st.anal.next, true);
 });
+
+test('跨模組一致性：已驗證卻沒有證據、改善事項關聯到不適用的控制措施', () => {
+  const p = { ...A.blankProject('X', ''), scope: '總部', criteriaOk: true, criteria: A.presetCriteria('four'), controls: {} };
+  p.controls['A.5.1'] = { app: 'Y', status: 3, owner: '甲', evidence: '', reason: '法律或法規要求' };
+  p.controls['A.5.2'] = { app: 'Y', status: 3, owner: '甲', evidence: 'ORG-01', reason: '法律或法規要求' };
+  p.controls['A.7.4'] = { app: 'N', status: 0, owner: '', evidence: '', reason: '無實體場所' };
+  p.actions = [{ ...A.blankAction('I-001'), title: 'x', refs: ['A.7.4'], status: '處理中' }, { ...A.blankAction('I-002'), title: 'y', refs: ['A.7.4'], status: '已確認有效' }];
+  const f = A.guideFacts(p, NOW);
+  assert.equal(f.noEvidence, 1);
+  assert.equal(f.actOnNA, 1, '已結案的不算');
+  const ks = keys(p);
+  assert.ok(ks.includes('noEvidence') && ks.includes('actOnNA'));
+  assert.equal(A.nextSteps(p, NOW).find(x => x.key === 'noEvidence').filter, 'noevid');
+});

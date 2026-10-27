@@ -206,7 +206,13 @@ function save(){
 }
 let saveTimer=null;
 function saveSoon(){clearTimeout(saveTimer);saveTimer=setTimeout(save,300)}
-function cur(){return isSample(S.activeId)?SAMPLES[S.activeId]:(S.projects[S.activeId]||null)}
+/* 已封存（唯讀）的專案：開啟時改用一份工作副本，可以查看、篩選、匯出，修改不會寫回原專案 */
+const RO_COPY=Object.create(null);
+function cur(){if(isSample(S.activeId))return SAMPLES[S.activeId];const p=S.projects[S.activeId];if(!p)return null;
+  if(!p.archived)return p;return RO_COPY[p.id]||(RO_COPY[p.id]=JSON.parse(JSON.stringify(p)))}
+function savedCur(){const p=S.projects[S.activeId];return p&&p.archived?p:cur()}   // 匯出用：封存專案一律匯出已儲存的內容
+function setArchived(id,on){const p=S.projects[id];if(!p)return;p.archived=!!on;delete RO_COPY[id];save();resetBuilt();render();
+  toast(on?`已封存「${p.name}」：之後只能查看與匯出，修改不會儲存`:`已解除封存「${p.name}」，可以繼續編輯`)}
 function ctl(code){const p=cur();if(!p)return {app:"",status:0,owner:"",evidence:"",reason:""};return p.controls[code]||(p.controls[code]={app:"",status:0,owner:"",evidence:"",reason:""})}
 function cls(code){const p=cur();if(!p)return {status:0,owner:"",evidence:""};return p.clauses[code]||(p.clauses[code]={status:0,owner:"",evidence:""})}
 function newProject(name,org,scope,start,industry,features){roadSel=null;
@@ -243,12 +249,13 @@ function projRows(list,ctx){
     const st=sampleStats(p), isCur=p.id===S.activeId;
     const meta=editingId===p.id
       ?`<div class="meta" style="display:flex;gap:6px;flex-wrap:wrap;flex:1"><input data-rename-in="${p.id}" value="${esc(p.name)}" aria-label="專案名稱" style="flex:1 1 180px"><button class="btn primary" data-pact="rsave" data-id="${p.id}">儲存</button><button class="btn" data-pact="rcancel">取消</button></div>`
-      :`<div class="meta"><b>${esc(p.name)}</b><small>${p.org?esc(p.org)+"・":""}最後修改 ${fmtDate(p.updated)}・已實施 ${st.impl}%${isCur?"・目前專案":""}</small></div>`;
+      :`<div class="meta"><b>${esc(p.name)}${p.archived?`<span class="tag" style="margin-left:8px;vertical-align:2px">已封存</span>`:""}</b><small>${p.org?esc(p.org)+"・":""}最後修改 ${fmtDate(p.updated)}・已實施 ${st.impl}%${isCur?"・目前專案":""}</small></div>`;
     const acts=editingId===p.id?"":pendingDelete===p.id
       ?`<span class="saved">刪除後無法復原</span><button class="btn danger" data-pact="del2" data-id="${p.id}">確認刪除</button><button class="btn" data-pact="dcancel">取消</button>`
       :`<button class="btn ${isCur&&ctx==="home"?"primary":""}" data-pact="open" data-id="${p.id}">${isCur?"繼續":"開啟"}</button><button class="btn" data-pact="rename" data-id="${p.id}">重新命名</button><button class="btn" data-pact="del" data-id="${p.id}">刪除</button>`;
     return `<div class="prow ${isCur?"active":""}">${meta}${acts?`<div class="pacts">${acts}</div>`:""}</div>`}).join("")}</div>`;
 }
+document.addEventListener("click",e=>{const b=e.target.closest("[data-arch]");if(!b||!S.projects[S.activeId])return;setArchived(S.activeId,b.dataset.arch==="1")});
 document.addEventListener("click",e=>{
   const b=e.target.closest("[data-pact]"); if(!b)return;
   const a=b.dataset.pact, id=b.dataset.id;
@@ -257,9 +264,9 @@ document.addEventListener("click",e=>{
   if(a==="rcancel"||a==="dcancel"){editingId=null;pendingDelete=null}
   if(a==="rsave"){const inp=document.querySelector(`[data-rename-in="${id}"]`);const n=inp&&inp.value.trim();
     if(!n){toast("專案名稱不能空白");return}
-    S.projects[id].name=n;S.projects[id].updated=Date.now();editingId=null;save();toast("已重新命名")}
+    S.projects[id].name=n;S.projects[id].updated=Date.now();delete RO_COPY[id];editingId=null;save();toast("已重新命名")}
   if(a==="del"){pendingDelete=id;editingId=null}
-  if(a==="del2"){const n=S.projects[id]&&S.projects[id].name;delete S.projects[id];pendingDelete=null;if(S.activeId===id)S.activeId=null;save();resetBuilt();toast("已刪除："+n)}
+  if(a==="del2"){const n=S.projects[id]&&S.projects[id].name;delete S.projects[id];delete RO_COPY[id];pendingDelete=null;if(S.activeId===id)S.activeId=null;save();resetBuilt();toast("已刪除："+n)}
   render();
   if(a==="rename"){const inp=document.querySelector(`[data-rename-in="${id}"]`);if(inp){inp.focus();inp.select()}}
 });
@@ -335,9 +342,9 @@ async function saveFile(filename, data, mime){
 function exportExcel(kind){
   refreshFocus();
   if(typeof writeXlsxFile!=="function"){toast("Excel 元件沒有載入，請確認 vendor/write-excel-file.min.js 存在");return}
-  const p=cur(),audit=kind==="audit";
+  const p=savedCur(),audit=kind==="audit";
   writeXlsxFile(audit?buildAuditWorkbook(p):buildWorkbook(p)).toBlob()
-    .then(blob=>{if(!p.sample){p.lastExcelAt=Date.now();save();if(tab==="risks")renderRisks()}return blob})
+    .then(blob=>{if(!p.sample&&!p.archived){p.lastExcelAt=Date.now();save();if(tab==="risks")renderRisks()}return blob})
     .then(blob=>saveFile(`${audit?"SoA_稽核用":"ISMS工作底稿"}_${safeName(p.name)}_${new Date().toISOString().slice(0,10)}.xlsx`,blob,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
     .catch(err=>{console.error(err);toast("Excel 產生失敗："+(err&&err.message||err))});
 }
@@ -390,7 +397,7 @@ function showImportReport(p,rep){
 /* 範本檔的位置；預覽環境不能存放 Office 檔時，建置時改成網站的完整網址 */
 const TPL_BASE="templates/";
 function exportJSON(){
-  const p=cur();
+  const p=savedCur();
   if(!p.sample){p.lastBackupAt=Date.now();p.changesSinceBackup=0;p.backupSnoozeUntil=0;save();renderBackupBanner()}
   saveFile(`ISMS專案_${safeName(p.name)}.json`,JSON.stringify({app:"isms-mapper",version:1,project:p},null,2),"application/json");
 }
@@ -424,6 +431,9 @@ function renderProjSel(){
 }
 function renderSampleBanner(){
   const p=cur(), b=$("#sampleBanner");
+  if(p&&p.archived&&!p.sample&&tab!=="home"){b.hidden=false;
+    b.innerHTML=`<span class="msg">「${esc(p.name)}」已封存（唯讀）：可以查看與匯出，修改不會儲存。</span><button class="btn" id="sbUnarch">解除封存</button>`;
+    $("#sbUnarch").addEventListener("click",()=>setArchived(p.id,false));return}
   if(!p||!p.sample||tab==="home"){b.hidden=true;return}
   b.hidden=false;
   b.innerHTML=`<span class="msg">正在預覽範例「${esc(p.org)}」（${esc(p.stage)}）。可以隨意操作，修改不會儲存。</span>
@@ -777,7 +787,7 @@ function renderAnnex(){
       <details class="panel lcwrap" ${lcOpen?"open":""} id="lcWrap"><summary><b>依產品／服務生命週期檢視</b><span class="note">從需求到退休，每個階段該注意哪些控制措施。階段依 ISO/IEC 24748 的生命週期概念整理，與控制措施的對應為本工具歸納，非標準規定；與附錄 A.8.25「安全開發生命週期」最直接相關。點階段可篩選下方清單</span></summary><div id="lcStrip"></div></details>
       <div class="filters">
         <div class="seg" id="themeSeg"><button data-th="all" aria-pressed="true">全部</button>${THEMES.map(t=>`<button data-th="${t.id}" aria-pressed="false">A.${t.id} ${t.name}</button>`).join("")}</div>
-        <select id="stFilter" aria-label="狀態篩選"><option value="all">所有狀態</option><option value="undec">未決定適用性</option><option value="N">不適用</option>${STATUS.map(s=>`<option value="${s.v}">${s.label}</option>`).join("")}<option value="new">2022 新增</option><option value="noreason">不適用但未填理由</option><option value="focus">產業建議重點</option><option value="nacand">可能不適用候選</option><option value="risk">有風險引用</option><option value="riskissue">風險連動待確認</option></select>
+        <select id="stFilter" aria-label="狀態篩選"><option value="all">所有狀態</option><option value="undec">未決定適用性</option><option value="N">不適用</option>${STATUS.map(s=>`<option value="${s.v}">${s.label}</option>`).join("")}<option value="new">2022 新增</option><option value="noreason">不適用但未填理由</option><option value="noevid">已驗證但未填證據位置</option><option value="focus">產業建議重點</option><option value="nacand">可能不適用候選</option><option value="risk">有風險引用</option><option value="riskissue">風險連動待確認</option></select>
         <input id="qFilter" class="grow" type="search" placeholder="篩選編號、名稱或負責人">
         <button class="btn primary" id="xlsBtn" data-tip="正式文件格式，8 欄＋公式統計，可直接提供稽核">匯出稽核用 SoA</button><button class="btn" id="xlsFull" data-tip="含產業建議、關聯風險、風險登錄表、連動檢查等工作資訊">匯出工作底稿</button>
       </div>
@@ -831,6 +841,7 @@ function renderAnnexRows(){
     if(filt.status==="new"&&!c.isNew)return false;
     if(filt.status==="focus"&&!FM[c.code])return false;
     if(filt.status==="noreason"&&!missingReason(v))return false;
+    if(filt.status==="noevid"&&!(v.app==="Y"&&v.status===3&&!String(v.evidence||"").trim()))return false;
     if(filt.status==="nacand"&&!NAC[c.code])return false;
     if(filt.status==="risk"&&!RBC[c.code])return false;
     if(filt.status==="riskissue"&&!(RBC[c.code]&&v.app!=="Y"))return false;
@@ -900,10 +911,10 @@ function renderProjects(){
       <div class="form"><button class="btn primary" id="pCopy">以此範例建立我的專案</button><button class="btn" id="xls2">匯出稽核用 SoA</button><button class="btn" id="xlsFull2">匯出工作底稿</button></div></div>`:
     `<div class="panel"><h3>目前專案</h3>
       <div class="pform">
-        <label class="lbl">專案名稱<span class="form" style="margin:0"><input id="renameIn" value="${esc(p.name)}"><button class="btn" id="renameBtn">重新命名</button></span></label>
-        <label class="lbl">驗證範圍<span class="form" style="margin:0"><input id="scopeIn" value="${esc(p.scope||"")}" placeholder="例如：總部資訊系統與客服中心"><button class="btn" id="scopeBtn">更新範圍</button></span></label>
+        <label class="lbl">專案名稱<span class="form" style="margin:0"><input id="renameIn" value="${esc(p.name)}" ${p.archived?"disabled":""}><button class="btn" id="renameBtn" ${p.archived?"disabled":""}>重新命名</button></span></label>
+        <label class="lbl">驗證範圍<span class="form" style="margin:0"><input id="scopeIn" ${p.archived?"disabled":""} value="${esc(p.scope||"")}" placeholder="例如：總部資訊系統與客服中心"><button class="btn" id="scopeBtn" ${p.archived?"disabled":""}>更新範圍</button></span></label>
       </div>
-      <div class="form"><button class="btn primary" id="xls2">匯出稽核用 SoA</button><button class="btn" id="xlsFull2">匯出工作底稿</button><button class="btn" id="jsonOut">匯出專案檔（JSON）</button></div>
+      <div class="form"><button class="btn primary" id="xls2">匯出稽核用 SoA</button><button class="btn" id="xlsFull2">匯出工作底稿</button><button class="btn" id="jsonOut">匯出專案檔（JSON）</button>${p.archived?"":`<button class="btn" data-arch="1" data-tip="年度結束、驗證完成後封存，保留當時的完整狀態">封存為唯讀</button>`}</div>
       <p class="note" style="margin:10px 0 0"><b>稽核用 SoA</b>：正式文件格式（主題、編號、名稱、適用性、理由代碼、執行狀態、實施方式／排除理由、證據位置），統計用公式計算，可直接提供稽核。<b>工作底稿</b>：另含產業建議、關聯風險、風險登錄表、風險評鑑準則、連動檢查、改善追蹤、條款 4–10 檢核、統計摘要與修改紀錄，供內部追蹤。專案檔可在其他電腦匯入繼續編輯。</p>
     </div>`}
   </div>
@@ -981,12 +992,14 @@ function openRolloverDrawer(){
       <li>文件版次 ${esc(d.ver||"（未填）")} → ${esc(bumpVersion(d.ver)||"（未填）")}，日期與核准日期清空，狀態改回「草案」</li>
       <li>${nAct?`<b>${nAct}</b> 項`:""}未結案的改善事項帶入新年度繼續追蹤，已確認有效的留在去年的紀錄</li>
       <li>修改紀錄從新年度開始重新記錄</li>
+      <li>去年的專案會封存為唯讀，保留當時的完整狀態；需要修正時可在專案管理解除封存</li>
     </ul>
     <div style="display:flex;gap:8px;margin-top:18px"><button class="btn primary" id="roGo">建立</button><button class="btn" data-close>取消</button></div>
   </aside>`;
   host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeDrawer));
   $("#roGo").addEventListener("click",()=>{
     const {project:np2,summary:sm}=rolloverProject(p,{name:$("#roName").value.trim()||np.name,period:$("#roPer").value.trim(),prevLabel:$("#roPrev").value.trim()});
+    if(S.projects[p.id]){S.projects[p.id].archived=true;delete RO_COPY[p.id]}   // 去年的專案封存為唯讀，避免誤改
     S.projects[np2.id]=np2;S.activeId=np2.id;copying=false;cmpBase="baseline";compareOpen=false;
     $("#drawerHost").innerHTML="";save();resetBuilt();tab="overview";render();window.scrollTo(0,0);ensurePersist();
     toast(`已建立「${np2.name}」：${sm.downgraded+sm.clauses} 項改回已實施、${sm.reassess} 項風險待重新評估${sm.carried?`、${sm.carried} 項改善事項帶入`:""}`);

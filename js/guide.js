@@ -35,6 +35,9 @@ function guideFacts(p,now){
     profile:!!p.industry||projFeatures(p).length>0,
     criteria:!!p.criteria&&p.criteriaOk!==false,
     identOk:!!p.identOk,
+    // 跨模組一致性：已驗證卻沒有證據位置；未結案的改善事項關聯到判為不適用的控制措施
+    noEvidence:app.filter(v=>v.status===3&&!String(v.evidence||"").trim()).length,
+    actOnNA:acts.filter(a=>a.status!==ACTION_CLOSED&&(a.refs||[]).some(c=>ANNEX_MAP[c]&&ctl(c).app==="N")).length,
     scaleDefs:!!sanitizeScale(p.scale)
   };
 }
@@ -57,6 +60,8 @@ function nextSteps(p,now){
   add(f.noReason,{key:"noReason",sev:"warn",title:`補填 ${f.noReason} 項排除理由`,desc:"標為不適用卻沒有理由，是稽核最常開的缺失之一",tab:"annex",filter:"noreason",cta:"前往補填"});
   add(f.riskWarn,{key:"riskWarn",sev:"warn",title:`確認 ${f.riskWarn} 項風險處理的待辦`,desc:"例如尚未決定處理方式、沒有選定控制措施或殘餘風險未評估",tab:"risks",cta:"前往風險評鑑"});
   add(f.needApproval,{key:"needApproval",sev:"warn",title:`取得 ${f.needApproval} 項殘餘風險的擁有者核准`,desc:"處理後仍需核准的風險，要由風險擁有者核准接受（6.1.3 f）",tab:"risks",cta:"前往風險評鑑"});
+  add(f.noEvidence,{key:"noEvidence",sev:"warn",title:`補上 ${f.noEvidence} 項已驗證控制措施的證據位置`,desc:"標為「已驗證」卻沒寫證據在哪裡，稽核時拿不出佐證",tab:"annex",filter:"noevid",cta:"前往補填"});
+  add(f.actOnNA,{key:"actOnNA",sev:"warn",title:`確認 ${f.actOnNA} 項改善事項關聯的控制措施`,desc:"改善事項關聯的控制措施在 SoA 判為不適用，兩邊說法互相矛盾；請調整關聯或重新檢討適用性",tab:"improve",cta:"開啟改善追蹤"});
   add(f.actVerify,{key:"actVerify",sev:"info",title:`確認 ${f.actVerify} 項已完成改善的有效性`,desc:"措施完成後確認有效才能結案（10.2 d）",tab:"improve",cta:"開啟改善追蹤"});
   add(f.applicable&&f.notStarted,{key:"notStarted",sev:"info",title:`落實 ${f.notStarted} 項尚未實施的控制措施`,desc:`適用的 ${f.applicable} 項中已實施 ${f.implemented} 項${p.baseline?"；去年已驗證的項目重新收集證據後可改回已驗證":"，記得填寫證據位置"}`,tab:"annex",cta:"前往附錄 A"});
   add(f.applicable&&f.noOwner,{key:"noOwner",sev:"info",title:`指定 ${f.noOwner} 項控制措施的負責人`,desc:"每一項都要有人負責（5.3）",tab:"annex",cta:"前往附錄 A"});
@@ -81,11 +86,11 @@ function roadmapSteps(p,now){
       detail:[f.undecided&&`${f.undecided} 項未判定`,f.noReason&&`${f.noReason} 項缺排除理由`,f.conflicts&&`${f.conflicts} 項衝突`,f.riskWarn&&`${f.riskWarn} 項風險處理待確認`].filter(Boolean).join("、")||"適用性與風險處理一致"},
     {n:5,keys:["needApproval","approve"],short:"核准",title:"核准 SoA 與風險處理計畫",clause:"6.1.3 e、f",tab:"projects",done:f.docApproved&&!f.needApproval&&f.applicable>0,
       detail:[!f.docApproved&&"文件狀態尚未改為「已核准」",f.needApproval&&`${f.needApproval} 項殘餘風險待擁有者核准`].filter(Boolean).join("、")||"已核准"},
-    {n:6,keys:["notStarted","noOwner"],short:"落實",title:"落實控制措施並收集證據",clause:"8.1、附錄 A",tab:"annex",done:f.applicable>0&&!f.notStarted,
+    {n:6,keys:["notStarted","noOwner","noEvidence"],short:"落實",title:"落實控制措施並收集證據",clause:"8.1、附錄 A",tab:"annex",done:f.applicable>0&&!f.notStarted,
       detail:f.applicable?`已實施 ${f.implemented}／${f.applicable} 項`:"尚無適用的控制措施"},
     {n:7,keys:["clauses"],short:"稽核",title:"完成管理系統條款、內部稽核與管理審查",clause:"4–10、9.2、9.3",tab:"clauses",done:f.clausesDone===f.clausesTotal,
       detail:`條款已完成 ${f.clausesDone}／${f.clausesTotal} 項｜內部稽核${f.auditDone?"已完成":"未完成"}｜管理審查${f.reviewDone?"已完成":"未完成"}`},
-    {n:8,keys:["actOverdue","actVerify"],short:"改善",title:"改善事項結案",clause:"10.1、10.2",tab:"improve",done:f.auditDone&&!f.actOpen,
+    {n:8,keys:["actOverdue","actVerify","actOnNA"],short:"改善",title:"改善事項結案",clause:"10.1、10.2",tab:"improve",done:f.auditDone&&!f.actOpen,
       detail:f.actOpen?`${f.actOpen} 項未結案${f.actOverdue?`、${f.actOverdue} 項逾期`:""}`:(f.auditDone?"所有改善事項已結案":"內部稽核後登錄發現事項")}
   ];
   const cur=steps.find(s=>!s.done);if(cur)cur.current=true;

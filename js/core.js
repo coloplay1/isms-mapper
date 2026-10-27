@@ -99,7 +99,8 @@ function sanitizeProject(raw){
   p.criteria=sanitizeCriteria(raw.criteria)||legacyCriteria(raw);
   const sc=sanitizeScale(raw.scale);if(sc)p.scale=sc;
   // 準則是否經使用者確認（新專案帶入的預設值不算）；舊版專案與 Excel 匯入有準則或風險時視為已確認
-  p.identOk=raw.identOk===true;   /* 風險識別完整性由使用者確認，工具無法判斷清單是否涵蓋整個範圍 */
+  p.identOk=raw.identOk===true;
+  p.archived=raw.archived===true;   // 封存（唯讀）：保留當年度的完整狀態   /* 風險識別完整性由使用者確認，工具無法判斷清單是否涵蓋整個範圍 */
   p.criteriaOk=typeof raw.criteriaOk==="boolean"?raw.criteriaOk:!!(sanitizeCriteria(raw.criteria)||(Array.isArray(raw.risks)&&raw.risks.length));
   p.doc=sanitizeDoc(raw.doc);
   p.period=str(raw.period,20);

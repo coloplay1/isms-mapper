@@ -129,3 +129,23 @@ test('比較 Excel：六個工作表，表頭含比較期間與文件管制列',
   assert.match(txt('處理計畫追蹤'), /逾期未完成/);
   for (const s of wb) for (const row of s.data) assert.ok(Array.isArray(row));
 });
+
+test('封存旗標：只接受 true，建立新年度後的新專案不會是封存狀態', () => {
+  assert.equal(A.sanitizeProject({ controls: {}, archived: 'yes' }).archived, false);
+  assert.equal(A.sanitizeProject({ controls: {}, archived: true }).archived, true);
+  const prev = A.sanitizeProject({ ...lastYear(), archived: true });
+  assert.equal(A.rolloverProject(prev, { prevLabel: '2025 年度' }).project.archived, false);
+});
+
+test('完整專案經過匯出與匯入：資料、關聯、快照與年度比較結果都一致', () => {
+  const now = A.rolloverProject(lastYear(), { prevLabel: '2025 年度' }).project;
+  now.risks[0].l = 2; now.risks.push({ ...A.blankRisk('R-004'), title: '新系統上線', owner: '乙', l: 3, i: 3, treat: 'mitigate', controls: ['A.8.8'] });
+  now.controls['A.7.4'] = { app: 'Y', status: 1, owner: '', evidence: '', reason: '新增廠區' };
+  now.actions = [{ ...A.blankAction('I-001'), title: '補備份還原測試', refs: ['A.8.8'], owner: '甲', due: '2026-03-31', status: '處理中' }];
+  const back = A.sanitizeProject(JSON.parse(JSON.stringify(now)));
+  for (const k of ['controls', 'clauses', 'risks', 'actions', 'criteria', 'doc', 'baseline']) assert.deepEqual(back[k], now[k], k);
+  assert.deepEqual(A.risksByControl(back), A.risksByControl(now), '風險與控制措施的關聯');
+  assert.deepEqual(A.riskChecks(back), A.riskChecks(now), '連動檢查');
+  const cmp = p => A.compareProjects(p.baseline, p);
+  assert.deepEqual(JSON.parse(JSON.stringify(cmp(back))), JSON.parse(JSON.stringify(cmp(now))), '與去年比較');
+});
