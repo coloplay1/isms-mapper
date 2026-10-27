@@ -415,6 +415,8 @@ function render(){
 function renderProjSel(){
   const sel=$("#projSel");
   const mine=Object.values(S.projects).sort((a,b)=>b.updated-a.updated);
+  // 第一次來（沒有自己的專案、也沒在預覽範例）時不顯示專案選單，避免一進來就看到「尚未開啟專案」
+  const show=mine.length>0||!!cur();sel.hidden=!show;const lb=document.querySelector('label[for="projSel"]');if(lb)lb.hidden=!show;
   sel.innerHTML=(cur()?"":`<option value="" selected>尚未開啟專案</option>`)+
     (mine.length?`<optgroup label="我的專案">${mine.map(p=>`<option value="${p.id}" ${p.id===S.activeId?"selected":""}>${esc(p.name)}</option>`).join("")}</optgroup>`:"")+
     `<optgroup label="範例：${esc(INDUSTRY_MAP[sampleInd].label)}（不會儲存）">${[...samplesOf(sampleInd),...SAMPLE_DEFS.filter(d=>d.id===S.activeId&&d.ind!==sampleInd)].map(d=>`<option value="${d.id}" ${d.id===S.activeId?"selected":""}>${esc(d.stage)}：${esc(d.name)}</option>`).join("")}</optgroup>`;
