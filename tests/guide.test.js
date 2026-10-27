@@ -97,7 +97,7 @@ test('風險管理流程：各步驟的進度與卡住的風險', () => {
   assert.equal(st.ctx.done, true);
   assert.deepEqual(st.ident.pending, ['R-002']);
   assert.deepEqual(st.anal.pending, ['R-001']);
-  assert.equal(st.eval.value, '須處理 1・需核准 1・可接受 1');
+  assert.equal(st.eval.value, '須處理 1・需核准 1・可接受 1・未評分 1');
   assert.deepEqual(st.treat.pending, ['R-002']);
   assert.deepEqual(st.accept.pending, ['R-004'], '殘餘 6 分屬需核准');
   assert.deepEqual(st.monitor.pending, ['R-004']);
@@ -129,4 +129,15 @@ test('風險識別要使用者確認涵蓋範圍才算完成；建立新年度�
   assert.equal(A.sanitizeProject({ controls: {}, identOk: 'yes' }).identOk, false);
   assert.equal(A.sanitizeProject({ controls: {}, identOk: true }).identOk, true);
   assert.equal(A.rolloverProject(A.sanitizeProject(ok), { now: NOW }).project.identOk, false);
+});
+
+test('風險流程依序完成：前一步未完成時後面不打勾', () => {
+  const p = { ...A.blankProject('X', ''), scope: '總部', criteriaOk: true, identOk: true, criteria: A.presetCriteria('four'),
+    risks: [{ ...A.blankRisk('R-001'), title: 't', owner: '甲', l: 1, i: 2, treat: 'accept' }, { ...A.blankRisk('R-002'), title: 'u', owner: '乙' }] };
+  const st = Object.fromEntries(A.riskStages(p, NOW).map(s => [s.id, s]));
+  assert.equal(st.anal.done, false);
+  for (const id of ['eval', 'treat', 'accept']) { assert.equal(st[id].done, false, id); assert.equal(st[id].wait, true, id); }
+  assert.equal(st.monitor.done, false);
+  assert.match(st.eval.value, /未評分 1/);
+  assert.equal(st.anal.next, true);
 });

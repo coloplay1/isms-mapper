@@ -113,7 +113,7 @@ function riskStages(p,now){
       pending:ids(r=>!String(r.owner||"").trim()),note:"未指定擁有者"},
     {id:"anal",name:"風險分析",en:"Analysis",clause:"6.1.2 d",done:risks.length>0&&scored.length===risks.length,value:`已評分 ${scored.length}／${risks.length}`,
       pending:ids(r=>!inherentScore(r)),note:"未評可能性與衝擊"},
-    {id:"eval",name:"風險評估",en:"Evaluation",clause:"6.1.2 e",done:scored.length>0,value:`須處理 ${n("treat")}・需核准 ${n("approve")}・可接受 ${n("accept")}`,
+    {id:"eval",name:"風險評估",en:"Evaluation",clause:"6.1.2 e",done:scored.length>0,value:`須處理 ${n("treat")}・需核准 ${n("approve")}・可接受 ${n("accept")}${scored.length<risks.length?`・未評分 ${risks.length-scored.length}`:""}`,
       pending:need.map(r=>r.id),note:"高於可接受水準",info:true},
     {id:"treat",name:"風險處理",en:"Treatment",clause:"6.1.3",done:scored.length>0&&!treatPend.length,
       value:`已決定 ${scored.filter(r=>r.treat).length}／${scored.length}${treatPend.length?`・待確認 ${treatPend.length}`:""}`,pending:treatPend,note:"處理方式或控制措施待確認"},
@@ -131,6 +131,10 @@ function riskStages(p,now){
   const idle=(id,msg)=>{const x=st.find(y=>y.id===id);x.idle=true;x.value=msg};
   if(!risks.length){idle("anal","新增風險後開始");idle("eval","新增風險後開始");idle("treat","新增風險後開始");idle("accept","新增風險後開始");idle("monitor","新增風險後開始")}
   else if(!scored.length){idle("eval","評分後開始");idle("treat","評分後開始");idle("accept","評分後開始")}
+  /* 步驟依序完成：前一步還沒完成時，後面的步驟不打勾（例如還有風險沒評分，就不能說評估、處理已完成） */
+  let prevDone=true;
+  for(const x of st.filter(y=>!y.side)){if(!prevDone&&x.done){x.done=false;x.wait=true}prevDone=x.done}
+  const mon=st.find(y=>y.id==="monitor");if(!prevDone)mon.done=false;
   const nx=st.find(x=>!x.side&&!x.done);if(nx)nx.next=true;
   return st;
 }

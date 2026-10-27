@@ -1408,8 +1408,9 @@ function rfInfoHTML(x){
   return `<div class="rfinfo"><div class="rfih"><b>${esc(x.name)}</b><span class="mono rcl">${esc(x.clause)}</span>
       <span class="rstate ${x.done?"ok":n&&!x.info?"warn":""}">${x.neutral?"說明":x.done?"✓ 已完成":n?`${n} 項${esc(x.note)}`:"尚未完成"}</span><button class="chip rfclose" style="margin-left:auto">收合</button></div>
     <p>${esc(info.what)}</p>
+    ${x.wait?`<p class="note" style="margin:-4px 0 8px">前面的步驟還沒完成（例如還有風險未評分，或風險識別尚未確認），完成後這一步才會打勾。</p>`:""}
     ${x.id==="ident"?identCoverageHTML(cur()):""}
-    <div class="rfiact">${n?`<span class="note">下方清單已篩選出這 ${n} 項。</span>`:x.neutral||x.id==="record"?"":`<span class="note">這一步目前沒有待處理的風險。</span>`}${info.acts.map(btn).join("")}</div></div>`;
+    <div class="rfiact">${n?`<span class="note">下方清單已篩選出這 ${n} 項。</span>`:x.neutral||x.wait||x.id==="record"?"":`<span class="note">這一步目前沒有待處理的風險。</span>`}${info.acts.map(btn).join("")}</div></div>`;
 }
 function riskFlowHTML(p){
   const st=riskStages(p),g=id=>st.find(x=>x.id===id);
