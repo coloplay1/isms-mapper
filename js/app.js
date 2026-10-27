@@ -653,7 +653,7 @@ function renderOverview(){
     const list=ANNEX.filter(x=>x.theme===t.id);
     return `<div class="heat-row"><div class="lab"><span>A.${t.id}　${t.name}（${list.length} 項）</span></div><div class="cells">${
       list.map(x=>{const v=ctl(x.code);const k=v.app==="N"?"na":v.app===""?"undec":"";
-        return `<button class="cell ${k} ${x.isNew?"new":""} ${FM[x.code]?"focus":""} ${v.app==="Y"&&v.status===3?"lvl3":""}" style="background:${v.app==="Y"?lvlColor(v.status):""}" data-open="${x.code}" data-tip="${x.code} ${esc(x.name)}｜${v.app==="N"?"不適用":v.app===""?"未決定":STATUS[v.status].label}${FM[x.code]?"｜建議重點":""}" aria-label="${x.code} ${esc(x.name)}">${x.code.split(".")[2]}</button>`}).join("")}</div></div>`}).join("");
+        return `<button class="cell ${k} ${x.isNew?"new":""} ${FM[x.code]?"focus":""} ${v.app==="Y"&&v.status===3?"lvl3":""} ${v.app==="Y"?"st"+v.status:""}" style="background:${v.app==="Y"?lvlColor(v.status):""}" data-open="${x.code}" data-tip="${x.code} ${esc(x.name)}｜${v.app==="N"?"不適用":v.app===""?"未決定":STATUS[v.status].label}${FM[x.code]?"｜建議重點":""}" aria-label="${x.code} ${esc(x.name)}">${x.code.split(".")[2]}</button>`}).join("")}</div></div>`}).join("");
   const todo=ANNEX.filter(x=>{const v=ctl(x.code);return v.app===""||(v.app==="Y"&&v.status===0)}).slice(0,8);
   const noReason=ANNEX.filter(x=>missingReason(ctl(x.code))).length;
   const riskIssues=riskChecks(p).filter(c=>c.sev!=="info").length;

@@ -8,7 +8,7 @@ img{max-width:100%}
 :root{
   --focus:#6a4fc9; --focus-soft:#ece8fa;
   --bg:#eef2f1; --surface:#ffffff; --surface2:#f6f8f8; --ink:#16232a; --muted:#5a6b72; --line:#d6dedd;
-  --accent:#0e5a6b; --accent-ink:#ffffff; --accent-soft:#dcebee; --seal:#b0442c;
+  --accent:#0e5a6b; --accent-ink:#ffffff; --on-fill:#ffffff; --accent-soft:#dcebee; --seal:#b0442c;
   --s0:#e4e9e9; --s1:#efc56d; --s2:#62aaa3; --s3:#1c6e61; --na:#c9cfd0;
   --font-display:"Noto Serif TC","Noto Serif CJK TC","Songti TC","PMingLiU",serif;
   --font-body:"PingFang TC","Microsoft JhengHei","Noto Sans TC","Noto Sans CJK TC",system-ui,sans-serif;
@@ -16,11 +16,11 @@ img{max-width:100%}
   --r:8px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0f171a; --surface:#16211f; --surface2:#1b2826; --ink:#e3ecea; --muted:#94a6a8; --line:#4a5e5e;
+  --bg:#0f171a; --surface:#16211f; --surface2:#1b2826; --ink:#e3ecea; --muted:#a9b9bb; --on-fill:#08130f; --line:#4a5e5e;
   --accent:#5cb7c6; --accent-ink:#06191d; --accent-soft:#16343a; --seal:#e07a5f;
   --s0:#26332f; --s1:#b88a2c; --s2:#3f8f88; --s3:#62c3ad; --na:#3a4545; --focus:#b4a3ff; --focus-soft:#2a2547; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0f171a; --surface:#16211f; --surface2:#1b2826; --ink:#e3ecea; --muted:#94a6a8; --line:#4a5e5e;
+  --bg:#0f171a; --surface:#16211f; --surface2:#1b2826; --ink:#e3ecea; --muted:#a9b9bb; --on-fill:#08130f; --line:#4a5e5e;
   --accent:#5cb7c6; --accent-ink:#06191d; --accent-soft:#16343a; --seal:#e07a5f;
   --s0:#26332f; --s1:#b88a2c; --s2:#3f8f88; --s3:#62c3ad; --na:#3a4545; --focus:#b4a3ff; --focus-soft:#2a2547; color-scheme:dark}
 *{box-sizing:border-box}
@@ -60,7 +60,7 @@ select:focus,input:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .cells{display:flex;flex-wrap:wrap;gap:4px}
 .cell{width:34px;height:30px;border-radius:4px;border:0;cursor:pointer;font-family:var(--font-mono);font-size:10px;color:var(--ink);display:grid;place-items:center;position:relative;padding:0}
 .cell.new::after{content:"";position:absolute;top:3px;right:3px;width:5px;height:5px;border-radius:50%;background:var(--seal)}
-.cell.lvl3{color:#fff}
+.cell.lvl3{color:var(--on-fill)}
 .na{background:repeating-linear-gradient(135deg,var(--na) 0 3px,transparent 3px 6px)!important;opacity:.7}
 .undec{background:transparent!important;outline:1px dashed var(--line)}
 .pdca{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
@@ -465,7 +465,7 @@ table.cmptable.sum th{white-space:nowrap}
 .nextlist .nnum{width:28px;height:28px;border-radius:50%;border:2px solid var(--accent);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
 .nextlist li.first .nnum{background:var(--accent);color:var(--accent-ink)}
 .nextlist li.err .nnum{border-color:var(--seal);color:var(--seal)}
-.nextlist li.first.err .nnum{background:var(--seal);color:#fff}
+.nextlist li.first.err .nnum{background:var(--seal);color:var(--on-fill)}
 .nextlist .ntext{flex:1 1 320px;display:grid;line-height:1.5}
 .nextlist .ntext span{font-size:13px;color:var(--muted)}
 /* 導入進度：步驟圖示 */
@@ -476,7 +476,7 @@ table.cmptable.sum th{white-space:nowrap}
 .stepper li.done::before,.stepper li.current::before{background:var(--s3)}
 .stepper button{position:relative;z-index:1;display:grid;justify-items:center;gap:4px;background:none;border:0;padding:0 2px 4px;cursor:pointer;font:inherit;color:var(--muted);min-width:44px}
 .stepper .sdot{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:15px;background:var(--surface);border:2px solid var(--muted);color:var(--muted)}
-.stepper li.done .sdot{background:var(--s3);border-color:var(--s3);color:#fff}
+.stepper li.done .sdot{background:var(--s3);border-color:var(--s3);color:var(--on-fill)}
 .stepper li.current .sdot{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .stepper li.sel .sdot{box-shadow:0 0 0 4px var(--accent-soft)}
 .stepper li.sel .slab{color:var(--ink);font-weight:700}
@@ -588,3 +588,6 @@ footer a{margin-left:8px;color:var(--accent)}
 @media (max-width:980px){.lcin{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}.lcin .lcarr{display:none}.lcbox{min-width:0}.lcsrc{grid-column:1/-1}}
 .brand .tagline{font-family:var(--font-body);font-size:12px;color:var(--muted);letter-spacing:0;margin-left:6px;padding-left:10px;border-left:1px solid var(--line);white-space:nowrap}
 @media (max-width:1000px){.brand .tagline{display:none}}
+/* 深色模式：亮色底的熱圖方格改用深色字 */
+:root[data-theme="dark"] .cell.st1,:root[data-theme="dark"] .cell.st2{color:var(--on-fill)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .cell.st1,:root:not([data-theme="light"]) .cell.st2{color:var(--on-fill)}}
