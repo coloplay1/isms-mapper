@@ -68,3 +68,10 @@ test('理由以全形或半形分號分隔', () => {
   assert.deepEqual(A.splitReasons('法律要求；契約要求;  ；'), ['法律要求', '契約要求']);
   assert.deepEqual(A.splitReasons(undefined), []);
 });
+
+test('勾選上市櫃特性會帶出管控指引與建議重點', () => {
+  const p = { industry: '', features: ['listed'] };
+  assert.ok(A.lawsFor(p).some(l => l.name === '上市上櫃公司資通安全管控指引'));
+  assert.ok(A.baseFocus(p)['A.5.24'].includes('listed'));
+  assert.ok(!A.lawsFor({ industry: '', features: [] }).some(l => l.name.includes('管控指引')));
+});

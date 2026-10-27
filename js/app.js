@@ -101,6 +101,7 @@ const SAMPLE_RISK_POOLS={
   remote:[["在家遠距工作","遠端存取環境","C"],["遠端桌面直接開放到網際網路","對外伺服器","CIA"]],
   vendor:[["委外廠商遠端維護系統","委外維護的系統","CIA"],["定期評估供應商資安","主要供應商","CIA"]],
   ci:[["發生資安事件要通報","資安事件通報作業","I"],["法規遵循（資通安全管理法、個資法）","法規遵循","I"]],
+  listed:[["發生資安事件要通報","重大資安事件與重大訊息","I"],["員工點擊釣魚郵件","全體員工信箱","CI"]],
   health:[["客戶個資外洩","病歷與病患資料","C"]],
   finance:[["假冒主管或廠商要求變更匯款帳戶","付款作業","I"],["帳號遭暴力破解攻擊","客戶線上帳戶","C"]],
   ot:[["駭客入侵內網並橫向移動","產線與 OT 網路","IA"],["設備送修或廠商到場維修","產線設備","C"]],
@@ -579,7 +580,7 @@ function focusPanel(p){
   const pending=list.filter(c=>{const v=ctl(c.code);return v.app===""||(v.app==="Y"&&v.status<2)});
   const laws=lawsFor(p);
   return `<div class="panel fpanel">
-    <div class="secthead"><h3>產業建議重點</h3><span class="note">${esc(ind?ind.label:"")}${ind&&ind.id?"・":""}${fs.map(f=>esc(FEATURE_MAP[f].label)).join("、")}</span><button class="btn" data-goto="projects" style="margin-left:auto">調整</button></div>
+    <div class="secthead"><h3>產業建議重點</h3><span class="note">${ind&&ind.id?esc(ind.label)+"・":""}${fs.map(f=>esc(FEATURE_MAP[f].label)).join("、")}</span><button class="btn" data-goto="projects" style="margin-left:auto">調整</button></div>
     <div class="fgrid">
       <div>
         ${nOn||nOff?`<div class="note" style="margin:0 0 10px;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center">已自行調整：加入 ${nOn} 項、取消 ${nOff} 項<button class="chip" data-freset>恢復預設建議</button></div>`:""}
