@@ -824,7 +824,7 @@ function renderAnnexRows(){
   $("#annexCount").textContent=`顯示 ${list.length} / 93 項`;
 }
 /* 理由欄自動換行並依內容調整高度，長理由不會被截斷 */
-function fitReason(el){el.style.height="auto";el.style.height=el.scrollHeight+2+"px"}
+function fitReason(el){el.style.height="auto";const h=el.scrollHeight+2,max=98;el.style.height=Math.min(h,max)+"px";el.style.overflowY=h>max?"auto":"hidden";if(el===pickFor)placePicker()}   /* 最多約 4 行，再多就在欄內捲動，避免版面被撐開 */
 document.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.defaultPrevented&&e.target.matches&&e.target.matches("textarea[data-reason]"))e.preventDefault()});
 window.addEventListener("resize",()=>{if(tab==="annex")document.querySelectorAll("#annexBody textarea[data-reason]").forEach(fitReason)});
 function onAnnexEdit(e){
@@ -1202,7 +1202,7 @@ function showPicker(el,filterText){
   if(pickIdx<0||pickIdx>=pickItems.length||pickItems[pickIdx].head)pickIdx=pickItems.findIndex(i=>i.on);
   picker.innerHTML=pickItems.length?pickItems.map((it,i)=>it.head?`<div class="oh">${esc(it.head)}</div>`:
     `<div class="oi ${it.on?"on":""} ${it.clear?"clr":""} ${it.add||it.save?"add":""} ${i===pickIdx?"hl":""}" role="option" aria-selected="${!!it.on}" data-i="${i}">
-      <span class="ck">${pickKind==="reason"&&!it.clear&&!it.save?(it.on?"☑":"☐"):(it.on?"✓":"")}</span><span class="ol">${esc(it.label)}</span>${it.custom?`<button class="odel" data-odel="${esc(it.v)}" aria-label="從常用理由移除" title="從常用理由移除">×</button>`:""}</div>`).join("")
+      <span class="pck">${pickKind==="reason"&&!it.clear&&!it.save?(it.on?"☑":"☐"):(it.on?"✓":"")}</span><span class="ol">${esc(it.label)}</span>${it.custom?`<button class="odel" data-odel="${esc(it.v)}" aria-label="從常用理由移除" title="從常用理由移除">×</button>`:""}</div>`).join("")
     :`<div class="oempty">${pickKind==="owner"?"名單是空的，直接輸入名字即可新增":"沒有符合的理由，直接輸入即可"}</div>`;
   if(pickKind==="reason")picker.insertAdjacentHTML("afterbegin",`<div class="ohint">可複選，選取的理由會以「；」分隔</div>`);
   picker.hidden=false;placePicker();
