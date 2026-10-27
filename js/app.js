@@ -140,7 +140,7 @@ function buildSample(d){
     p.controls[c.code]={app:"Y",status:st<0?3:st,owner:st>=d.ownerFrom?ow:"",evidence:st>=2?c.ev.split("、")[0]:"",reason:REASONS_IN[0]};
   });
   CLAUSES.forEach((c,i)=>{const st=d.cl(i);p.clauses[c.code]={status:st,owner:st?"資安小組":"",evidence:st>=2?c.ev:""}});
-  p.criteria=presetCriteria(d.criteria||"four");p.criteriaOk=true;p.doc=sanitizeDoc(d.doc);
+  p.criteria=presetCriteria(d.criteria||"four");p.criteriaOk=true;p.identOk=true;p.doc=sanitizeDoc(d.doc);
   p.risks=(d.risks||[]).map(([ci,asset,cia,ow,l,i,treat,rl,ri,accepted,plan],k)=>{const c=CASES[ci];
     return {...blankRisk("R-"+String(k+1).padStart(3,"0")),title:c.t,threat:c.s,asset,cia,owner:ow>=0?d.owners[ow]:"",l,i,treat,rl,ri,accepted,plan,
       controls:treat==="mitigate"?c.r.filter(x=>ANNEX_MAP[x]&&!na.has(x)):[]}});
@@ -602,6 +602,7 @@ function focusPanel(p){
 document.addEventListener("click",e=>{const g=e.target.closest("[data-goto]");if(!g)return;
   if(g.dataset.focusfilter){filt.status="focus";filt.theme="all";delete $("#view-annex").dataset.built}
   if(g.dataset.gofilter){filt.status=g.dataset.gofilter;filt.theme="all";filt.q="";delete $("#view-annex").dataset.built}
+  if(g.dataset.openx==="ident")riskView.stage="ident";
   tab=g.dataset.goto;render();window.scrollTo(0,0);
   if(g.dataset.anchor){const a=document.getElementById(g.dataset.anchor);if(a)a.scrollIntoView({block:"start"})}
   if(g.dataset.openx==="criteria")openCriteriaDrawer()});
@@ -1365,6 +1366,21 @@ const RF_INFO={
   record:{what:"保存風險評鑑與處理的文件化資訊（6.1.2、6.1.3、8.2、8.3），並向管理階層報告。匯出的 SoA Excel 含風險登錄表、風險評鑑準則與連動檢查，文件狀態改為「已核准」後即可作為紀錄。",acts:[["xls","匯出 SoA Excel"],["goto:projects","文件管制資訊"]]},
   monitor:{what:"定期與重大變更時重新評估，追蹤處理計畫是否如期完成。每年可在專案管理建立新年度。",acts:[["goto:projects","前往年度循環"]]}
 };
+/* 風險識別的涵蓋情形：只提供線索，是否完整由使用者確認 */
+function identCoverageHTML(p){
+  const rs=(p&&p.risks)||[];if(!rs.length)return "";
+  const cia=[["C","機密性"],["I","完整性"],["A","可用性"]].map(([k,t])=>[t,rs.some(r=>String(r.cia||"").includes(k))]);
+  const assets=new Set(rs.map(r=>String(r.asset||"").trim()).filter(Boolean)).size;
+  const miss=projFeatures(p).filter(fid=>{const f=FEATURE_MAP[fid];if(!f||!f.codes)return false;const pool=(SAMPLE_RISK_POOLS[fid]||[]).map(x=>x[0]);
+    return !rs.some(r=>pool.includes(r.title)||(r.controls||[]).some(c=>f.codes.includes(c)))});
+  return `<div class="idcov"><b>涵蓋情形</b>
+    <span>${rs.length} 項風險・${assets} 種資產</span>
+    <span>${cia.map(([t,ok])=>`<span class="${ok?"ok":"miss"}">${ok?"✓":"✗"} ${t}</span>`).join(" ")}</span>
+    ${miss.length?`<span class="miss">尚未看到對應風險的業務特性：${miss.map(f=>esc(FEATURE_MAP[f].label)).join("、")}</span>`:""}
+    <p class="note">稽核會確認風險清單涵蓋驗證範圍內的主要資產與流程，實務上通常有數十項，只有幾項很難說明已完整識別。確認範圍內的人員、資訊、系統、實體環境與委外廠商都檢視過後再按確認。</p>
+    <div><button class="btn ${p.identOk?"":"primary"}" data-rfact="identok">${p.identOk?"取消確認":"確認風險識別完成"}</button>${p.identOk?` <span class="rstate ok">已確認涵蓋範圍</span>`:""}</div>
+  </div>`;
+}
 function rfInfoHTML(x){
   if(!x)return "";
   const info=RF_INFO[x.id]||{what:"",acts:[]},n=x.pending.length;
@@ -1372,6 +1388,7 @@ function rfInfoHTML(x){
   return `<div class="rfinfo"><div class="rfih"><b>${esc(x.name)}</b><span class="mono rcl">${esc(x.clause)}</span>
       <span class="rstate ${x.done?"ok":n&&!x.info?"warn":""}">${x.neutral?"說明":x.done?"✓ 已完成":n?`${n} 項${esc(x.note)}`:"尚未完成"}</span><button class="chip rfclose" style="margin-left:auto">收合</button></div>
     <p>${esc(info.what)}</p>
+    ${x.id==="ident"?identCoverageHTML(cur()):""}
     <div class="rfiact">${n?`<span class="note">下方清單已篩選出這 ${n} 項。</span>`:x.neutral||x.id==="record"?"":`<span class="note">這一步目前沒有待處理的風險。</span>`}${info.acts.map(btn).join("")}</div></div>`;
 }
 function riskFlowHTML(p){
@@ -1551,7 +1568,7 @@ function renderRisks(){
   on("ckApplyAll",applyAllRiskToSoA);
   on("mxClear",()=>{riskView.cell=null;renderRisks()});
   $("#view-risks").querySelectorAll("#rsClear,.rfclose").forEach(b=>b.addEventListener("click",()=>{riskView.stage=null;renderRisks()}));
-  $("#view-risks").querySelectorAll("[data-rfact]").forEach(b=>b.addEventListener("click",()=>{const a=b.dataset.rfact;if(a==="new")openRiskPicker();else if(a==="xls")exportExcel();else openCriteriaDrawer()}));
+  $("#view-risks").querySelectorAll("[data-rfact]").forEach(b=>b.addEventListener("click",()=>{const a=b.dataset.rfact;if(a==="identok"){const p=cur();p.identOk=!p.identOk;touchRisk();const y=window.scrollY;renderRisks();window.scrollTo(0,y);toast(p.identOk?"已確認風險識別完成":"已取消確認");return}if(a==="new")openRiskPicker();else if(a==="xls")exportExcel();else openCriteriaDrawer()}));
   $("#view-risks").querySelectorAll("[data-rstage]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.rstage,y=window.scrollY;riskView.stage=riskView.stage===id?null:id;riskView.cell=null;renderRisks();
     // 不捲動頁面：說明框就在流程圖下方，清單的篩選結果往下看即可
     window.scrollTo(0,y);const nb=document.querySelector(`[data-rstage="${id}"]`);if(nb)nb.focus({preventScroll:true})}));
