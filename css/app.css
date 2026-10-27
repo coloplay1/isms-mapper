@@ -616,3 +616,4 @@ footer a{margin-left:8px;color:var(--accent)}
 .pickpanel{border:1px solid var(--accent);border-radius:0 0 10px 10px;padding:18px;background:var(--surface2)}
 .pickpanel a{color:var(--accent)}
 @media (max-width:760px){.pick3{grid-template-columns:minmax(0,1fr);gap:8px}.pick3 button{border-bottom:1px solid var(--line);border-radius:10px}.pick3 button.on{border-color:var(--accent)}.pickpanel{border-radius:10px;margin-top:8px}}
+.ghsep{margin:0 12px;color:var(--line)}@media (max-width:600px){.guidehint>span:not(.ghsep){display:block;margin-top:4px}.ghsep{display:none}}

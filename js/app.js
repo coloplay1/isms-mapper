@@ -451,7 +451,7 @@ function renderHome(){
   const start=(id,icon,t,d,extra="")=>`<div class="start" ${id?`id="${id}"`:""}><span class="sicon" aria-hidden="true">${icon}</span><div><h3>${t}</h3><p>${d}</p>${extra}</div></div>`;
   // 首頁三選一：先看範例／建立專案／匯入既有資料；沒有專案時預設看範例
   const pick=homePick||(mine.length?"create":"look");
-  const PICKS=[["look","▶","先看看能做什麼","選產業，打開範例公司看完整導入的樣子"],["create","＋","開始導入我們公司","建立專案，照「下一步建議」逐步完成"],["import","⇪","我已經有 SoA 或風險表","匯入 Excel 或專案檔，自動檢查缺漏"]];
+  const PICKS=[["look","▶","先看範例公司怎麼做","選產業，看虛構公司從導入初期到驗證前的樣子"],["create","＋","開始導入我們公司","建立專案，照「下一步建議」逐步完成"],["import","⇪","我已經有 SoA 或風險表","匯入 Excel 或專案檔，自動檢查缺漏"]];
   $("#view-home").innerHTML=`<div class="home2">
     ${mine.length?`<section><div class="secthead"><h3>我的專案</h3><span class="note">${mine.length} 個，依最近修改排序</span></div>${projRows(mine,"home")}</section>`:""}
     <section class="intro">
@@ -494,7 +494,7 @@ function renderHome(){
         <p class="note" style="margin:12px 0 0">還沒有自己的格式？可下載<a href="${TPL_BASE}isms-soa-risk-template.xlsx" download>空白範本</a>或<a href="${TPL_BASE}isms-soa-risk-example.xlsx" download>填寫範例</a>，填好後再匯入。</p>
       </div>
       </div>
-      <p class="guidehint" style="margin:10px 0 0">不確定怎麼用？<a href="${GUIDE_URL}" target="_blank" rel="noopener">看使用指南（PDF，15 頁）</a>・<a href="#" data-goto="docs">下載 ${nDocs} 份文件範本</a></p>
+      <p class="guidehint" style="margin:10px 0 0"><span>不確定怎麼用？<a href="${GUIDE_URL}" target="_blank" rel="noopener">看使用指南（PDF，15 頁）</a></span><span class="ghsep" aria-hidden="true">｜</span><span>只需要文件？<a href="#" data-goto="docs">下載 ${nDocs} 份文件範本</a>直接編輯</span></p>
     </section>
   </div>`;
   const v=$("#view-home");
