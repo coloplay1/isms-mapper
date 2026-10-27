@@ -1616,6 +1616,7 @@ function openRiskDrawer(id){
   host.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${esc(r.id)} 風險">
     <button class="btn x" data-close>關閉</button>
     <div class="code">${r.id}　風險登錄</div>
+    <div id="rCkTop"></div>
     <h3 class="rstep"><span>1</span>識別</h3>
     <dl>
       <div><dt>風險描述</dt><dd><input id="rTitle" value="${esc(r.title)}" placeholder="例如：離職員工帳號未停用，資料遭不當存取"><div class="saved" style="margin-top:4px;white-space:normal">寫成「可能發生」的事件；已發生的事件請登錄在改善追蹤，並作為評估可能性的依據。</div></dd></div>
@@ -1665,10 +1666,12 @@ function openRiskDrawer(id){
     $("#rApprText").textContent=r.treat==="accept"?"風險擁有者已核准接受此風險":"風險擁有者已核准處理計畫與殘餘風險";
     $("#rTreatHint").textContent=!s?"":r.treat?"":`目前 ${s} 分屬「${riskLevel(s,cur()).label}」：${pl(s)}`;
     const cks=riskChecks(cur()).filter(c=>c.rid===r.id);
-    const und=cks.filter(c=>c.kind==="undecided").length;
+    const und=cks.filter(c=>c.kind==="undecided").length,nw=cks.filter(c=>c.sev!=="info").length;
+    /* 背景的連動檢查會被詳細頁遮住，所以在頂端摘要這個風險的檢查結果，點一下跳到清單 */
+    $("#rCkTop").innerHTML=nw?`<button class="ckjump ${cks.some(c=>c.sev==="err")?"err":""}" data-ckjump>連動檢查：${nw} 項待確認<span aria-hidden="true">↓</span></button>`:"";
     const done=Object.keys(applied).filter(c=>ctl(c).app==="Y"&&(r.controls||[]).includes(c));
-    $("#rChecks").innerHTML=cks.length||done.length?`${und>1?`<div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn primary" data-dapplyall>全部設為適用（${und}）</button></div>`:""}
-      <ul class="cklist" style="margin-top:${und>1?8:14}px">${cks.map(c=>`<li class="ck ${c.sev}"><span class="ckmsg">${esc(c.msg.replace(r.id+(r.title?"「"+r.title+"」":""),"").trim()||c.msg)}</span><span class="ckact">${c.kind==="undecided"?`<button class="btn" data-dapply="${c.code}">設為適用</button>`:""}</span></li>`).join("")}
+    $("#rChecks").innerHTML=cks.length||done.length?`<h3 class="ckh">連動檢查</h3>${und>1?`<div style="display:flex;justify-content:flex-end;margin-top:6px"><button class="btn primary" data-dapplyall>全部設為適用（${und}）</button></div>`:""}
+      <ul class="cklist" style="margin-top:${und>1?8:6}px">${cks.map(c=>`<li class="ck ${c.sev}"><span class="ckmsg">${esc(c.msg.replace(r.id+(r.title?"「"+r.title+"」":""),"").trim()||c.msg)}</span><span class="ckact">${c.kind==="undecided"?`<button class="btn" data-dapply="${c.code}">設為適用</button>`:""}</span></li>`).join("")}
       ${done.map(c=>`<li class="ck ok"><span class="ckmsg">✓ ${c} ${esc(ANNEX_MAP[c].name)} 已設為適用</span><span class="ckact"><button class="btn" data-dundo="${c}">復原</button></span></li>`).join("")}</ul>`:"";
   };
   const renderCtl=(q="")=>{
@@ -1707,6 +1710,7 @@ function openRiskDrawer(id){
   const applyOne=code=>{const v=ctl(code);if(v.app!=="")return false;applied[code]=v.reason;setField(code,"app","Y",{silent:true});
     if(!splitReasons(v.reason).includes(RISK_REASON))setField(code,"reason",[...splitReasons(v.reason),RISK_REASON].join(SEP),{silent:true});return true};
   const afterApply=()=>{renderCtl($("#rcQ")?$("#rcQ").value:"");refresh();if(tab==="risks")renderRisks();else render()};
+  $("#rCkTop").addEventListener("click",e=>{if(e.target.closest("[data-ckjump]"))$("#rChecks").scrollIntoView({behavior:"smooth",block:"start"})});
   $("#rChecks").addEventListener("click",e=>{
     const one=e.target.closest("[data-dapply]"),all=e.target.closest("[data-dapplyall]"),un=e.target.closest("[data-dundo]");
     if(one){if(applyOne(one.dataset.dapply))toast(`${one.dataset.dapply} 已設為適用，理由：${RISK_REASON}`);afterApply()}
