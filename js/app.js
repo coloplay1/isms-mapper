@@ -1407,11 +1407,13 @@ function addSuggestedRisk(s){
   return newRisk({title:c.t,threat:c.s,controls:c.r.filter(x=>ANNEX_MAP[x]),asset:s.asset,cia:s.cia});
 }
 /* 建立全景：直接在這裡填驗證範圍、確認風險準則，不必切換分頁 */
+let ctxScopeEdit=false;   // 已有驗證範圍時預設只顯示文字，按「修改」才變成輸入框
 function ctxEditHTML(p){
   if(!p)return "";const scopeOk=!!String(p.scope||"").trim(),critOk=p.criteriaOk!==false;
   return `<div class="idcov ctxedit">
     <div class="ctxrow"><span class="ctxk">${scopeOk?'<span class="ok">✓</span>':'<span class="miss">✗</span>'} 驗證範圍</span>
-      <input id="rfScope" value="${esc(p.scope||"")}" placeholder="例如：台北總部資訊機房與核心系統" aria-label="驗證範圍"><button class="btn" data-rfact="scope">儲存</button></div>
+      ${scopeOk&&!ctxScopeEdit?`<span class="ctxv">${esc(p.scope)}</span><button class="btn" data-rfact="scopeedit">修改</button>`:
+      `<input id="rfScope" value="${esc(p.scope||"")}" placeholder="例如：台北總部資訊機房與核心系統" aria-label="驗證範圍"><button class="btn primary" data-rfact="scope">儲存</button>`}</div>
     <div class="ctxrow"><span class="ctxk">${critOk?'<span class="ok">✓</span>':'<span class="miss">✗</span>'} 風險準則</span>
       <span class="ctxv">${esc(criteriaText(p))}${critOk?"":`<br><span class="miss">目前是預設值，請確認符合組織可接受的風險程度</span>`}</span>
       ${critOk?"":`<button class="btn primary" data-rfact="criteria">確認準則</button>`}</div>
@@ -1623,13 +1625,15 @@ function renderRisks(){
   on("ckApplyAll",applyAllRiskToSoA);
   on("mxClear",()=>{riskView.cell=null;renderRisks()});
   $("#view-risks").querySelectorAll("#rsClear,.rfclose").forEach(b=>b.addEventListener("click",()=>{riskView.stage=null;renderRisks()}));
-  const rsc=$("#rfScope");if(rsc)rsc.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("#view-risks").querySelector('[data-rfact="scope"]').click()}});
+  const rsc=$("#rfScope");if(rsc)rsc.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("#view-risks").querySelector('[data-rfact="scope"]').click()}
+    else if(e.key==="Escape"&&ctxScopeEdit){ctxScopeEdit=false;const y=window.scrollY;renderRisks();window.scrollTo(0,y)}});
   $("#view-risks").querySelectorAll("[data-rfadd]").forEach(b=>b.addEventListener("click",()=>{
     const sug=identSuggestions(cur()),k=b.dataset.rfadd,list=k==="all"?sug:[sug[+k]].filter(Boolean);
     const added=list.map(addSuggestedRisk).filter(Boolean);if(!added.length)return;
     const y=window.scrollY;renderRisks();window.scrollTo(0,y);
     toast(added.length>1?`已加入 ${added.length} 項風險（${added[0].id}–${added[added.length-1].id}），請指定擁有者並評分`:`已加入 ${added[0].id}「${added[0].title}」，請指定擁有者並評分`)}));
-  $("#view-risks").querySelectorAll("[data-rfact]").forEach(b=>b.addEventListener("click",()=>{const a=b.dataset.rfact;if(a==="scope"){const p=cur(),v=$("#rfScope").value.trim();p.scope=v;touchRisk();const y=window.scrollY;renderRisks();window.scrollTo(0,y);toast(v?"已更新驗證範圍":"已清除驗證範圍");return}if(a==="identok"){const p=cur();p.identOk=!p.identOk;touchRisk();const y=window.scrollY;renderRisks();window.scrollTo(0,y);toast(p.identOk?"已確認風險識別完成":"已取消確認");return}if(a==="new")openRiskPicker();else if(a==="xls")exportExcel();else openCriteriaDrawer()}));
+  $("#view-risks").querySelectorAll("[data-rfact]").forEach(b=>b.addEventListener("click",()=>{const a=b.dataset.rfact;if(a==="scopeedit"){ctxScopeEdit=true;const y=window.scrollY;renderRisks();window.scrollTo(0,y);const i=$("#rfScope");if(i){i.focus({preventScroll:true});i.select()}return}
+    if(a==="scope"){const p=cur(),v=$("#rfScope").value.trim();p.scope=v;ctxScopeEdit=false;touchRisk();const y=window.scrollY;renderRisks();window.scrollTo(0,y);toast(v?"已更新驗證範圍":"已清除驗證範圍");return}if(a==="identok"){const p=cur();p.identOk=!p.identOk;touchRisk();const y=window.scrollY;renderRisks();window.scrollTo(0,y);toast(p.identOk?"已確認風險識別完成":"已取消確認");return}if(a==="new")openRiskPicker();else if(a==="xls")exportExcel();else openCriteriaDrawer()}));
   $("#view-risks").querySelectorAll("[data-rstage]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.rstage,y=window.scrollY;riskView.stage=riskView.stage===id?null:id;riskView.cell=null;renderRisks();
     // 不捲動頁面：說明框就在流程圖下方，清單的篩選結果往下看即可
     window.scrollTo(0,y);const nb=document.querySelector(`[data-rstage="${id}"]`);if(nb)nb.focus({preventScroll:true})}));
