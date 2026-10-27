@@ -1366,17 +1366,37 @@ const RF_INFO={
   record:{what:"保存風險評鑑與處理的文件化資訊（6.1.2、6.1.3、8.2、8.3），並向管理階層報告。匯出的 SoA Excel 含風險登錄表、風險評鑑準則與連動檢查，文件狀態改為「已核准」後即可作為紀錄。",acts:[["xls","匯出 SoA Excel"],["goto:projects","文件管制資訊"]]},
   monitor:{what:"定期與重大變更時重新評估，追蹤處理計畫是否如期完成。每年可在專案管理建立新年度。",acts:[["goto:projects","前往年度循環"]]}
 };
+/* 依尚未涵蓋的業務特性與 CIA 面向，從常見情境挑出可一鍵加入的風險 */
+function identSuggestions(p){
+  const rs=(p&&p.risks)||[],has=t=>rs.some(r=>r.title===t),out=[],seen=new Set();
+  const push=(x,why)=>{if(seen.has(x[0])||has(x[0])||!CASES.some(c=>c.t===x[0]))return;seen.add(x[0]);out.push({title:x[0],asset:x[1],cia:x[2],why})};
+  for(const fid of identMissFeatures(p))(SAMPLE_RISK_POOLS[fid]||[]).forEach(x=>push(x,FEATURE_MAP[fid].label));
+  for(const [k,t] of [["C","機密性"],["I","完整性"],["A","可用性"]])
+    if(!rs.some(r=>String(r.cia||"").includes(k)))SAMPLE_RISK_POOLS.base.filter(x=>x[2].includes(k)).slice(0,2).forEach(x=>push(x,t));
+  return out.slice(0,8);
+}
+function identMissFeatures(p){
+  const rs=(p&&p.risks)||[];
+  return projFeatures(p).filter(fid=>{const f=FEATURE_MAP[fid];if(!f||!f.codes)return false;const pool=(SAMPLE_RISK_POOLS[fid]||[]).map(x=>x[0]);
+    return !rs.some(r=>pool.includes(r.title)||(r.controls||[]).some(c=>f.codes.includes(c)))});
+}
+function addSuggestedRisk(s){
+  const c=CASES.find(x=>x.t===s.title);if(!c)return null;
+  return newRisk({title:c.t,threat:c.s,controls:c.r.filter(x=>ANNEX_MAP[x]),asset:s.asset,cia:s.cia});
+}
 /* 風險識別的涵蓋情形：只提供線索，是否完整由使用者確認 */
 function identCoverageHTML(p){
   const rs=(p&&p.risks)||[];if(!rs.length)return "";
   const cia=[["C","機密性"],["I","完整性"],["A","可用性"]].map(([k,t])=>[t,rs.some(r=>String(r.cia||"").includes(k))]);
   const assets=new Set(rs.map(r=>String(r.asset||"").trim()).filter(Boolean)).size;
-  const miss=projFeatures(p).filter(fid=>{const f=FEATURE_MAP[fid];if(!f||!f.codes)return false;const pool=(SAMPLE_RISK_POOLS[fid]||[]).map(x=>x[0]);
-    return !rs.some(r=>pool.includes(r.title)||(r.controls||[]).some(c=>f.codes.includes(c)))});
+  const miss=identMissFeatures(p),sug=identSuggestions(p);
   return `<div class="idcov"><b>涵蓋情形</b>
     <span>${rs.length} 項風險・${assets} 種資產</span>
     <span>${cia.map(([t,ok])=>`<span class="${ok?"ok":"miss"}">${ok?"✓":"✗"} ${t}</span>`).join(" ")}</span>
     ${miss.length?`<span class="miss">尚未看到對應風險的業務特性：${miss.map(f=>esc(FEATURE_MAP[f].label)).join("、")}</span>`:""}
+    ${sug.length?`<div class="idsug"><span class="note">建議補充（點一下加入，之後再評分與修改）：</span>
+      ${sug.map((s,i)=>`<button class="chip" data-rfadd="${i}" data-tip="${esc("對應："+s.why)}">＋ ${esc(s.title)}</button>`).join("")}
+      ${sug.length>1?`<button class="btn" data-rfadd="all">全部加入（${sug.length}）</button>`:""}</div>`:""}
     <p class="note">稽核會確認風險清單涵蓋驗證範圍內的主要資產與流程，實務上通常有數十項，只有幾項很難說明已完整識別。確認範圍內的人員、資訊、系統、實體環境與委外廠商都檢視過後再按確認。</p>
     <div><button class="btn ${p.identOk?"":"primary"}" data-rfact="identok">${p.identOk?"取消確認":"確認風險識別完成"}</button>${p.identOk?` <span class="rstate ok">已確認涵蓋範圍</span>`:""}</div>
   </div>`;
@@ -1568,6 +1588,11 @@ function renderRisks(){
   on("ckApplyAll",applyAllRiskToSoA);
   on("mxClear",()=>{riskView.cell=null;renderRisks()});
   $("#view-risks").querySelectorAll("#rsClear,.rfclose").forEach(b=>b.addEventListener("click",()=>{riskView.stage=null;renderRisks()}));
+  $("#view-risks").querySelectorAll("[data-rfadd]").forEach(b=>b.addEventListener("click",()=>{
+    const sug=identSuggestions(cur()),k=b.dataset.rfadd,list=k==="all"?sug:[sug[+k]].filter(Boolean);
+    const added=list.map(addSuggestedRisk).filter(Boolean);if(!added.length)return;
+    const y=window.scrollY;renderRisks();window.scrollTo(0,y);
+    toast(added.length>1?`已加入 ${added.length} 項風險（${added[0].id}–${added[added.length-1].id}），請指定擁有者並評分`:`已加入 ${added[0].id}「${added[0].title}」，請指定擁有者並評分`)}));
   $("#view-risks").querySelectorAll("[data-rfact]").forEach(b=>b.addEventListener("click",()=>{const a=b.dataset.rfact;if(a==="identok"){const p=cur();p.identOk=!p.identOk;touchRisk();const y=window.scrollY;renderRisks();window.scrollTo(0,y);toast(p.identOk?"已確認風險識別完成":"已取消確認");return}if(a==="new")openRiskPicker();else if(a==="xls")exportExcel();else openCriteriaDrawer()}));
   $("#view-risks").querySelectorAll("[data-rstage]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.rstage,y=window.scrollY;riskView.stage=riskView.stage===id?null:id;riskView.cell=null;renderRisks();
     // 不捲動頁面：說明框就在流程圖下方，清單的篩選結果往下看即可

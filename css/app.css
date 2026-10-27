@@ -596,3 +596,4 @@ footer a{margin-left:8px;color:var(--accent)}
 .rfbox.idle{border-style:dashed;background:transparent}.rfbox.idle .rfv{color:var(--muted)}
 .rfbox.next{border-left-color:var(--accent)}.rfnext{font-size:11px;font-weight:500;color:var(--accent);border:1px solid currentColor;border-radius:9px;padding:0 6px;margin-left:4px;vertical-align:1px}
 .idcov{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;border:1px dashed var(--line);border-radius:6px;padding:10px 12px;margin:0 0 10px}.idcov .ok{color:var(--s3)}.idcov .miss{color:var(--seal)}.idcov .note{flex-basis:100%;margin:0}.idcov>div{flex-basis:100%}
+.idsug{flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.idsug .note{flex-basis:100%;margin:0}
