@@ -591,3 +591,5 @@ footer a{margin-left:8px;color:var(--accent)}
 /* 深色模式：亮色底的熱圖方格改用深色字 */
 :root[data-theme="dark"] .cell.st1,:root[data-theme="dark"] .cell.st2{color:var(--on-fill)}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .cell.st1,:root:not([data-theme="light"]) .cell.st2{color:var(--on-fill)}}
+
+.prerender{padding:24px 0}.prerender a{color:var(--accent)}.prerender ul{line-height:1.8;padding-left:1.2em}

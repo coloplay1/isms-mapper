@@ -35,3 +35,15 @@ test('CHANGELOG 最新一版是 package.json 的版本，且版本由新到舊�
     }
   }
 });
+
+test('index.html 靜態介紹的數字與資料一致', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const A = require('./load.js').load();
+  const intro = html.slice(html.indexOf('class="prerender"'), html.indexOf('</section>', html.indexOf('class="prerender"')));
+  assert.ok(intro.includes(`${A.CASES.length} 個實務情境`), `案例數應為 ${A.CASES.length}`);
+  assert.ok(intro.includes(`${A.ANNEX.length} 項控制措施`), `控制措施數應為 ${A.ANNEX.length}`);
+  for (const n of ['個人資料保護法', '資通安全管理法', '上市上櫃公司資通安全管控指引', 'PCI DSS', 'IEC 62443']) {
+    assert.ok(A.LAWS.some(l => l.name === n), `法規提示已沒有 ${n}，請一併修改靜態介紹`);
+    assert.ok(intro.includes(n), `靜態介紹缺少 ${n}`);
+  }
+});

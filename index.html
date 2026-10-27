@@ -47,7 +47,28 @@
   <div id="backupBanner" class="bkbanner" hidden></div>
   <div id="storeBanner" class="banner" hidden>這個瀏覽器目前無法自動儲存。請在「專案管理」匯出專案檔，下次再匯入。</div>
   <div id="sampleBanner" class="sbanner" hidden></div>
-  <section id="view-home"></section>
+  <section id="view-home">
+    <!-- 靜態介紹：給不執行 JavaScript 的讀取者（AI 摘要、分享預覽、部分搜尋引擎）與停用 JavaScript 的使用者。程式載入後會以互動畫面取代。 -->
+    <div class="prerender">
+      <h1>ISMS 條款對照台</h1>
+      <p class="lede">從工作情境到 SoA 的 ISO/IEC 27001:2022 導入工具。把日常工作對應到條款、評估風險、完成適用性聲明（SoA），並追蹤稽核發現與年度改善。免安裝、免註冊，所有資料只存在你的瀏覽器，不會上傳。</p>
+      <noscript><p class="banner">這個工具需要啟用 JavaScript 才能操作。</p></noscript>
+      <h2>主要功能</h2>
+      <ul>
+        <li><b>案例搜尋</b>：內建 103 個實務情境與同義詞字典，輸入「同事離職」「中毒」「廠商要連進來」就能找到對應的條款與附錄 A 控制措施。</li>
+        <li><b>風險評鑑</b>：依條款 6.1.2／6.1.3 與 ISO/IEC 27005 流程登錄風險，以 5×5 矩陣評估固有與殘餘風險，可自訂風險準則與各級定義。</li>
+        <li><b>附錄 A 適用性確認</b>：93 項控制措施逐項判定適用性、納入／排除理由、執行狀態、負責人與證據，並可依產品／服務生命週期檢視。</li>
+        <li><b>風險與 SoA 連動檢查</b>：自動找出「被風險引用卻判為不適用」「殘餘風險未經擁有者核准」等稽核常見缺口。</li>
+        <li><b>條款 4–10 追蹤</b>：管理系統本文條款依 PDCA 分組追蹤進度。</li>
+        <li><b>改善追蹤</b>：登錄內部稽核的不符合與觀察事項、管理審查決議、資安事件檢討，追蹤原因分析、矯正措施與有效性確認（條款 10.2）。</li>
+        <li><b>年度循環</b>：以去年的專案建立新年度，並產生與去年的比較，作為管理審查（9.3）的輸入資料。</li>
+        <li><b>產業建議重點與台灣法規提示</b>：依產業與業務特性標示優先控制措施，並提示個人資料保護法、資通安全管理法、上市上櫃公司資通安全管控指引、PCI DSS、IEC 62443 等相關法規。</li>
+        <li><b>Excel 匯出與匯入</b>：一鍵匯出適用性聲明（控制措施編號、是否適用、理由、實施狀態、證據位置）、風險登錄表、風險評鑑準則、連動檢查、條款檢核與改善追蹤；也能匯入既有的 SoA 與風險評鑑 Excel。</li>
+        <li><b>ISMS 文件範本</b>：依手冊、政策、程序、表單、紀錄五層架構提供 32 份 Word／Excel 範本，以 CC BY 4.0 授權。</li>
+      </ul>
+      <p><a href="docs/user-guide.pdf?v=1.19.0">使用指南（PDF）</a>・<a href="https://github.com/coloplay1/isms-mapper">GitHub 原始碼</a></p>
+    </div>
+  </section>
   <section id="view-overview" hidden></section>
   <section id="view-search" hidden></section>
   <section id="view-risks" hidden></section>
