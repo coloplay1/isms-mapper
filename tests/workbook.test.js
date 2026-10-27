@@ -154,3 +154,20 @@ test('匯出再匯入保留產業與業務特性（統計摘要）', () => {
   assert.equal(A.importWorkbook(plain, {}).raw.projName, 'X');
   for (const f of ['cloud', 'dev']) assert.ok(back.features.includes(f), f);
 });
+
+test('匯入結果列出欄位對應、未使用的欄位與沒找到的重要欄位', () => {
+  const data = [
+    ['控制編號', '是否適用', '實施狀態', '內部備註'],
+    ['A.5.1', '適用', '已實施', 'x'],
+  ];
+  const { report } = A.importWorkbook([{ sheet: '我的SoA', data }]);
+  const c = report.columns.find(x => x.sheet === '我的SoA');
+  assert.equal(c.kind, '適用性聲明（SoA）');
+  assert.deepEqual(c.mapped.map(x => [x.from, x.to]), [['控制編號', '控制措施編號'], ['是否適用', '適用性'], ['實施狀態', '執行狀態']]);
+  assert.deepEqual(c.ignored, ['內部備註']);
+  assert.deepEqual(c.missing, ['納入／排除理由', '負責人']);
+});
+
+test('找不到可匯入的表時，錯誤訊息列出檢查過的工作表', () => {
+  assert.throws(() => A.importWorkbook([{ sheet: '封面', data: [['公司名稱']] }, { sheet: '清單', data: [['項目', '說明']] }]), /已檢查工作表：封面、清單/);
+});

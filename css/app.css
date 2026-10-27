@@ -604,3 +604,5 @@ footer a{margin-left:8px;color:var(--accent)}
 #annexBody select[data-f=app]{min-width:86px}#annexBody .stsel{min-width:110px}
 #annexBody input[data-f=owner]{min-width:124px}
 #annexBody td.name .saved{white-space:normal}
+.colmap{margin-top:16px;border:1px solid var(--line);border-radius:6px;padding:8px 12px}.colmap summary{cursor:pointer;font-weight:700}.colmap summary .note{font-weight:400;margin-left:8px}
+.cmsheet{margin-top:12px}.cmsheet>b+.note{margin-left:8px}.colmap a{color:var(--accent)}.cmsheet ul{list-style:none;padding:0;margin:6px 0;display:grid;gap:2px;font-size:13px}.cmsheet li{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:baseline}.cmsheet li span:first-child{color:var(--muted);overflow-wrap:anywhere}.cmsheet p{margin:4px 0;font-size:13px}

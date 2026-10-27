@@ -138,6 +138,21 @@ const IMPORT_COLS={
     due:["預計完成","預計完成日"],status:["狀態","處理狀態"],doneAt:["完成日期"],verify:["有效性確認"],note:["備註"]},
   clause:{code:["條款"],status:["執行狀態","實施狀態"],owner:["負責人"],evidence:["證據位置","對應文件"]}
 };
+/* 匯入結果顯示用的欄位名稱；important 是沒對到時要提醒的欄位 */
+const IMPORT_LABEL={
+  soa:{kind:"適用性聲明（SoA）",f:{code:"控制措施編號",app:"適用性",codes:"理由代碼",reason:"納入／排除理由",impl:"實施方式",status:"執行狀態",owner:"負責人",evidence:"證據位置"},important:["reason","status","owner"]},
+  risk:{kind:"風險評鑑表",f:{id:"風險編號",title:"風險描述",asset:"相關資產",threat:"威脅",vuln:"脆弱性",existing:"現有控制",cia:"影響（CIA）",owner:"風險擁有者",l:"可能性",i:"衝擊",treat:"處理方式",controls:"選定控制措施",plan:"處理計畫",due:"預計完成",rl:"殘餘可能性",ri:"殘餘衝擊",accepted:"擁有者核准",status:"處理狀態"},important:["title","owner","l","i","treat","controls"]},
+  action:{kind:"改善追蹤",f:{id:"編號",type:"類型",source:"來源",raised:"提出日期",title:"事項描述",cause:"原因分析",correction:"立即處置",action:"改善或矯正措施",refs:"關聯條款",owner:"負責人",due:"預計完成",status:"狀態",doneAt:"完成日期",verify:"有效性確認",note:"備註"},important:["owner","due"]},
+  clause:{kind:"條款 4–10",f:{code:"條款",status:"執行狀態",owner:"負責人",evidence:"證據位置"},important:["status"]}
+};
+/* 記錄某張表的欄位對應：哪個 Excel 欄名對到哪個欄位、哪些欄被略過、哪些重要欄位沒找到 */
+function colReport(sheet,type,row,m){
+  const L=IMPORT_LABEL[type],used=new Set(Object.values(m));
+  return {sheet,kind:L.kind,
+    mapped:Object.entries(m).sort((a,b)=>a[1]-b[1]).map(([f,k])=>({from:cellText(row[k]),to:L.f[f]||f})),
+    ignored:(row||[]).map((h,k)=>used.has(k)?"":cellText(h)).filter(Boolean),
+    missing:L.important.filter(f=>!(f in m)).map(f=>L.f[f])};
+}
 function normHead(h){return String(h??"").replace(/[（(][^）)]*[）)]/g,"").replace(/\s+/g,"").replace(/／/g,"/")}
 function cellText(v){
   if(v===null||v===undefined)return "";
@@ -192,10 +207,11 @@ function parseCriteria(data){
 /* sheets：[{sheet, data:[[儲存格值…]…]}]，回傳 {raw, report}；raw 再交給 sanitizeProject() */
 function importWorkbook(sheets,opts={}){
   const raw={name:opts.name||"匯入專案",org:"",controls:{},clauses:{},risks:[],actions:[],criteria:null,doc:null};
-  const report={controls:0,risks:0,clauses:0,actions:0,criteria:false,sheets:[],warnings:[]};
+  const report={controls:0,risks:0,clauses:0,actions:0,criteria:false,sheets:[],warnings:[],columns:[],seen:[]};
   const seenRisk=new Set(),warn=m=>{if(report.warnings.length<50)report.warnings.push(m)};
   for(const {sheet,data} of sheets||[]){
     if(!Array.isArray(data))continue;
+    report.seen.push(sheet);
     if(!raw.doc)for(const row of data.slice(0,5)){for(const c of row||[]){const d=parseDocLine(c);if(d){raw.doc=d;break}}if(raw.doc)break}
     if(!raw.org)for(const row of data.slice(0,5)){const t=cellText((row||[])[0]);const m=t.match(/^(.+?)｜驗證範圍：(.+)$/);if(m){const ph=x=>/^（.*）$/.test(x)?"":x;raw.org=ph(m[1]);raw.scope=ph(m[2]);break}}
     // 統計摘要的「產業」「業務特性」列
@@ -217,7 +233,7 @@ function importWorkbook(sheets,opts={}){
         (g("codes").match(/RA|LR|CO|BP/g)||[]).forEach(k=>{if(!rs.includes(REASON_CODES[k]))rs.push(REASON_CODES[k])});
         let impl=g("impl");if(app==="N"&&!g("reason")&&impl){rs.push(impl);impl=""}
         raw.controls[code]={app,status:app==="N"?0:statusFrom(st),owner:g("owner"),evidence:g("evidence"),reason:rs.join("；"),impl};n++}
-      report.controls+=n;if(n)report.sheets.push(sheet);
+      report.controls+=n;if(n){report.sheets.push(sheet);report.columns.push(colReport(sheet,"soa",data[hs],m))}
       if(n&&n<93)warn(`「${sheet}」只有 ${n} 項控制措施，其餘項目為未決定`);
       continue}
     // 改善追蹤表：要有「事項描述」與「狀態」
@@ -233,7 +249,7 @@ function importWorkbook(sheets,opts={}){
           action:g("action"),refs:parseRefCodes(g("refs")),owner:g("owner"),due:dueFrom(row[m.due]),status:g("status").replace(/（.*）$/,""),
           doneAt:dueFrom(row[m.doneAt]),verify:g("verify"),carried});
         seen.add(id);n++}
-      report.actions+=n;if(n)report.sheets.push(sheet);continue}
+      report.actions+=n;if(n){report.sheets.push(sheet);report.columns.push(colReport(sheet,"action",data[ha],m))}continue}
     const hr=findHeader(data,IMPORT_COLS.risk.id);
     const mr=hr>=0?mapColumns(data[hr],IMPORT_COLS.risk):null;
     // 至少要有編號以外的兩個風險欄位，才當成風險表（避免說明頁裡提到「風險編號」）
@@ -256,17 +272,17 @@ function importWorkbook(sheets,opts={}){
           treat,plan:g("plan")||(treat?"":treatTxt),controls:codes.filter(c=>ANNEX_MAP[c]),due,
           accepted:/已核准|^是$|^Y$|✓|^V$/i.test(g("accepted")),status:RISK_STATUS.includes(g("status"))?g("status"):""});
         seenRisk.add(id);n++}
-      report.risks+=n;if(n)report.sheets.push(sheet);continue}
+      report.risks+=n;if(n){report.sheets.push(sheet);report.columns.push(colReport(sheet,"risk",data[hr],m))}continue}
     const hc=findHeader(data,IMPORT_COLS.clause.code);
     if(hc>=0){const m=mapColumns(data[hc],IMPORT_COLS.clause);let n=0;
       for(const row of data.slice(hc+1)){const code=cellText(row&&row[m.code]);if(!CLAUSE_MAP[code])continue;
         const g=k=>k in m?cellText(row[m[k]]):"";
         raw.clauses[code]={status:statusFrom(g("status")),owner:g("owner"),evidence:g("evidence")};n++}
-      report.clauses+=n;if(n)report.sheets.push(sheet);continue}
+      report.clauses+=n;if(n){report.sheets.push(sheet);report.columns.push(colReport(sheet,"clause",data[hc],m))}continue}
     if(!raw.scale){const sc=parseScale(data);if(sc)raw.scale=sc}
     if(/準則/.test(sheet)||!raw.criteria){const c=parseCriteria(data);if(c&&!raw.criteria){raw.criteria=c;report.criteria=true;report.sheets.push(sheet)}}
   }
   function k_due(row,m){return "due" in m?row[m.due]:""}
-  if(!report.controls&&!report.risks)throw new Error("找不到 SoA 或風險評鑑表（需要「控制措施編號」或「風險編號」欄位）");
+  if(!report.controls&&!report.risks)throw new Error(`找不到 SoA 或風險評鑑表：需要有「控制措施編號」加「適用性」欄，或「風險編號」加風險描述、可能性等欄位${report.seen.length?`（已檢查工作表：${report.seen.slice(0,6).join("、")}${report.seen.length>6?" 等":""}）`:""}。可下載空白範本對照欄位名稱`);
   return {raw,report};
 }

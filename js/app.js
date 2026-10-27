@@ -370,6 +370,13 @@ function showImportReport(p,rep){
       <li><span>連動檢查</span><b>${n?n+" 項待確認":"沒有發現不一致"}</b></li>
     </ul>
     <p class="note" style="margin-top:10px">${esc(criteriaText(p))}</p>
+    ${(rep.columns||[]).length?`<details class="colmap" ${(rep.columns||[]).some(c=>c.missing.length)?"open":""}><summary>欄位對應（${rep.columns.length} 張表）<span class="note">確認 Excel 的欄位有沒有對到正確的地方</span></summary>
+      ${rep.columns.map(c=>`<div class="cmsheet"><b>${esc(c.sheet)}</b><span class="note">當成${esc(c.kind)}讀取</span>
+        <ul>${c.mapped.map(x=>`<li><span>${esc(x.from)}</span><span aria-hidden="true">→</span><b>${esc(x.to)}</b></li>`).join("")}</ul>
+        ${c.missing.length?`<p class="warnhint">沒找到：${c.missing.map(esc).join("、")}。如果原檔有這些資料，把欄名改成範本上的名稱再匯入一次。</p>`:""}
+        ${c.ignored.length?`<p class="note">未使用的欄位：${c.ignored.map(esc).join("、")}</p>`:""}</div>`).join("")}
+      <p class="note">欄名不同時，對照<a href="${TPL_BASE}isms-soa-risk-template.xlsx" download>空白範本</a>的欄位名稱修改後重新匯入即可。</p>
+    </details>`:""}
     ${rep.warnings.length?`<h3 style="margin-top:16px">注意事項（${rep.warnings.length}）</h3><ul class="cklist">${rep.warnings.map(w=>`<li class="ck warn"><span class="ckmsg">${esc(w)}</span></li>`).join("")}</ul>`:""}
     <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap">${p.risks.length?`<button class="btn primary" id="irRisk">查看風險評鑑</button>`:""}<button class="btn" id="irAnnex">查看附錄 A</button></div>
   </aside>`;
