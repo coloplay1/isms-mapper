@@ -874,21 +874,26 @@ function onAnnexEdit(e){
 function renderClauses(){
   const groups=[["4","組織前後環境"],["5","領導"],["6","規劃"],["7","支援"],["8","運作"],["9","績效評估"],["10","改善"]];
   $("#view-clauses").innerHTML=`<h2>管理系統條款 4–10</h2><p class="lede">本文條款不能排除，全部都要符合。逐條追蹤執行狀態與證據，驗證稽核時最先檢查的就是這些文件與紀錄。</p>
-  <div class="table-wrap"><table style="min-width:820px"><thead><tr><th>條款</th><th>名稱與說明</th><th style="width:60px">PDCA</th><th style="width:118px">執行狀態</th><th style="width:140px">負責人</th><th>證據位置</th></tr></thead><tbody id="clBody">
+  <div class="table-wrap"><table style="min-width:900px;table-layout:fixed"><thead><tr><th style="width:64px">條款</th><th>名稱與說明</th><th style="width:60px">PDCA</th><th style="width:118px">執行狀態</th><th style="width:140px">負責人</th><th style="width:240px">證據位置</th></tr></thead><tbody id="clBody">
   ${groups.map(([ch,n])=>`<tr><td colspan="6" style="background:var(--surface2);font-weight:700;font-size:13px">第 ${ch} 章　${n}</td></tr>`+
     CLAUSES.filter(c=>c.code.split(".")[0]===ch).map(c=>{const v=cls(c.code);return `<tr data-cl="${c.code}">
     <td class="code"><button data-open="${c.code}">${c.code}</button></td>
-    <td class="name">${esc(c.name)}<div class="saved">${esc(c.desc)}</div></td>
+    <td class="name">${esc(c.name)}<div class="saved" style="white-space:normal">${esc(c.desc)}</div></td>
     <td class="mono">${c.phase}</td>
     <td><select data-f="status" class="stsel" style="border-left-color:${lvlColor(v.status)}" aria-label="${c.code} 狀態">${STATUS.map(s=>`<option value="${s.v}" ${s.v===v.status?"selected":""}>${s.label}</option>`).join("")}</select></td>
     <td><input data-f="owner" data-owner autocomplete="off" value="${esc(v.owner)}" placeholder="選擇或輸入" aria-label="${c.code} 負責人"></td>
-    <td><input data-f="evidence" value="${esc(v.evidence)}" placeholder="${esc(c.ev)}" aria-label="${c.code} 證據"></td></tr>`}).join("")).join("")}
+    <td><textarea data-f="evidence" class="evta" rows="1" placeholder="${esc(c.ev)}" title="${esc(v.evidence||c.ev)}" aria-label="${c.code} 證據">${esc(v.evidence)}</textarea></td></tr>`}).join("")).join("")}
   </tbody></table></div>`;
   const body=$("#clBody");
   const h=e=>{const el=e.target,tr=el.closest("tr[data-cl]");if(!tr||!el.dataset.f)return;
     if(setField(tr.dataset.cl,el.dataset.f,el.value)&&el.dataset.f==="status")el.style.borderLeftColor=lvlColor(cls(tr.dataset.cl).status)};
-  body.addEventListener("change",h);body.addEventListener("input",e=>{if(e.target.matches("input"))h(e)});
+  body.addEventListener("change",h);body.addEventListener("input",e=>{if(e.target.matches("input,textarea"))h(e);if(e.target.matches(".evta")){fitEv(e.target,true);e.target.title=e.target.value||e.target.placeholder}});
+  /* 證據位置：平常只顯示一行，點進去展開成多行顯示完整內容，離開後收回 */
+  body.addEventListener("focusin",e=>{if(e.target.matches(".evta"))fitEv(e.target,true)});
+  body.addEventListener("focusout",e=>{if(e.target.matches(".evta"))fitEv(e.target,false)});
+  body.addEventListener("keydown",e=>{if(e.target.matches(".evta")&&e.key==="Enter"&&!e.isComposing){e.preventDefault();e.target.blur()}});
 }
+function fitEv(el,open){el.style.height="";if(!open){el.scrollTop=0;return}const max=150,h=el.scrollHeight+2;if(h>el.offsetHeight)el.style.height=Math.min(h,max)+"px";el.style.overflowY=h>max?"auto":"hidden"}
 let pendingDelete=null;
 function renderProjects(){
   const list=Object.values(S.projects).sort((a,b)=>b.updated-a.updated);
