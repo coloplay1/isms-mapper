@@ -414,7 +414,8 @@ function render(){
   if(!cur()&&NEEDS_PROJECT.has(tab))tab="home";
   refreshFocus();refreshOwnerList();personEdit=personDel=null;
   renderProjSel(); renderSaved(); renderSampleBanner();
-  const fg=$("#footGuide");if(fg)fg.hidden=tab==="home";   // 首頁已有使用指南連結，頁尾不重複
+  const fg=$("#footGuide");if(fg)fg.hidden=tab==="home";
+  const fv=$("#footVer");if(fv&&!fv.dataset.v){const m=(document.querySelector('script[src*="js/app.js"]')||{}).src?.match(/[?&]v=([\d.]+)/);if(m){fv.dataset.v=m[1];fv.textContent=`版本 ${m[1]}｜更新紀錄`}}   // 版本號取自載入網址，不另外維護   // 首頁已有使用指南連結，頁尾不重複
   document.querySelectorAll("#tabs button").forEach(b=>{b.setAttribute("aria-selected",b.dataset.tab===tab);
     b.setAttribute("aria-disabled",!cur()&&NEEDS_PROJECT.has(b.dataset.tab))});
   ["home","overview","search","risks","annex","clauses","improve","docs","projects"].forEach(v=>$("#view-"+v).hidden=v!==tab);

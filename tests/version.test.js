@@ -47,3 +47,10 @@ test('index.html 靜態介紹的數字與資料一致', () => {
     assert.ok(intro.includes(n), `靜態介紹缺少 ${n}`);
   }
 });
+
+test('頁尾有更新紀錄連結，版本號由 app.js 的 ?v= 讀出', () => {
+  const html = read('index.html');
+  assert.match(html, /id="footVer" href="https:\/\/github\.com\/coloplay1\/isms-mapper\/blob\/main\/CHANGELOG\.md"/);
+  assert.match(html, new RegExp(`js/app\\.js\\?v=${version.replace(/\./g, '\\.')}"`));
+  assert.match(read('js/app.js'), /footVer/);
+});
