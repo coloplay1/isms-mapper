@@ -13,12 +13,13 @@ test('新專案：第一階段的範圍、風險評鑑、SoA 都可能不符合'
   for (const key of ['scope', 'criteria', 'riskAssess', 'soa', 'approve', 'audit', 'review']) assert.equal(k[key].grade, 'nc', key);
   assert.ok(k.soa.detail[0].includes('93 項未判定'));
   assert.equal(k.soa.go.filter, 'undec');
-  assert.ok(st.flatMap(s => s.items).every(x => x.title && x.ask && x.clause));
-  assert.deepEqual(st.flatMap(s => s.items).filter(x => x.grade === 'ok').map(x => x.key), [], '沒有資料的項目不能算已備妥');
+  assert.ok(st.flatMap(s => s.items).every(x => x.title && x.ask && x.clause && x.rule), '每一項都要寫出資料齊全的條件');
+  assert.equal(Object.keys(A.AUDIT_RULES).length, st.flatMap(s => s.items).length);
+  assert.deepEqual(st.flatMap(s => s.items).filter(x => x.grade === 'ok').map(x => x.key), [], '沒有資料的項目不能算資料齊全');
   for (const key of ['consistent', 'impl', 'evidence', 'owner', 'plan', 'reassess', 'correct']) assert.equal(k[key].grade, 'na', key);
 });
 
-test('準備好的專案：全部已備妥，沒有前往按鈕', () => {
+test('準備好的專案：全部資料齊全，沒有前往按鈕', () => {
   const controls = Object.fromEntries(A.ANNEX.map(c => [c.code, { app: 'Y', status: 3, owner: '甲', evidence: '紀錄', reason: '依風險評鑑結果' }]));
   const clauses = Object.fromEntries(A.CLAUSES.map(c => [c.code, { status: 3, owner: '甲', evidence: '紀錄' }]));
   const risk = { id: 'R-001', title: 'x', owner: '甲', l: 2, i: 2, treat: 'accept', accepted: true, controls: [] };

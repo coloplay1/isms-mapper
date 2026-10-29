@@ -574,6 +574,11 @@ table.cmptable.sum th{white-space:nowrap}
 .audask{font-size:13px;color:var(--muted);margin-top:4px}
 .auddet{margin:6px 0 0;padding-left:18px;font-size:13.5px}
 .audgo{margin-top:8px}
+.audwarn{margin:0 0 14px;font-size:13px;padding:6px 10px;border-radius:6px;background:var(--surface2);border-left:3px solid var(--amber);color:var(--ink)}
+.audrule{margin-top:4px;font-size:12.5px;color:var(--muted)}
+.audrule>summary{cursor:pointer;width:max-content;text-decoration:underline dotted;text-underline-offset:3px}
+.audrule>span{display:block;margin-top:2px;color:var(--ink)}
+.audlist>li.ok .audrule,.audlist>li.nd .audrule{display:inline-block;margin-top:2px}
 .audgo .btn{font-size:13px;padding:4px 10px}
 /* 導入進度：步驟圖示 */
 .stepper{list-style:none;margin:6px 0 12px;padding:0;display:grid;grid-template-columns:repeat(8,minmax(0,1fr))}

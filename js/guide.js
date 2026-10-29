@@ -182,8 +182,26 @@ function docNeed(p,d){
 /* ================= 稽核準備度：用稽核員的角度看同一份資料 =================
    驗證稽核分兩個階段：第一階段審查 ISMS 是否建立（範圍、準則、風險評鑑、SoA、核准），
    第二階段查核是否落實（證據、處理計畫執行、內部稽核、管理審查、矯正措施）。
-   grade：nc 可能開立不符合、obs 可能列為觀察或改善建議、ok 已備妥、na 還沒有可查的資料（例如沒有適用的控制措施時，不算已備妥）。
+   grade：nc 可能開立不符合、obs 可能列為觀察或改善建議、ok 資料齊全（工具裡填的資料沒有缺口，不代表證據檔案一定存在）、na 還沒有可查的資料（例如沒有適用的控制措施時，不算已備妥）。
    這是依常見稽核做法整理的參考判斷，實際結果依稽核員與驗證機構而定。 */
+/* 每一項「資料齊全」的判斷條件，顯示在畫面上，讓使用者知道工具看的是什麼、要補什麼 */
+const AUDIT_RULES={
+  scope:"專案有填寫驗證範圍",
+  criteria:"風險準則已按「確認」，並寫了可能性與衝擊各級的定義",
+  riskAssess:"至少登錄一項風險、全部都已評分，並在風險識別按過「確認風險識別完成」",
+  soa:"93 項控制措施都已判定適用性，判為不適用的都有排除理由",
+  consistent:"已有風險，且風險選定的控制措施在 SoA 都判為適用、沒有衝突",
+  approve:"文件管制狀態為「已核准」、需核准的殘餘風險都已勾選擁有者核准、處理計畫都有預計完成日",
+  clauses:"條款 4–10 都標為「已實施」或「已驗證」",
+  impl:"判為適用的控制措施都標為「已實施」或「已驗證」",
+  evidence:"已實施與已驗證的控制措施都有填寫證據位置",
+  owner:"判為適用的控制措施都有負責人",
+  plan:"降低、移轉或避免的處理計畫都沒有逾期，也沒有 30 天內到期",
+  reassess:"建立過新年度，沿用去年分數的風險都已重新評估",
+  audit:"條款 9.2 標為「已實施」或「已驗證」",
+  review:"條款 9.3 標為「已實施」或「已驗證」",
+  correct:"改善事項沒有逾期，已完成的都已確認有效"
+};
 function auditReadiness(p,now){
   if(!p)return [];
   const f=guideFacts(p,now);
@@ -191,10 +209,11 @@ function auditReadiness(p,now){
   const notStart=vs.filter(x=>x.v.status===0).length,partial=vs.filter(x=>x.v.status===1).length;
   const implNoEv=vs.filter(x=>x.v.status===2&&!String(x.v.evidence||"").trim()).length;
   const it=(key,clause,title,ask,checks,go,na)=>{
-    if(na)return {key,clause,title,ask,grade:"na",detail:[na],go};
+    const rule=AUDIT_RULES[key]||"";
+    if(na)return {key,clause,title,ask,rule,grade:"na",detail:[na],go};
     const hit=checks.filter(c=>c[1]);
     const grade=hit.some(c=>c[0]==="nc")?"nc":hit.length?"obs":"ok";
-    return {key,clause,title,ask,grade,detail:hit.map(c=>c[2]),go:grade==="ok"?null:go};
+    return {key,clause,title,ask,rule,grade,detail:hit.map(c=>c[2]),go:grade==="ok"?null:go};
   };
   const noApp=!f.applicable&&"還沒有判為適用的控制措施，判定 SoA 後才查得到";
   const planNeed=(p.risks||[]).some(r=>r.treat&&r.treat!=="accept");

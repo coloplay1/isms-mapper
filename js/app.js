@@ -685,19 +685,21 @@ document.addEventListener("click",e=>{
   const r=e.target.closest("[data-road]");if(r){roadSel=+r.dataset.road;renderOverview();const b=document.querySelector(`[data-road="${roadSel}"]`);if(b)b.focus()}});
 /* 稽核員會怎麼看：把同一份資料換成驗證稽核兩個階段的角度，預設收合，摘要列直接看到各階段的數量 */
 let audOpen=false;
-const AUD_GRADE={nc:"可能不符合",obs:"可能列為觀察",ok:"已備妥",na:"尚無資料"};
+const AUD_GRADE={nc:"可能不符合",obs:"可能列為觀察",ok:"資料齊全",na:"尚無資料"};
 function auditPanel(p){
   const st=auditReadiness(p);
   const sum=s=>{const n=g=>s.items.filter(x=>x.grade===g).length,nc=n("nc"),ob=n("obs"),na=n("na");
-    return nc||ob||na?(nc?`<span class="ag nc">不符合 ${nc}</span>`:"")+(ob?`<span class="ag obs">觀察 ${ob}</span>`:"")+(na?`<span class="ag nd">尚無資料 ${na}</span>`:""):`<span class="ag ok">已備妥</span>`};
+    return nc||ob||na?(nc?`<span class="ag nc">不符合 ${nc}</span>`:"")+(ob?`<span class="ag obs">觀察 ${ob}</span>`:"")+(na?`<span class="ag nd">尚無資料 ${na}</span>`:""):`<span class="ag ok">資料齊全</span>`};
   return `<details class="panel audview" id="audView" ${audOpen?"open":""}><summary><b>稽核員會怎麼看</b>
     <span class="audsum">${st.map(s=>`<span class="audst">${esc(s.name.split("：")[0])}${sum(s)}</span>`).join("")}</span><span class="note audhint">${audOpen?"收合":"展開"}</span></summary>
-    <p class="note" style="margin:8px 0 14px">同一份資料，換成驗證稽核的角度：第一階段看 ISMS 有沒有建立，第二階段抽樣看有沒有確實執行。標示為依常見稽核做法的參考判斷，實際結果依稽核員與驗證機構而定。</p>
+    <p class="note" style="margin:8px 0 6px">同一份資料，換成驗證稽核的角度：第一階段看 ISMS 有沒有建立，第二階段抽樣看有沒有確實執行。標示為依常見稽核做法的參考判斷，實際結果依稽核員與驗證機構而定。</p>
+    <p class="audwarn">「資料齊全」只代表工具裡填的資料沒有缺口。工具看不到證據檔案本身，稽核前請抽查證據位置的檔案確實存在、而且是最新的。</p>
     <div class="audgrid">${st.map(s=>`<div class="audcol"><h4>${esc(s.name)}</h4><p class="note" style="margin:0 0 10px">${esc(s.desc)}</p>
       <ul class="audlist">${s.items.map(x=>{const g=x.grade==="na"?"nd":x.grade;return `<li class="${g}">
         <div class="audh"><span class="ag ${g}">${x.grade==="ok"?"✓ ":""}${AUD_GRADE[x.grade]}</span><b>${esc(x.title)}</b><span class="mono rcl">${esc(x.clause)}</span></div>
         <div class="audask">稽核員會問：${esc(x.ask)}</div>
         ${x.detail.length?`<ul class="auddet">${x.detail.map(d=>`<li>${esc(d)}</li>`).join("")}</ul>`:""}
+        ${x.rule?`<details class="audrule"><summary>怎樣算資料齊全</summary><span>${esc(x.rule)}</span></details>`:""}
         ${x.go&&g!=="nd"?`<div class="audgo">${stepBtn(x.go,false)}</div>`:""}</li>`}).join("")}</ul></div>`).join("")}</div>
   </details>`;
 }
