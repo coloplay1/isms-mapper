@@ -154,6 +154,21 @@ function roadmapItems(p,n,now){
   return {items,more};
 }
 
+/* 文件範本對本專案的必要性：依標準要求、SoA 判定與風險引用自動判斷，回答「為什麼要有這份」。
+   level：req 標準要求、need 本專案需要、undec 尚未判定、none 可能不需要、opt 選用 */
+function docNeed(p,d){
+  if(!p||!d)return null;
+  const ctl=code=>((p.controls||{})[code]||{app:""}).app;
+  const risks=(p.risks||[]).filter(r=>(r.controls||[]).some(c=>d.controls.includes(c)));
+  const rk=risks.map(r=>({id:r.id,title:r.title||"（未命名風險）"}));
+  if(d.mandatory)return {level:"req",label:"標準要求",why:`條款 ${d.clauses.join("、")} 要求`,codes:[],risks:rk};
+  if(!d.controls.length)return {level:"opt",label:"選用",why:d.clauses.length?`支援條款 ${d.clauses.join("、")} 的作法，標準未要求一定要有這份`:"標準未要求一定要有這份",codes:[],risks:rk};
+  const app=d.controls.filter(c=>ctl(c)==="Y"),und=d.controls.filter(c=>!ctl(c));
+  if(app.length)return {level:"need",label:"本專案需要",why:`對應的 ${d.controls.length} 項控制措施中，${app.length} 項判為適用`,codes:app,risks:rk};
+  if(und.length)return {level:"undec",label:"尚未判定",why:und.length===d.controls.length?`對應的 ${d.controls.length} 項控制措施都還沒判定適用性，判定後才知道需不需要`:`對應的 ${d.controls.length} 項控制措施中，${und.length} 項尚未判定、其餘不適用`,codes:und,risks:rk};
+  return {level:"none",label:"可能不需要",why:`對應的 ${d.controls.length} 項控制措施都判為不適用，可考慮不建立`,codes:[],risks:rk};
+}
+
 /* ================= 風險管理流程（ISO/IEC 27005、ISO 31000） =================
    把風險登錄表的資料對應到標準的風險管理流程圖：每一步顯示進度，pending 是卡在這一步的風險編號。 */
 function riskStages(p,now){

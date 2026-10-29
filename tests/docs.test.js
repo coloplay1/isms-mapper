@@ -46,3 +46,22 @@ test('標示為標準要求的文件，都出現在條款要求對照表中', ()
   const listed = new Set(A.DOC_REQUIREMENTS.flatMap(r => r.docs));
   for (const d of A.DOCS.filter(x => x.mandatory)) assert.ok(listed.has(d.id), `${d.id} 標為標準要求，但對照表沒有列出`);
 });
+
+test('文件範本的必要性依標準要求、SoA 判定與風險引用判斷', () => {
+  const pol04 = A.DOC_MAP['POL-04'], pro02 = A.DOC_MAP['PRO-02'], pro09 = A.DOC_MAP['PRO-09'];
+  const base = A.blankProject('X', '');
+  assert.equal(A.docNeed(null, pol04), null);
+  assert.equal(A.docNeed(base, pro02).level, 'req');
+  assert.equal(A.docNeed(base, pol04).level, 'undec', '控制措施還沒判定');
+  assert.equal(A.docNeed(base, pro09).level, 'undec');
+  const allN = Object.fromEntries(pol04.controls.map(c => [c, { app: 'N', status: 0, reason: '無' }]));
+  assert.equal(A.docNeed({ ...base, controls: allN }, pol04).level, 'none');
+  const p = { ...base, controls: { ...allN, 'A.5.15': { app: 'Y', status: 2 } },
+    risks: [{ ...A.blankRisk('R-001'), title: '離職帳號未停用', controls: ['A.5.18'] }, { ...A.blankRisk('R-002'), title: '無關', controls: ['A.8.13'] }] };
+  const n = A.docNeed(p, pol04);
+  assert.equal(n.level, 'need');
+  assert.deepEqual(n.codes, ['A.5.15']);
+  assert.deepEqual(n.risks.map(r => r.id), ['R-001']);
+  const fmOnly = A.DOCS.find(d => !d.mandatory && !d.controls.length);
+  if (fmOnly) assert.equal(A.docNeed(base, fmOnly).level, 'opt');
+});

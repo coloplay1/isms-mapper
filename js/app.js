@@ -1957,15 +1957,21 @@ function docLink(d,label){return d.status==="planned"?`<span class="saved">規�
 let docFilter="all";
 function renderDocs(){
   const ready=DOCS.filter(d=>d.status!=="planned"),planned=DOCS.length-ready.length;
-  const show=d=>docFilter==="all"||(docFilter==="req"&&d.mandatory)||docFilter===d.layer;
+  const p=cur(),need=d=>docNeed(p,d);
+  const show=d=>docFilter==="all"||(docFilter==="req"&&d.mandatory)||(docFilter==="mine"&&p&&["req","need"].includes(need(d).level))||docFilter===d.layer;
+  const cnt=k=>p?ready.filter(d=>need(d).level===k).length:0;
+  const needLine=d=>{const n=need(d);if(!n)return "";
+    const rs=n.risks.slice(0,2).map(r=>`<button class="ref" data-risk="${esc(r.id)}" data-tip="${esc(r.title)}"><span class="mono">${esc(r.id)}</span> ${esc(r.title)}</button>`).join("")+(n.risks.length>2?`<span class="note">等 ${n.risks.length} 項</span>`:"");
+    return `<div class="dneed ${n.level}"><span class="dnlab">建立依據</span><span>${esc(n.why)}${n.risks.length?"；風險評鑑引用：":""}</span>${rs}</div>`};
   const refs=d=>[...d.clauses,...d.controls].map(c=>`<button class="rc" data-open="${c}" data-tip="${c} ${esc((CLAUSE_MAP[c]||ANNEX_MAP[c]||{}).name||"")}">${c}</button>`).join("");
   $("#view-docs").innerHTML=`<h2>ISMS 文件範本</h2>
   <p class="lede">依五層文件架構整理的通用範本，涵蓋 ISO/IEC 27001 條款 4–10 要求保存的文件化資訊。黃色標示的【】是需要依組織修改的地方；範本內容自行撰寫，不含標準原文。範本以 <a href="https://github.com/coloplay1/isms-mapper/blob/main/templates/LICENSE.md" target="_blank" rel="noopener">CC BY 4.0</a> 釋出，可自由使用與修改；轉載範本時請標示出處。</p>
   <div class="filters">
     <a class="btn primary" href="${TPL_BASE}isms-document-kit.zip" download="ISMS文件範本包.zip">⬇ 下載全部（ZIP）</a>
-    <div class="seg" id="docSeg">${[["all","全部"],["req","標準要求的文件"],...DOC_LAYERS.map(l=>[l.id,l.id+" "+l.name])].map(([k,t])=>`<button data-df="${k}" aria-pressed="${docFilter===k}">${t}</button>`).join("")}</div>
+    <div class="seg" id="docSeg">${[["all","全部"],...(p?[["mine","本專案需要"]]:[]),["req","標準要求的文件"],...DOC_LAYERS.map(l=>[l.id,l.id+" "+l.name])].map(([k,t])=>`<button data-df="${k}" aria-pressed="${docFilter===k}">${t}</button>`).join("")}</div>
     <span class="count">已提供 ${ready.length} 份${planned?`，規劃中 ${planned} 份`:""}</span>
   </div>
+  ${p?`<div class="callout dsum"><b>依「${esc(p.name)}」判斷</b>：本專案需要 <b>${cnt("req")+cnt("need")}</b> 份（標準要求 ${cnt("req")}、依適用的控制措施 ${cnt("need")}）${cnt("undec")?`；${cnt("undec")} 份要等附錄 A 判定後才知道`:""}${cnt("none")?`；${cnt("none")} 份對應的控制措施都不適用，可能不需要`:""}${cnt("opt")?`；${cnt("opt")} 份為選用`:""}。每份範本下方會說明建立依據，改了附錄 A 或風險，判斷會跟著更新。</div>`:""}
   ${docFilter==="all"||docFilter==="req"?`<div class="panel" style="margin-bottom:18px"><div class="secthead"><h3>條款 4–10 要求保存的文件化資訊</h3><span class="note">驗證稽核一定會查的文件。點條款編號可查看說明。</span></div>
     <div class="table-wrap" style="border:0"><table class="dreq"><thead><tr><th style="width:70px">條款</th><th>要求保存的內容</th><th>對應範本</th></tr></thead><tbody>
     ${DOC_REQUIREMENTS.map(r=>`<tr><td class="code"><button data-open="${r.code}">${r.code}</button></td><td>${esc(r.req)}</td><td><div class="dchips">${r.docs.map(id=>{const d=DOC_MAP[id];return `<a class="dchip" href="${docHref(d)}" download="${esc(docDl(d))}" data-tip="${esc(d.name)}"><span class="mono">${d.id}</span> ${esc(d.name)}</a>`}).join("")}</div></td></tr>`).join("")}
@@ -1973,8 +1979,8 @@ function renderDocs(){
   ${DOC_LAYERS.map(l=>{const list=DOCS.filter(d=>d.layer===l.id&&show(d));if(!list.length)return "";
     return `<section class="dlayer"><div class="secthead"><h3>${l.id}　${esc(l.name)}</h3><span class="note">${esc(l.desc)}</span></div>
     <div class="dlist">${list.map(d=>`<article class="ditem ${d.status==="planned"?"planned":""}">
-      <div class="dhead"><span class="mono">${d.id}</span><b>${esc(d.name)}</b>${d.mandatory?`<span class="dtag">標準要求</span>`:""}${d.tool?`<span class="dtag tool">可匯入工具檢查</span>`:""}<span class="dfmt">${d.fmt==="docx"?"Word":"Excel"}</span></div>
-      <p>${esc(d.desc)}</p>
+      <div class="dhead"><span class="mono">${d.id}</span><b>${esc(d.name)}</b>${p?`<span class="dtag ${need(d).level}">${need(d).label}</span>`:d.mandatory?`<span class="dtag">標準要求</span>`:""}${d.tool?`<span class="dtag tool">可匯入工具檢查</span>`:""}<span class="dfmt">${d.fmt==="docx"?"Word":"Excel"}</span></div>
+      <p>${esc(d.desc)}</p>${needLine(d)}
       <div class="dfoot"><div class="rcodes">${refs(d)}</div><div class="dbtns">${d.example?`<a class="dl ghost" href="${TPL_BASE+d.example}" download="${esc(d.id+" "+d.name+"_填寫範例."+d.fmt)}">填寫範例</a>`:""}${docLink(d,d.status==="planned"?"":"下載")}</div></div>
     </article>`).join("")}</div></section>`}).join("")}
   <p class="note" style="margin-top:18px">範本以虛構公司「北辰精密製造」撰寫填寫範例；正式使用前請依組織實際情況修改，並經權責主管核准。法規內容整理於 ${RULES_DATE}，請以主管機關公告為準。</p>`;
