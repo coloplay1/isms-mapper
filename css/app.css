@@ -496,6 +496,7 @@ table.cmptable.sum th{white-space:nowrap}
 .nextlist li.first.err .nnum{background:var(--seal);color:var(--on-fill)}
 .nextlist .ntext{flex:1 1 320px;display:grid;line-height:1.5}
 .nextlist .ntext span{font-size:13px;color:var(--muted)}
+.nextlist li>.btn{min-width:10.5em;text-align:center;flex:none}
 /* 導入進度：步驟圖示 */
 .stepper{list-style:none;margin:6px 0 12px;padding:0;display:grid;grid-template-columns:repeat(8,minmax(0,1fr))}
 .stepper li{position:relative;display:flex;justify-content:center;align-items:flex-start}
