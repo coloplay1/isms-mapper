@@ -645,10 +645,10 @@ function nextCard(p){
   const rel=sel.done?[]:list.filter(x=>sel.keys.includes(x.key));
   const state=st=>st.done?"已完成":st.current?"目前步驟":"未完成";
   return `<section class="nextcard" aria-label="導入進度與下一步建議">
-    <div class="secthead"><h3>導入進度</h3><span class="note">${done}／${road.length} 步完成。點圓點可查看每一步的狀況</span></div>
+    <div class="secthead"><h3>導入進度</h3><span class="note">${done}／${road.length} 步完成。圓點下方是該步驟還沒完成的項目數，點圓點可查看明細</span></div>
     <ol class="stepper">${road.map(st=>`<li class="${st.done?"done":""}${st.current?" current":""}${st===sel?" sel":""}">
-      <button type="button" data-road="${st.n}" aria-pressed="${st===sel}" aria-label="步驟 ${st.n} ${esc(st.title)}：${state(st)}">
-      <span class="sdot" aria-hidden="true">${st.done?"✓":st.n}</span><span class="slab">${esc(st.short)}</span></button></li>`).join("")}</ol>
+      <button type="button" data-road="${st.n}" aria-pressed="${st===sel}" aria-label="步驟 ${st.n} ${esc(st.title)}：${state(st)}${st.badge?"，"+esc(st.badge):""}" title="${esc(st.detail)}">
+      <span class="sdot" aria-hidden="true">${st.done?"✓":st.n}</span><span class="slab">${esc(st.short)}</span>${st.badge?`<span class="sbadge${st.hot?" hot":""}" aria-hidden="true">${esc(st.badge)}</span>`:""}</button></li>`).join("")}</ol>
     <div class="sdetail" aria-live="polite">
       <div class="sdhead"><b>步驟 ${sel.n}　${esc(sel.title)}</b><span class="mono rcl">${esc(sel.clause)}</span><span class="rstate ${sel.done?"ok":sel.current?"warn":""}">${state(sel)}</span></div>
       <span class="rdetail">${esc(sel.detail)}</span>

@@ -93,6 +93,20 @@ function roadmapSteps(p,now){
     {n:8,keys:["actOverdue","actVerify","actOnNA"],short:"改善",title:"改善事項結案",clause:"10.1、10.2",tab:"improve",done:f.auditDone&&!f.actOpen,
       detail:f.actOpen?`${f.actOpen} 項未結案${f.actOverdue?`、${f.actOverdue} 項逾期`:""}`:(f.auditDone?"所有改善事項已結案":"內部稽核後登錄發現事項")}
   ];
+  /* 未完成步驟的待辦數，顯示在進度圖下方，不用點開就知道還缺多少 */
+  const n=x=>+!!x;
+  const gaps={
+    1:[n(!f.scope)+n(!f.profile)],
+    2:[n(!f.criteria)],
+    3:f.risks?[f.unscored+f.reassess+n(!f.identOk)]:[0,"尚無風險"],
+    4:[f.undecided+f.noReason+f.conflicts+f.riskWarn,f.conflicts?`衝突 ${f.conflicts}`:""],
+    5:[n(!f.docApproved)+f.needApproval],
+    6:f.applicable?[f.notStarted]:[0,"未開始"],
+    7:[f.clausesTotal-f.clausesDone],
+    8:f.actOverdue?[f.actOpen,`逾期 ${f.actOverdue}`]:f.auditDone?[f.actOpen]:[f.actOpen,"待稽核"]
+  };
+  for(const st of steps){if(st.done)continue;const[k,special]=gaps[st.n];
+    st.todo=k;st.badge=special||(k?`待辦 ${k}`:"");st.hot=!!special&&/逾期|衝突/.test(special)}
   const cur=steps.find(s=>!s.done);if(cur)cur.current=true;
   return steps;
 }

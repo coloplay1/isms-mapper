@@ -471,17 +471,19 @@ table.cmptable.sum th{white-space:nowrap}
 .nextlist .ntext span{font-size:13px;color:var(--muted)}
 /* 導入進度：步驟圖示 */
 .stepper{list-style:none;margin:6px 0 12px;padding:0;display:grid;grid-template-columns:repeat(8,minmax(0,1fr))}
-.stepper li{position:relative;display:flex;justify-content:center}
+.stepper li{position:relative;display:flex;justify-content:center;align-items:flex-start}
 .stepper li::before{content:"";position:absolute;top:21px;right:50%;width:100%;height:3px;background:var(--line);z-index:0}
 .stepper li:first-child::before{display:none}
 .stepper li.done::before,.stepper li.current::before{background:var(--s3)}
-.stepper button{position:relative;z-index:1;display:grid;justify-items:center;gap:4px;background:none;border:0;padding:0 2px 4px;cursor:pointer;font:inherit;color:var(--muted);min-width:44px}
+.stepper button{position:relative;z-index:1;display:grid;justify-items:center;align-content:start;gap:4px;background:none;border:0;padding:0 2px 4px;cursor:pointer;font:inherit;color:var(--muted);min-width:44px}
 .stepper .sdot{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:15px;background:var(--surface);border:2px solid var(--muted);color:var(--muted)}
 .stepper li.done .sdot{background:var(--s3);border-color:var(--s3);color:var(--on-fill)}
 .stepper li.current .sdot{background:var(--surface);border:3px solid var(--accent);color:var(--accent)}   /* 實心＝完成、空心粗框＝目前、空心細框＝未開始，兩種主題一致 */
 .stepper li.sel .sdot{box-shadow:0 0 0 4px var(--accent-soft)}
 .stepper li.sel .slab{color:var(--ink);font-weight:700}
 .stepper .slab{font-size:13px;white-space:nowrap}
+.stepper .sbadge{font-size:11.5px;line-height:1.5;padding:0 7px;border-radius:999px;background:var(--accent-soft);color:var(--ink);white-space:nowrap}
+.stepper .sbadge.hot{background:var(--seal);color:var(--on-fill)}   /* 逾期、衝突用實心紅底，和一般待辦區分 */
 .stepper button:focus-visible{outline:none}
 .stepper button:focus-visible .sdot{outline:2px solid var(--focus);outline-offset:3px}
 @media (max-width:620px){.stepper{grid-template-columns:repeat(4,minmax(0,1fr));row-gap:10px}.stepper li:nth-child(5)::before{display:none}}

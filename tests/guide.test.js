@@ -54,6 +54,25 @@ test('改善結案要先做過內部稽核；SoA 核准看文件狀態', () => {
   assert.equal(A.roadmapSteps({ ...base, doc: { status: '已核准' } }, NOW)[4].done, true);
 });
 
+test('未完成的步驟有待辦數標示；逾期與衝突標成紅色；完成的步驟不顯示', () => {
+  const p = { ...A.blankProject('X', ''), scope: '總部', controls: { 'A.5.18': { app: 'N', status: 0, owner: '', reason: '無' } },
+    risks: [{ ...A.blankRisk('R-001'), title: 't', owner: '甲', l: 3, i: 3, treat: 'mitigate', controls: ['A.5.18'], rl: 1, ri: 1, reassess: true }],
+    actions: [{ ...A.blankAction('I-001'), title: 'x', owner: '甲', due: '2026-01-31', status: '處理中' }] };
+  const road = A.roadmapSteps(p, NOW);
+  assert.equal(road[0].badge, '待辦 1', '範圍已填、產業特性未選');
+  assert.match(road[2].badge, /^待辦 \d+$/);
+  assert.equal(road[3].badge, '衝突 1'); assert.equal(road[3].hot, true);
+  assert.equal(road[7].badge, '逾期 1'); assert.equal(road[7].hot, true, '尚未內部稽核，逾期仍要提醒');
+  assert.equal(A.roadmapSteps({ ...p, actions: [] }, NOW)[7].badge, '待稽核');
+  assert.equal(A.roadmapSteps(A.blankProject('新', ''), NOW)[2].badge, '尚無風險');
+  for (const s of road) if (s.done) assert.equal(s.badge, undefined);
+  const full = { ...A.blankProject('X', ''), scope: '總部', industry: 'mfg', criteria: A.presetCriteria('four'),
+    doc: { status: '已核准' }, controls: allControls(), clauses: allClauses(3), scale: { l: A.SCALE_REF.l, i: A.SCALE_REF.i }, identOk: true,
+    risks: [{ ...A.blankRisk('R-001'), title: 't', owner: '甲', l: 1, i: 2, treat: 'accept' }],
+    actions: [{ ...A.blankAction('I-001'), title: 'x', status: '已確認有效' }] };
+  assert.ok(A.roadmapSteps(full, NOW).every(s => !s.badge));
+});
+
 test('沒有開啟專案時回傳空清單', () => {
   for (const p of [null, undefined]) { assert.deepEqual(A.nextSteps(p), []); assert.deepEqual(A.roadmapSteps(p), []); }
 });
