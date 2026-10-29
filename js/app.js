@@ -640,11 +640,14 @@ document.addEventListener("click",e=>{const g=e.target.closest("[data-goto]");if
   if(g.dataset.actf)actFilter=g.dataset.actf;
   if(g.dataset.riskf){riskView.due=g.dataset.riskf;riskView.stage=null;riskView.cell=null}
   tab=g.dataset.goto;render();window.scrollTo(0,0);
-  if(g.dataset.anchor){const a=document.getElementById(g.dataset.anchor);if(a)a.scrollIntoView({block:"start"})}
+  if(g.dataset.anchor){const a=document.getElementById(g.dataset.anchor);if(a){a.scrollIntoView({block:"start"});flashPanel(a)}}
   if(g.dataset.riskf){const d=document.querySelector("#view-risks .duebar");if(d)d.scrollIntoView({block:"start"})}
   if(g.dataset.openx==="criteria")openCriteriaDrawer()});
 /* ---------- 下一步建議（總覽上方）與導入路線圖 ---------- */
 let nextAll=false;
+/* 跳到頁面中的某個區塊時短暫標亮，並把游標放到第一個要填的欄位，讓人知道要做什麼 */
+function flashPanel(el){el.classList.remove("flash");void el.offsetWidth;el.classList.add("flash");setTimeout(()=>el.classList.remove("flash"),2600);
+  const f=el.querySelector(".need");if(f)f.focus({preventScroll:true})}
 function stepBtn(x,primary,label){return `<button class="btn ${primary?"primary":""}" data-goto="${x.tab}"${x.filter?` data-gofilter="${x.filter}"`:""}${x.open?` data-openx="${x.open}"`:""}${x.anchor?` data-anchor="${x.anchor}"`:""}${x.actf?` data-actf="${x.actf}"`:""}${x.riskf?` data-riskf="${x.riskf}"`:""}>${esc(label||(x.cta||"前往")+" →")}</button>`}
 /* 按鈕上顯示要前往的分頁，點之前就知道會離開總覽 */
 const TAB_LABEL={home:"首頁",overview:"總覽",search:"案例搜尋",risks:"風險評鑑",annex:"附錄 A",clauses:"條款 4–10",audit:"稽核準備",improve:"改善追蹤",docs:"文件範本",projects:"專案管理"};
@@ -980,7 +983,10 @@ function renderProjects(){
   on("pNew",()=>goNew());
   on("xlsxIn",()=>$("#xlsxFile").click());
   const dp=$("#docForm");if(dp)dp.addEventListener("input",e=>{const k=e.target.dataset.doc;if(!k)return;const p=cur();
-    p.doc=sanitizeDoc({...(p.doc||{}),[k]:e.target.value});if(!p.sample){p.changesSinceBackup=(p.changesSinceBackup||0)+1}saveSoon()});
+    p.doc=sanitizeDoc({...(p.doc||{}),[k]:e.target.value});if(!p.sample){p.changesSinceBackup=(p.changesSinceBackup||0)+1}saveSoon();
+    const d=p.doc,need=docNeedKeys(d);dp.querySelectorAll("[data-doc]").forEach(el=>el.classList.toggle("need",need.includes(el.dataset.doc)));
+    const h=$("#docHint");if(h){h.textContent=docHint(d);h.classList.toggle("ok",!need.length)}
+    const sv=$("#docSaved");if(sv&&!p.sample)sv.textContent="已自動儲存 "+new Date().toTimeString().slice(0,5)});
   if($("#storePanel")){ensurePersist().then(()=>{const el=$("#persistVal");if(el)el.textContent={yes:"已啟用",no:"未啟用（瀏覽器未同意）",unknown:"此瀏覽器不支援"}[persistState]});
     storageInfo().then(i=>{const el=$("#usageVal");if(el)el.textContent=`約 ${i.local} KB（瀏覽器上限通常約 5 MB）`})}
   if($("#indBox")){wireIndustry(v,"pInd","pF","pCount");
@@ -1105,12 +1111,19 @@ function exportComparison(){
 function goNew(){homePick="create";tab="home";render();const n=$("#hName");if(n){n.focus({preventScroll:true});$("#pk-create").scrollIntoView({block:"start"})}}
 function resetBuilt(){["annex"].forEach(v=>delete $("#view-"+v).dataset.built)}
 $("#xlsxFile").addEventListener("change",e=>{const f=e.target.files[0];e.target.value="";if(f)importExcelFile(f)});
+/* 核准要填的欄位：狀態不是「已核准」時，標出還沒填的核准人、核准日期與狀態 */
+const DOC_NEED=["approver","approvedAt","status"];
+function docNeedKeys(d){return d.status==="已核准"?[]:DOC_NEED.filter(k=>k==="status"||!String(d[k]||"").trim())}
+function docHint(d){const n=docNeedKeys(d);if(!n.length)return "已核准，核准資訊會印在匯出的 Excel 表頭。";
+  const f=n.filter(k=>k!=="status").map(k=>({approver:"核准人",approvedAt:"核准日期"})[k]);
+  return `要完成核准：${f.length?`填寫${f.join("、")}，並`:""}把狀態改為「已核准」。`}
 function docPanel(p){
-  const d=sanitizeDoc(p.doc);
-  return `<div class="panel" id="docctl" style="margin-top:18px;scroll-margin-top:120px"><div class="secthead"><h3>文件管制資訊</h3><span class="note">會印在匯出 Excel 每個工作表的表頭（條款 7.5）。正式送審前請填寫並完成簽核。</span></div>
+  const d=sanitizeDoc(p.doc),need=docNeedKeys(d);
+  return `<div class="panel" id="docctl" style="margin-top:18px;scroll-margin-top:120px"><div class="secthead"><h3>文件管制資訊</h3><span class="note">會印在匯出 Excel 每個工作表的表頭（條款 7.5）。正式送審前請填寫並完成簽核。</span><span class="saved" id="docSaved" style="margin-left:auto">${p.sample?"範例不會儲存":"輸入後自動儲存"}</span></div>
+    <p class="dochint ${need.length?"":"ok"}" id="docHint">${esc(docHint(d))}</p>
     <div id="docForm" class="docgrid">
-      ${DOC_FIELDS.map(([k,l])=>`<label>${l}<input data-doc="${k}" value="${esc(d[k])}" ${k==="date"||k==="approvedAt"?'placeholder="例如 2026/10/25"':""}></label>`).join("")}
-      <label>狀態<select data-doc="status">${DOC_STATUS.map(x=>`<option ${x===d.status?"selected":""}>${x}</option>`).join("")}</select></label>
+      ${DOC_FIELDS.map(([k,l])=>`<label>${l}<input data-doc="${k}" value="${esc(d[k])}" ${k==="date"||k==="approvedAt"?'placeholder="例如 2026/10/25"':""} class="${need.includes(k)?"need":""}"></label>`).join("")}
+      <label>狀態<select data-doc="status" class="${need.includes("status")?"need":""}">${DOC_STATUS.map(x=>`<option ${x===d.status?"selected":""}>${x}</option>`).join("")}</select></label>
     </div>${p.sample?`<p class="note" style="margin:8px 0 0">範例中的修改不會儲存。</p>`:""}</div>`;
 }
 $("#importFile").addEventListener("change",e=>{
