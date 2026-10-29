@@ -511,6 +511,37 @@ table.cmptable.sum th{white-space:nowrap}
 .nextlist .ntext{flex:1 1 320px;display:grid;line-height:1.5}
 .nextlist .ntext span{font-size:13px;color:var(--muted)}
 .nextlist li>.btn{min-width:10.5em;text-align:center;flex:none}
+/* 追蹤鏈 */
+.trace{margin:12px 0;border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--surface2)}
+.trace>summary{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;cursor:pointer;list-style:none}
+.trace>summary::-webkit-details-marker{display:none}
+.trace>summary::before{content:"▸";color:var(--muted);font-size:11px;transition:transform .15s}
+.trace[open]>summary::before{transform:rotate(90deg)}
+.trace>summary .ag{margin-left:auto}
+.tchain{list-style:none;margin:10px 0 0;padding:0}
+.tchain>li{position:relative;display:flex;gap:10px;padding:0 0 12px}
+.tchain>li:last-child{padding-bottom:0}
+.tchain>li::before{content:"";position:absolute;left:6px;top:16px;bottom:-2px;width:2px;background:var(--line)}
+.tchain>li:last-child::before{display:none}
+.tdot{flex:none;width:14px;height:14px;margin-top:4px;border-radius:50%;border:2px solid var(--s3);background:var(--s3);position:relative;z-index:1}
+.tchain>li.warn .tdot{border-color:var(--amber);background:var(--surface2)}
+.tchain>li.bad .tdot{border-color:var(--seal);background:var(--seal)}
+.tchain>li.idle .tdot{border-color:var(--line);background:var(--surface2)}
+.tchain>li.idle{color:var(--muted)}
+.tbody{min-width:0;flex:1}
+.th{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;font-size:14px}
+.th .rcl{font-size:11.5px;color:var(--muted)}
+.tst{font-size:12px;font-weight:600;color:var(--s3)}
+.tchain>li.warn .tst{color:var(--amber)}
+.tchain>li.bad .tst{color:var(--seal)}
+.tt{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.tchain>li.bad .tt{color:var(--seal)}
+.tlinks{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.tlink{display:inline-flex;gap:6px;align-items:baseline;font:inherit;font-size:12.5px;text-align:left;border:1px solid var(--line);border-left:3px solid var(--s3);border-radius:4px;background:var(--surface);color:var(--ink);padding:2px 8px;cursor:pointer;max-width:100%}
+.tlink span{color:var(--muted);font-size:11.5px;white-space:nowrap}
+.tlink.warn{border-left-color:var(--amber)}
+.tlink.bad{border-left-color:var(--seal)}
+.tlink.bad span{color:var(--seal)}
 /* 稽核員會怎麼看 */
 .audview{margin-top:18px}
 .audview>summary{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;cursor:pointer;list-style:none}

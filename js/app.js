@@ -1376,11 +1376,26 @@ function markPicked(code){
   view.querySelectorAll(`[data-open="${CSS.escape(code)}"]`).forEach(el=>el.classList.add("picked"));
 }
 /* 從詳細頁點到另一項（例如相關案例的「也對應到」）時記下來處，讓使用者可以返回；重新整理同一項時保留 */
-let drawerTrail=[],drawerCode=null;
+let drawerTrail=[],drawerCode=null,riskDrawerId=null;
+/* 目前開著的詳細頁（控制措施／條款或風險），跳到另一項前記下來，返回時恢復展開的案例與捲動位置 */
+function drawerHere(){const d=document.querySelector("#drawerHost .drawer");if(!d)return null;
+  if($("#dStatus")&&drawerCode)return {kind:"ctl",id:drawerCode,open:[...d.querySelectorAll('[data-casetoggle][aria-expanded="true"]')].map(b=>b.dataset.casetoggle),scroll:d.scrollTop};
+  if($("#rTitle")&&riskDrawerId)return {kind:"risk",id:riskDrawerId,open:[],scroll:d.scrollTop};
+  return null}
+function pushTrail(){const h=drawerHere();if(!h)return false;drawerTrail.push(h);if(drawerTrail.length>10)drawerTrail.shift();return true}
+function trailBackHTML(){if(!drawerTrail.length)return "";const p=drawerTrail[drawerTrail.length-1];
+  const name=p.kind==="risk"?((riskById(p.id)||{}).title||""):((ANNEX_MAP[p.id]||CLAUSE_MAP[p.id]||{}).name||"");
+  return `<button class="btn" id="dTrail" style="margin-bottom:10px">← 返回 ${esc(p.id)} ${esc(name)}</button>`}
+function trailBack(){const p=drawerTrail.pop();if(!p)return;
+  if(p.kind==="risk")openRiskDrawer(p.id,true);else openDrawer(p.id,!!lastList,true);
+  const host=$("#drawerHost");
+  p.open.forEach(i=>{const b=host.querySelector(`[data-casetoggle="${i}"]`),body=$("#rc"+i);if(b&&body){body.hidden=false;b.setAttribute("aria-expanded","true")}});
+  const d=host.querySelector(".drawer");if(d)d.scrollTop=p.scroll}
+document.addEventListener("click",e=>{if(e.target.closest("#dTrail")){e.preventDefault();trailBack()}});
 function openDrawer(code,fromList,trail){
   if(!fromList)lastList=null;
   if(!trail&&(code!==drawerCode||!$("#drawerHost").innerHTML))drawerTrail=[];
-  drawerCode=code;
+  drawerCode=code;riskDrawerId=null;
   const isA=!!ANNEX_MAP[code]; const c=isA?ANNEX_MAP[code]:CLAUSE_MAP[code]; if(!c)return;
   const v=isA?ctl(code):cls(code);
   const rel=[...CASES,...customCases()].filter(x=>x.r.includes(code));
@@ -1388,7 +1403,7 @@ function openDrawer(code,fromList,trail){
   const host=$("#drawerHost");
   host.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${esc(c.name)}">
     <button class="btn x" data-close>關閉</button>
-    ${drawerTrail.length?(()=>{const p=drawerTrail[drawerTrail.length-1],pc=ANNEX_MAP[p.code]||CLAUSE_MAP[p.code];return `<button class="btn" id="dTrail" style="margin-bottom:10px">← 返回 ${esc(p.code)} ${esc(pc?pc.name:"")}</button>`})():lastList?`<button class="btn" id="dBack" style="margin-bottom:10px">← 返回清單</button>`:""}
+    ${drawerTrail.length?trailBackHTML():lastList?`<button class="btn" id="dBack" style="margin-bottom:10px">← 返回清單</button>`:""}
     <div class="code">${isA?code:"第 "+code+" 條"}${isA&&c.isNew?' <span class="tag">2022 新增</span>':""}</div>
     <h2>${esc(c.name)}</h2>
     <p class="lede" style="margin-bottom:6px">${esc(c.desc)}</p>
@@ -1398,6 +1413,7 @@ function openDrawer(code,fromList,trail){
     ${isA&&FM[code]?`<div class="why"><b>建議重點</b>：依目前專案的設定<ul>${FM[code].map(f=>`<li>${esc(FEATURE_MAP[f].label)}：${esc(FEATURE_MAP[f].why)}</li>`).join("")}</ul></div>`:""}
     ${isA&&NAC[code]?`<div class="why" style="background:var(--surface2)"><b style="color:var(--muted)">可能不適用</b>：${esc(NAC[code])}。是否排除仍須依風險評鑑決定。</div>`:""}
     ${isA?riskLinkHTML(code,v):""}
+    ${isA?`<div id="dTrace">${traceHTML(traceChain(cur(),"ctl",code))}</div>`:""}
     <dl>
       ${isA?`<div><dt>適用性</dt><dd><select id="dApp">${APP.map(a=>`<option value="${a.v}" ${a.v===v.app?"selected":""}>${a.label}</option>`).join("")}</select></dd></div>
       <div><dt>納入／排除理由</dt><dd><input id="dReason" data-reason="${code}" autocomplete="off" placeholder="選擇或輸入理由，可複選" value="${esc(v.reason)}" class="${missingReason(v)?"warn":""}" aria-describedby="dReasonHint"><small id="dReasonHint" class="warnhint" ${missingReason(v)?"":"hidden"}>不適用的項目需要填寫排除理由，SoA 稽核時會檢查。</small></dd></div>
@@ -1419,18 +1435,28 @@ function openDrawer(code,fromList,trail){
   const refreshHist=()=>{const h=$("#dHist");if(h)h.innerHTML=historyHTML(((cur()&&cur().log)||[]).filter(e=>e.c===code).slice(-10).reverse(),false)};
   const syncWarn=()=>{const r=$("#dReason");if(!r)return;const miss=missingReason(v);r.classList.toggle("warn",miss);$("#dReasonHint").hidden=!miss};
   Object.entries(FIELDS).forEach(([id,f])=>{const el=$("#"+id);if(!el)return;
-    const fn=()=>{if(setField(code,f,el.value)){syncWarn();refreshHist()}};
+    const fn=()=>{if(setField(code,f,el.value)){syncWarn();refreshHist();const t=$("#dTrace");if(t)t.innerHTML=traceHTML(traceChain(cur(),"ctl",code))}};
     el.addEventListener(el.tagName==="SELECT"?"change":"input",fn)});
   host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>{lastList=null;closeDrawer()}));
   const back=$("#dBack");if(back)back.addEventListener("click",()=>{renderOverviewQuiet();openList(lastList)});
-  const tb=$("#dTrail");if(tb)tb.addEventListener("click",()=>{const p=drawerTrail.pop();openDrawer(p.code,!!lastList,true);
-    p.open.forEach(i=>{const b=host.querySelector(`[data-casetoggle="${i}"]`),body=$("#rc"+i);if(b&&body){body.hidden=false;b.setAttribute("aria-expanded","true")}});
-    const d=host.querySelector(".drawer");if(d)d.scrollTop=p.scroll});
   host.querySelectorAll("[data-casetoggle]").forEach(b=>b.addEventListener("click",()=>{const body=$("#rc"+b.dataset.casetoggle);const open=body.hidden;body.hidden=!open;b.setAttribute("aria-expanded",String(open))}));
   host.querySelectorAll("[data-casego]").forEach(b=>b.addEventListener("click",()=>{closeDrawer();searchQ=b.dataset.casego;tab="search";
     const si=$("#sInput"); if(si) si.value=searchQ; render(); if($("#sInput")) $("#sInput").value=searchQ;}));
   host.querySelector(".x").focus();
 }
+/* 追蹤鏈：稽核員從這一項往下追的路線，斷掉的地方標紅；點連結開啟相關的風險、控制措施或改善事項（可返回） */
+let traceOpen=true;
+const TRACE_ST={ok:"✓",warn:"待補強",bad:"斷掉",idle:""};
+function traceHTML(ch){
+  if(!ch)return "";
+  const sum=ch.broken?`<span class="ag nc">斷在「${esc(ch.broken)}」</span>`:ch.warn?`<span class="ag obs">${ch.warn} 處待補強</span>`:`<span class="ag ok">✓ 完整</span>`;
+  const lk=l=>`<button class="tlink ${l.state}" ${l.kind==="risk"?`data-risk="${esc(l.id)}"`:l.kind==="act"?`data-act="${esc(l.id)}"`:`data-open="${esc(l.id)}"`}>${esc(l.label)}${l.note?`<span>${esc(l.note)}</span>`:""}</button>`;
+  return `<details class="trace" ${traceOpen?"open":""}><summary><b>追蹤鏈</b><span class="note">稽核員會這樣往下追</span>${sum}</summary>
+    <ol class="tchain">${ch.nodes.map(n=>`<li class="${n.state}"><span class="tdot" aria-hidden="true"></span><div class="tbody">
+      <div class="th"><b>${esc(n.label)}</b>${n.clause?`<span class="mono rcl">${esc(n.clause)}</span>`:""}${TRACE_ST[n.state]?`<span class="tst">${TRACE_ST[n.state]}</span>`:""}</div>
+      <div class="tt">${esc(n.text)}</div>${n.links&&n.links.length?`<div class="tlinks">${n.links.map(lk).join("")}</div>`:""}</div></li>`).join("")}</ol></details>`;
+}
+document.addEventListener("click",e=>{const s=e.target.closest(".trace>summary");if(s)traceOpen=!s.parentElement.open});
 function riskLinkHTML(code,v){
   const ids=RBC[code]||[];
   if(!ids.length)return String(v.reason||"").includes(RISK_REASON)?`<div class="why" style="background:var(--surface2)"><b style="color:var(--muted)">風險評鑑</b>：納入理由是風險評鑑結果，但目前沒有風險引用這一項。可到「風險評鑑」把它加進對應的風險。</div>`:"";
@@ -1439,15 +1465,11 @@ function riskLinkHTML(code,v){
     ${v.app===""?`<button class="btn" data-apply="${code}" style="margin-top:8px">設為適用，理由填「${RISK_REASON}」</button>`:""}</div>`;
 }
 function renderOverviewQuiet(){if(tab==="overview")renderOverview()}
-function closeDrawer(){$("#drawerHost").innerHTML="";drawerTrail=[];drawerCode=null;if(tab!=="search")render();else renderSearchResult()}
+function closeDrawer(){$("#drawerHost").innerHTML="";drawerTrail=[];drawerCode=null;riskDrawerId=null;if(tab!=="search")render();else renderSearchResult()}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#drawerHost").innerHTML)closeDrawer()});
 document.addEventListener("click",e=>{const o=e.target.closest("[data-open]");if(!o)return;e.preventDefault();
-  const d=o.closest(".drawer");
-  if(d&&drawerCode&&$("#dStatus")&&o.dataset.open!==drawerCode){
-    const open=[...d.querySelectorAll('[data-casetoggle][aria-expanded="true"]')].map(b=>b.dataset.casetoggle);
-    drawerTrail.push({code:drawerCode,open,scroll:d.scrollTop});if(drawerTrail.length>10)drawerTrail.shift();
-    openDrawer(o.dataset.open,!!lastList,true);
-  }else openDrawer(o.dataset.open)});
+  if(o.closest(".drawer")&&o.dataset.open!==drawerCode&&pushTrail())openDrawer(o.dataset.open,!!lastList,true);
+  else openDrawer(o.dataset.open)});
 
 /* ================= 風險評鑑與處理 ================= */
 const riskView={mode:"in",cell:null,stage:null,due:null};   // due：處理計畫期限篩選 late／soon／nodue
@@ -1733,19 +1755,24 @@ function renderRisks(){
 }
 document.addEventListener("click",e=>{
   const a=e.target.closest("[data-apply]");if(a){e.preventDefault();applyRiskToSoA(a.dataset.apply);return}
-  const r=e.target.closest("[data-risk]");if(r){e.preventDefault();openRiskDrawer(r.dataset.risk);return}
+  const r=e.target.closest("[data-risk]");if(r){e.preventDefault();
+    if(r.closest(".drawer")&&r.dataset.risk!==riskDrawerId&&pushTrail())openRiskDrawer(r.dataset.risk,true);else openRiskDrawer(r.dataset.risk);return}
   const n=e.target.closest("[data-newrisk]");if(n){e.preventDefault();riskFromCase(n.dataset.newrisk)}
 });
 function levelSelect(id,val,labels){
   return `<select id="${id}">${[0,1,2,3,4,5].map(n=>`<option value="${n}" ${n===+val?"selected":""}>${n?n+"　"+labels[n]:"未評估"}</option>`).join("")}</select>`;
 }
-function openRiskDrawer(id){
+function openRiskDrawer(id,trail){
   const r=riskById(id);if(!r)return;
   const host=$("#drawerHost");
+  if(!trail&&(id!==riskDrawerId||!host.innerHTML))drawerTrail=[];
+  riskDrawerId=id;drawerCode=null;
   host.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${esc(r.id)} 風險">
     <button class="btn x" data-close>關閉</button>
+    ${trailBackHTML()}
     <div class="code">${r.id}　風險登錄</div>
     <div id="rCkTop"></div>
+    <div id="rTrace"></div>
     <h3 class="rstep"><span>1</span>識別</h3>
     <dl>
       <div><dt>風險描述</dt><dd><input id="rTitle" value="${esc(r.title)}" placeholder="例如：離職員工帳號未停用，資料遭不當存取"><div class="saved" style="margin-top:4px;white-space:normal">寫成「可能發生」的事件；已發生的事件請登錄在改善追蹤，並作為評估可能性的依據。</div></dd></div>
@@ -1797,6 +1824,7 @@ function openRiskDrawer(id){
       h.className="saved"+(d&&d.state==="late"?" dlate":d&&d.state==="soon"?" dsoon":"");
       h.textContent=bad?"格式請寫成 2026-12-31 或 2026-12":!d?"":d.state==="late"?`已超過 ${-d.days} 天，請更新進度或調整期限並記錄原因`:d.state==="soon"?(d.days?`還有 ${d.days} 天到期`:"今天到期"):d.state==="nodue"?"建議寫上預計完成日，方便追蹤":`還有 ${d.days} 天`}
     $("#rTreatHint").textContent=!s?"":r.treat?"":`目前 ${s} 分屬「${riskLevel(s,cur()).label}」：${pl(s)}`;
+    $("#rTrace").innerHTML=traceHTML(traceChain(cur(),"risk",r.id));
     const cks=riskChecks(cur()).filter(c=>c.rid===r.id);
     const und=cks.filter(c=>c.kind==="undecided").length,nw=cks.filter(c=>c.sev!=="info").length;
     /* 背景的連動檢查會被詳細頁遮住，所以在頂端摘要這個風險的檢查結果，點一下跳到清單 */
@@ -1966,14 +1994,18 @@ function renderImprove(){
   $("#aHow summary").addEventListener("click",()=>{howtoOpen=!$("#aHow").open});   /* 只記住使用者自己點的展開／收合 */
   $("#aSeg").addEventListener("click",e=>{const b=e.target.closest("[data-af]");if(!b)return;actFilter=b.dataset.af;renderImprove()});
 }
-document.addEventListener("click",e=>{const a=e.target.closest("[data-act]");if(a){e.preventDefault();openActionDrawer(a.dataset.act)}});
-function openActionDrawer(id){
+document.addEventListener("click",e=>{const a=e.target.closest("[data-act]");if(a){e.preventDefault();
+  if(a.closest(".drawer")&&pushTrail())openActionDrawer(a.dataset.act,true);else openActionDrawer(a.dataset.act)}});
+function openActionDrawer(id,trail){
   const a=actionById(id);if(!a)return;
   const host=$("#drawerHost");
+  if(!trail)drawerTrail=[];
+  drawerCode=null;riskDrawerId=null;
   const draw=()=>{
     const t=ACTION_TYPE_MAP[a.type];
     host.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${esc(a.id)} 改善事項">
     <button class="btn x" data-close>關閉</button>
+    ${trailBackHTML()}
     <div class="code">${a.id}　改善事項${a.carried?`<span class="saved">　沿用自 ${esc(a.carried)}</span>`:""}</div>
     <dl>
       <div><dt>類型</dt><dd><select id="aType">${ACTION_TYPES.map(x=>`<option value="${x.v}" ${x.v===a.type?"selected":""}>${x.label}（${x.clause}）</option>`).join("")}</select><div class="saved" style="margin-top:4px">${esc(t.hint)}</div></dd></div>

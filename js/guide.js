@@ -247,6 +247,80 @@ function auditReadiness(p,now){
           {id:"s2",name:"第二階段：實施查核",desc:"抽樣確認有在執行：證據、處理計畫、內部稽核與管理審查",items:s2}];
 }
 
+/* ================= 追蹤鏈：稽核員從一個點往下追 =================
+   控制措施：為什麼要做 → SoA 判定 → 負責人 → 執行 → 證據 → 改善紀錄
+   風險：識別 → 評估 → 處理方式 → 控制措施 → 處理計畫 → 殘餘風險與核准 → 改善紀錄
+   state：ok 完整、warn 待補強、bad 斷掉（稽核時拿不出來）、idle 前面斷了或還不需要；broken 是第一個斷掉的步驟 */
+function traceChain(p,kind,id,now){
+  if(!p)return null;
+  const ctl=code=>(p.controls||{})[code]||{app:"",status:0,owner:"",reason:"",evidence:""};
+  const acts=p.actions||[],risks=p.risks||[];
+  const actLinks=codes=>acts.filter(a=>(a.refs||[]).some(c=>codes.includes(c))).map(a=>{
+    const late=actionOverdue(a,now),closed=a.status===ACTION_CLOSED;
+    return {kind:"act",id:a.id,label:a.id+" "+(a.title||"（未填寫）"),note:late?"逾期":a.status,state:late?"bad":closed?"ok":"warn"}});
+  const actNode=codes=>{const l=actLinks(codes);
+    return {k:"act",label:"改善紀錄",clause:"10.2",state:!l.length?"idle":l.some(x=>x.state==="bad")?"bad":"ok",
+      text:!l.length?"沒有相關的改善事項":l.some(x=>x.state==="bad")?"有改善事項逾期":l.some(x=>x.state==="warn")?`${l.filter(x=>x.state==="warn").length} 項改善事項處理中，尚未逾期`:"相關改善事項都已確認有效",links:l}};
+  const ctlState=c=>{const v=ctl(c);return v.app!=="Y"?"bad":v.status===0?"bad":v.status===1?"warn":!String(v.evidence||"").trim()?"warn":"ok"};
+  const ctlNote=c=>{const v=ctl(c);return v.app==="N"?"SoA 不適用":v.app===""?"SoA 未判定":v.status<2?STATUS[v.status].label:!String(v.evidence||"").trim()?"沒寫證據位置":STATUS[v.status].label};
+  let nodes=[];
+  if(kind==="ctl"){
+    const c=ANNEX_MAP[id];if(!c)return null;
+    const v=ctl(id),rs=(risksByControl(p)[id]||[]),rlinks=rs.map(rid=>{const r=risks.find(x=>x.id===rid);return {kind:"risk",id:rid,label:rid+" "+((r&&r.title)||""),state:"ok"}});
+    const reason=String(v.reason||"").trim(),ev=String(v.evidence||"").trim(),owner=String(v.owner||"").trim();
+    if(v.app==="N"){
+      nodes=[{k:"why",label:"為什麼不做",clause:"6.1.3 d",state:rs.length?"bad":reason?"ok":"bad",
+        text:rs.length?`判為不適用，卻有 ${rs.length} 項風險要用它處理`:reason?`排除理由：${reason}`:"判為不適用，但沒有寫排除理由",links:rlinks},
+        {k:"soa",label:"SoA 判定",clause:"6.1.3 d",state:rs.length?"bad":"ok",text:"不適用；不需要再往下追實施與證據"}];
+    }else{
+      const und=v.app==="";
+      nodes.push({k:"why",label:"為什麼要做",clause:"6.1.3",state:rs.length||reason?"ok":und?"idle":"warn",
+        text:rs.length?`處理 ${rs.length} 項風險`+(reason?`；理由：${reason}`:""):reason?`納入理由：${reason}`:und?"還沒判定適用性":"沒有風險引用，也沒有寫納入理由",links:rlinks});
+      nodes.push({k:"soa",label:"SoA 判定",clause:"6.1.3 d",state:und?"bad":"ok",text:und?"尚未判定適用或不適用":"適用"});
+      if(und){["負責人","執行","證據"].forEach((l,i)=>nodes.push({k:["owner","impl","ev"][i],label:l,state:"idle",text:"判定適用後再確認"}))}
+      else{
+        nodes.push({k:"owner",label:"負責人",clause:"5.3",state:owner?"ok":"warn",text:owner||"沒有指定負責人"});
+        nodes.push({k:"impl",label:"執行",clause:"8.1",state:v.status>=2?"ok":v.status===1?"warn":"bad",text:STATUS[v.status].label});
+        nodes.push({k:"ev",label:"證據",clause:"7.5",state:ev?"ok":v.status===3?"bad":v.status===2?"warn":"idle",
+          text:ev?ev:v.status===3?"標為已驗證，卻沒寫證據在哪裡":v.status===2?"已實施，但沒寫證據位置":"實施後補上證據位置"});
+      }
+      nodes.push(actNode([id]));
+    }
+  }else if(kind==="risk"){
+    const r=risks.find(x=>x.id===id);if(!r)return null;
+    const s=inherentScore(r),lv=riskLevel(s,p),owner=String(r.owner||"").trim();
+    nodes.push({k:"ident",label:"識別",clause:"6.1.2 c",state:owner?"ok":"warn",text:owner?`風險擁有者：${owner}`:"沒有指定風險擁有者"});
+    nodes.push({k:"assess",label:"評估",clause:"6.1.2 d、e",state:s?"ok":"bad",text:s?`${s} 分・${lv?lv.label:""}`:"尚未評估可能性與衝擊"});
+    const T={accept:"接受",mitigate:"降低",transfer:"移轉",avoid:"避免"};
+    if(!s){nodes.push({k:"treat",label:"處理方式",state:"idle",text:"評估後再決定"})}
+    else if(!r.treat){nodes.push({k:"treat",label:"處理方式",clause:"6.1.3 a",state:"bad",text:"尚未決定處理方式"})}
+    else if(r.treat==="accept"){
+      const need=policyOf(s,p)!=="accept";
+      nodes.push({k:"treat",label:"處理方式",clause:"6.1.3 a",state:policyOf(s,p)==="treat"?"bad":"ok",text:policyOf(s,p)==="treat"?"接受，但這個分數依準則不可接受":"接受"});
+      nodes.push({k:"appr",label:"擁有者核准",clause:"6.1.3 f",state:!need||r.accepted?"ok":"warn",text:!need?"在可接受範圍內":r.accepted?"風險擁有者已核准接受":"需要風險擁有者核准接受"});
+    }else{
+      nodes.push({k:"treat",label:"處理方式",clause:"6.1.3 a",state:"ok",text:T[r.treat]});
+      if(r.treat==="mitigate"){
+        const cs=r.controls||[],links=cs.map(c=>({kind:"ctl",id:c,label:c+" "+(ANNEX_MAP[c]?ANNEX_MAP[c].name:""),note:ctlNote(c),state:ctlState(c)}));
+        const st=!cs.length?"bad":links.some(x=>x.state==="bad")?"bad":links.some(x=>x.state==="warn")?"warn":"ok";
+        nodes.push({k:"ctl",label:"控制措施",clause:"6.1.3 b、c",state:st,
+          text:!cs.length?"沒有選定控制措施":st==="bad"?"有控制措施在 SoA 不適用、未判定或未開始":st==="warn"?"有控制措施部分實施或沒寫證據位置":`${cs.length} 項都已實施並有證據位置`,links});
+      }
+      const d=planDue(r,now);
+      nodes.push({k:"plan",label:"處理計畫",clause:"8.3",state:r.status==="已完成"?"ok":!String(r.plan||"").trim()?"warn":d&&d.state==="late"?"bad":d&&d.state==="nodue"?"warn":"ok",
+        text:r.status==="已完成"?"已完成":[String(r.plan||"").trim()||"沒有寫處理計畫",d&&d.state==="late"?`逾期 ${-d.days} 天`:d&&d.state==="nodue"?"沒有預計完成日":d?`預計 ${r.due} 完成（還有 ${d.days} 天）`:""].filter(Boolean).join("；")});
+      if(r.treat!=="avoid"){
+        const rs=residualScore(r),need=rs&&policyOf(rs,p)==="approve";
+        nodes.push({k:"resid",label:"殘餘風險與核准",clause:"6.1.3 f",state:!rs?"warn":policyOf(rs,p)==="treat"?"bad":need&&!r.accepted?"warn":"ok",
+          text:!rs?"尚未評估處理後的殘餘風險":policyOf(rs,p)==="treat"?`殘餘 ${rs} 分仍不可接受`:need?(r.accepted?`殘餘 ${rs} 分，擁有者已核准`:`殘餘 ${rs} 分，需要擁有者核准`):`殘餘 ${rs} 分，在可接受範圍內`});
+      }
+    }
+    nodes.push(actNode(r.controls||[]));
+  }else return null;
+  const b=nodes.findIndex(n=>n.state==="bad");
+  return {kind,id,nodes,broken:b<0?null:nodes[b].label,warn:nodes.filter(n=>n.state==="warn").length};
+}
+
 /* ================= 風險管理流程（ISO/IEC 27005、ISO 31000） =================
    把風險登錄表的資料對應到標準的風險管理流程圖：每一步顯示進度，pending 是卡在這一步的風險編號。 */
 function riskStages(p,now){
