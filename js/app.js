@@ -144,6 +144,11 @@ function buildSample(d){
   p.risks=(d.risks||[]).map(([ci,asset,cia,ow,l,i,treat,rl,ri,accepted,plan],k)=>{const c=CASES[ci];
     return {...blankRisk("R-"+String(k+1).padStart(3,"0")),title:c.t,threat:c.s,asset,cia,owner:ow>=0?d.owners[ow]:"",l,i,treat,rl,ri,accepted,plan,
       controls:treat==="mitigate"?c.r.filter(x=>ANNEX_MAP[x]&&!na.has(x)):[]}});
+  // 範例的處理計畫期限與狀態：建置中多在進行，驗證稽核前大多完成、留一項逾期示範到期提醒；導入初期尚未排期限
+  {const sid=d.stageId||(d.stage==="建置中"?"build":d.stage==="驗證稽核前"?"audit":"intro");
+    const demo={build:[["2026-09-30","處理中"],["2026-11-15","處理中"],["2026-12","規劃中"],["2027-03","規劃中"],["2027-06","規劃中"]],
+      audit:[["2026-06-30","已完成"],["2026-08-31","已完成"],["2026-10-15","處理中"],["2026-12","處理中"],["2027-03","規劃中"]]}[sid];
+    if(demo){let j=0;p.risks.forEach(r=>{if(r.treat&&r.treat!=="accept"){const [due,st]=demo[Math.min(j++,demo.length-1)];r.due=due;r.status=st}})}}
   // 納入理由：被風險引用的寫「依風險評鑑結果」，其餘輪流使用其他理由
   const byC=risksByControl(p);let k=0;
   ANNEX.forEach(c=>{const v=p.controls[c.code];if(v.app==="Y")v.reason=byC[c.code]?RISK_REASON:REASONS_IN[1+(k++%(REASONS_IN.length-1))]});
@@ -633,12 +638,14 @@ document.addEventListener("click",e=>{const g=e.target.closest("[data-goto]");if
   if(g.dataset.gofilter){filt.status=g.dataset.gofilter;filt.theme="all";filt.q="";delete $("#view-annex").dataset.built}
   if(g.dataset.openx==="ident")riskView.stage="ident";
   if(g.dataset.actf)actFilter=g.dataset.actf;
+  if(g.dataset.riskf){riskView.due=g.dataset.riskf;riskView.stage=null;riskView.cell=null}
   tab=g.dataset.goto;render();window.scrollTo(0,0);
   if(g.dataset.anchor){const a=document.getElementById(g.dataset.anchor);if(a)a.scrollIntoView({block:"start"})}
+  if(g.dataset.riskf){const d=document.querySelector("#view-risks .duebar");if(d)d.scrollIntoView({block:"start"})}
   if(g.dataset.openx==="criteria")openCriteriaDrawer()});
 /* ---------- 下一步建議（總覽上方）與導入路線圖 ---------- */
 let nextAll=false;
-function stepBtn(x,primary,label){return `<button class="btn ${primary?"primary":""}" data-goto="${x.tab}"${x.filter?` data-gofilter="${x.filter}"`:""}${x.open?` data-openx="${x.open}"`:""}${x.anchor?` data-anchor="${x.anchor}"`:""}${x.actf?` data-actf="${x.actf}"`:""}>${esc(label||(x.cta||"前往")+" →")}</button>`}
+function stepBtn(x,primary,label){return `<button class="btn ${primary?"primary":""}" data-goto="${x.tab}"${x.filter?` data-gofilter="${x.filter}"`:""}${x.open?` data-openx="${x.open}"`:""}${x.anchor?` data-anchor="${x.anchor}"`:""}${x.actf?` data-actf="${x.actf}"`:""}${x.riskf?` data-riskf="${x.riskf}"`:""}>${esc(label||(x.cta||"前往")+" →")}</button>`}
 /* 按鈕上顯示要前往的分頁，點之前就知道會離開總覽 */
 const TAB_LABEL={home:"首頁",overview:"總覽",search:"案例搜尋",risks:"風險評鑑",annex:"附錄 A",clauses:"條款 4–10",improve:"改善追蹤",docs:"文件範本",projects:"專案管理"};
 let roadSel=null;   // 步驟圖示中選取的步驟（null = 目前步驟）
@@ -648,7 +655,7 @@ function nextCard(p){
   const shown=nextAll?list:list.slice(0,3);
   const rel=sel.done?[]:list.filter(x=>sel.keys.includes(x.key));
   const it=sel.done?{items:[]}:roadmapItems(p,sel.n),items=it.items,more=it.more;
-  const go=more&&items.length?{...sel,tab:more.tab,filter:more.filter,actf:more.actf}:sel;
+  const go=more&&items.length?{...sel,tab:more.tab,filter:more.filter,actf:more.actf,riskf:more.riskf}:sel;
   const iattr=x=>x.kind==="risk"?`data-risk="${esc(x.id)}"`:x.kind==="act"?`data-act="${esc(x.id)}"`:`data-open="${esc(x.id)}"`;
   const state=st=>st.done?"已完成":st.current?"目前步驟":"未完成";
   return `<section class="nextcard" aria-label="導入進度與下一步建議">
@@ -1422,7 +1429,7 @@ document.addEventListener("click",e=>{const o=e.target.closest("[data-open]");if
   }else openDrawer(o.dataset.open)});
 
 /* ================= 風險評鑑與處理 ================= */
-const riskView={mode:"in",cell:null,stage:null};
+const riskView={mode:"in",cell:null,stage:null,due:null};   // due：處理計畫期限篩選 late／soon／nodue
 /* 風險管理流程圖：對應 ISO/IEC 27005 的流程，每一步顯示進度，點一下篩選卡在這一步的風險 */
 /* 點流程圖的步驟：說明這一步做什麼、工具裡對應哪些欄位，以及可以直接做的動作 */
 const RF_INFO={
@@ -1524,8 +1531,17 @@ function riskProgress(r){
   if(!inherentScore(r))return `<span class="muted">待評估</span>`;
   if(r.treat==="accept")return r.accepted?`<span class="rstate ok">已核准接受</span>`:`<span class="muted">接受</span>`;
   if(!r.treat)return `<span class="muted">—</span>`;
-  return r.status==="已完成"?`<span class="rstate ok">已完成</span>`:r.status?esc(r.status):`<span class="muted">未設定</span>`;
+  return (r.status==="已完成"?`<span class="rstate ok">已完成</span>`:r.status?esc(r.status):`<span class="muted">未設定</span>`)+dueTag(planDue(r));
 }
+/* 處理計畫期限的小標籤：逾期紅色、即將到期黃色，其餘不顯示 */
+function dueTag(d){
+  if(!d)return "";
+  if(d.state==="late")return `<span class="dtag late" data-tip="已超過預計完成日 ${-d.days} 天">逾期 ${-d.days} 天</span>`;
+  if(d.state==="soon")return `<span class="dtag soon" data-tip="${PLAN_SOON_DAYS} 天內到期">${d.days?`剩 ${d.days} 天`:"今天到期"}</span>`;
+  if(d.state==="nodue")return `<span class="dtag none">未設期限</span>`;
+  return "";
+}
+const DUE_FILTER={late:"處理計畫逾期",soon:`處理計畫 ${PLAN_SOON_DAYS} 天內到期`,nodue:"處理計畫未設期限"};
 function riskState(r,checks){
   if(r.reassess)return `<span class="rstate warn">待重新評估</span>`;
   const mine=checks.filter(c=>c.rid===r.id&&c.sev!=="info");
@@ -1630,7 +1646,9 @@ function renderRisks(){
   const issues=checks.filter(c=>c.sev!=="info"),info=checks.filter(c=>c.sev==="info");
   const pickScore=riskView.mode==="res"?residualScore:inherentScore;
   const stg=riskView.stage?riskStages(p).find(x=>x.id===riskView.stage):null;
-  const shown=riskView.cell?list.filter(r=>{const [l,i]=riskView.mode==="res"?[r.rl,r.ri]:[r.l,r.i];return l+"-"+i===riskView.cell}):stg&&stg.pending.length?list.filter(r=>stg.pending.includes(r.id)):list;
+  const dueOf=r=>(planDue(r)||{}).state,dueN=k=>list.filter(r=>dueOf(r)===k).length;
+  const shown=riskView.cell?list.filter(r=>{const [l,i]=riskView.mode==="res"?[r.rl,r.ri]:[r.l,r.i];return l+"-"+i===riskView.cell}):riskView.due?list.filter(r=>dueOf(r)===riskView.due):stg&&stg.pending.length?list.filter(r=>stg.pending.includes(r.id)):list;
+  const dueChips=["late","soon","nodue"].filter(k=>dueN(k)||riskView.due===k);
   const ck=showAllChecks?issues:issues.slice(0,6);
   $("#view-risks").innerHTML=`<h2>風險評鑑與處理</h2>
   <p class="lede">依條款 6.1.2 識別與評估風險，依 6.1.3 決定處理方式並選定控制措施。風險選定的控制措施會連到附錄 A，作為適用性聲明（SoA）納入理由的依據；這裡只提出不一致的地方，不會自動改變判定。</p>
@@ -1652,9 +1670,10 @@ function renderRisks(){
     </div>
   </div>
   ${list.some(r=>r.reassess)?`<p class="note reassess">${list.filter(r=>r.reassess).length} 項風險沿用 ${p.baseline?esc(p.baseline.label):"去年"}的評估，待重新評估。打開風險確認可能性與衝擊後，按「已重新評估」。</p>`:""}
-  ${stg&&stg.pending.length&&!riskView.cell?`<div class="filters" style="margin-top:18px"><span class="count">流程篩選：${esc(stg.name)}－${esc(stg.note)}（${shown.length} 項）</span><button class="chip" id="rsClear">清除篩選</button></div>`:""}
+  ${dueChips.length&&!riskView.cell?`<div class="filters duebar" style="margin-top:18px"><span class="count">${riskView.due?`篩選：${DUE_FILTER[riskView.due]}（${shown.length} 項）`:"處理計畫期限"}</span>${dueChips.map(k=>`<button class="chip dchip ${k}" data-duef="${k}" aria-pressed="${riskView.due===k}">${({late:"逾期",soon:PLAN_SOON_DAYS+" 天內到期",nodue:"未設期限"})[k]} ${dueN(k)}</button>`).join("")}${riskView.due?`<button class="chip" id="dueClear">清除篩選</button>`:""}</div>`:""}
+  ${stg&&stg.pending.length&&!riskView.cell&&!riskView.due?`<div class="filters" style="margin-top:18px"><span class="count">流程篩選：${esc(stg.name)}－${esc(stg.note)}（${shown.length} 項）</span><button class="chip" id="rsClear">清除篩選</button></div>`:""}
   ${riskView.cell?`<div class="filters" style="margin-top:18px"><span class="count">篩選：${riskView.mode==="res"?"殘餘":"固有"}風險 可能性 ${riskView.cell.split("-")[0]} × 衝擊 ${riskView.cell.split("-")[1]}（${shown.length} 項）</span><button class="chip" id="mxClear">清除篩選</button></div>`:""}
-  <div class="table-wrap" style="margin-top:${riskView.cell||(stg&&stg.pending.length)?8:18}px"><table class="rtable"><thead><tr><th style="width:70px">編號</th><th>風險</th><th style="width:120px">風險擁有者</th><th style="width:84px">固有</th><th style="width:70px">處理方式</th><th>控制措施</th><th style="width:84px">殘餘</th><th style="width:96px">進度</th><th style="width:96px">檢查<span class="saved" style="display:block;font-weight:400">與 SoA 連動</span></th></tr></thead><tbody>
+  <div class="table-wrap" style="margin-top:${riskView.cell||riskView.due||dueChips.length||(stg&&stg.pending.length)?8:18}px"><table class="rtable"><thead><tr><th style="width:70px">編號</th><th>風險</th><th style="width:120px">風險擁有者</th><th style="width:84px">固有</th><th style="width:70px">處理方式</th><th>控制措施</th><th style="width:84px">殘餘</th><th style="width:96px">進度</th><th style="width:96px">檢查<span class="saved" style="display:block;font-weight:400">與 SoA 連動</span></th></tr></thead><tbody>
   ${shown.map(r=>`<tr>
     <td class="code"><button data-risk="${r.id}">${r.id}</button></td>
     <td class="name"><button class="rtitle" data-risk="${r.id}">${esc(r.title||"（未命名風險）")}</button>${r.asset?`<div class="saved">${esc(r.asset)}${r.cia?"｜"+[...r.cia].map(x=>({C:"機密性",I:"完整性",A:"可用性"})[x]).join("、"):""}</div>`:""}</td>
@@ -1664,7 +1683,7 @@ function renderRisks(){
     <td><div class="rcodes">${(r.controls||[]).slice(0,3).map(c=>{const a=ctl(c).app;return `<button class="rc ${a==="N"?"bad":a===""?"undec":""}" data-open="${c}" data-tip="${c} ${esc(ANNEX_MAP[c].name)}｜SoA：${APP.find(x=>x.v===a).label}">${c}</button>`}).join("")}${(r.controls||[]).length>3?`<span class="saved" data-tip="${esc(r.controls.slice(3).join("、"))}">+${r.controls.length-3}</span>`:""}</div></td>
     <td>${lvlBadge(residualScore(r))}</td>
     <td>${riskProgress(r)}</td>
-    <td>${riskState(r,checks)}</td></tr>`).join("")||`<tr><td colspan="9"><div class="empty">${list.length?"這一格沒有風險。":"還沒有風險。可以按「新增風險」，或到案例搜尋把情境加入風險登錄表。"}</div></td></tr>`}
+    <td>${riskState(r,checks)}</td></tr>`).join("")||`<tr><td colspan="9"><div class="empty">${list.length?(riskView.due?"沒有符合的風險。":"這一格沒有風險。"):"還沒有風險。可以按「新增風險」，或到案例搜尋把情境加入風險登錄表。"}</div></td></tr>`}
   </tbody></table></div>`;
   const on=(id,fn)=>{const el=$("#"+id);if(el)el.addEventListener("click",fn)};
   on("rNew",openRiskPicker);
@@ -1672,6 +1691,8 @@ function renderRisks(){
   on("ckMore",()=>{showAllChecks=!showAllChecks;renderRisks()});
   on("ckApplyAll",applyAllRiskToSoA);
   on("mxClear",()=>{riskView.cell=null;renderRisks()});
+  on("dueClear",()=>{riskView.due=null;renderRisks()});
+  $("#view-risks").querySelectorAll("[data-duef]").forEach(b=>b.addEventListener("click",()=>{riskView.due=riskView.due===b.dataset.duef?null:b.dataset.duef;riskView.cell=null;riskView.stage=null;renderRisks()}));
   $("#view-risks").querySelectorAll("#rsClear,.rfclose").forEach(b=>b.addEventListener("click",()=>{riskView.stage=null;renderRisks()}));
   const rsc=$("#rfScope");if(rsc)rsc.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("#view-risks").querySelector('[data-rfact="scope"]').click()}
     else if(e.key==="Escape"&&ctxScopeEdit){ctxScopeEdit=false;const y=window.scrollY;renderRisks();window.scrollTo(0,y)}});
@@ -1682,12 +1703,12 @@ function renderRisks(){
     toast(added.length>1?`已加入 ${added.length} 項風險（${added[0].id}–${added[added.length-1].id}），請指定擁有者並評分`:`已加入 ${added[0].id}「${added[0].title}」，請指定擁有者並評分`)}));
   $("#view-risks").querySelectorAll("[data-rfact]").forEach(b=>b.addEventListener("click",()=>{const a=b.dataset.rfact;if(a==="scopeedit"){ctxScopeEdit=true;const y=window.scrollY;renderRisks();window.scrollTo(0,y);const i=$("#rfScope");if(i){i.focus({preventScroll:true});i.select()}return}
     if(a==="scope"){const p=cur(),v=$("#rfScope").value.trim();p.scope=v;ctxScopeEdit=false;touchRisk();const y=window.scrollY;renderRisks();window.scrollTo(0,y);toast(v?"已更新驗證範圍":"已清除驗證範圍");return}if(a==="identok"){const p=cur();p.identOk=!p.identOk;touchRisk();const y=window.scrollY;renderRisks();window.scrollTo(0,y);toast(p.identOk?"已確認風險識別完成":"已取消確認");return}if(a==="new")openRiskPicker();else if(a==="xls")exportExcel();else openCriteriaDrawer()}));
-  $("#view-risks").querySelectorAll("[data-rstage]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.rstage,y=window.scrollY;riskView.stage=riskView.stage===id?null:id;riskView.cell=null;renderRisks();
+  $("#view-risks").querySelectorAll("[data-rstage]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.rstage,y=window.scrollY;riskView.stage=riskView.stage===id?null:id;riskView.cell=null;riskView.due=null;renderRisks();
     // 不捲動頁面：說明框就在流程圖下方，清單的篩選結果往下看即可
     window.scrollTo(0,y);const nb=document.querySelector(`[data-rstage="${id}"]`);if(nb)nb.focus({preventScroll:true})}));
   on("rCrit",openCriteriaDrawer);
   $("#mxSeg").addEventListener("click",e=>{const b=e.target.closest("[data-mode]");if(!b)return;riskView.mode=b.dataset.mode;riskView.cell=null;renderRisks()});
-  $("#view-risks").querySelectorAll("[data-mx]").forEach(b=>b.addEventListener("click",()=>{riskView.cell=riskView.cell===b.dataset.mx?null:b.dataset.mx;riskView.stage=null;renderRisks()}));
+  $("#view-risks").querySelectorAll("[data-mx]").forEach(b=>b.addEventListener("click",()=>{riskView.cell=riskView.cell===b.dataset.mx?null:b.dataset.mx;riskView.stage=null;riskView.due=null;renderRisks()}));
 }
 document.addEventListener("click",e=>{
   const a=e.target.closest("[data-apply]");if(a){e.preventDefault();applyRiskToSoA(a.dataset.apply);return}
@@ -1728,7 +1749,7 @@ function openRiskDrawer(id){
       <div><dt>處理方式</dt><dd><select id="rTreat">${TREATMENTS.map(t=>`<option value="${t.v}" ${t.v===r.treat?"selected":""}>${t.label}${TREAT_HINT[t.v]?"："+TREAT_HINT[t.v]:""}</option>`).join("")}</select><div class="saved" id="rTreatHint" style="margin-top:4px"></div></dd></div>
       <div data-show="mitigate"><dt>選定的控制措施</dt><dd id="rCtl"></dd></div>
       <div data-show="mitigate transfer avoid"><dt>處理計畫</dt><dd><textarea id="rPlan" rows="2" placeholder="要做什麼、需要哪些資源">${esc(r.plan)}</textarea></dd></div>
-      <div class="r2x" data-show="mitigate transfer avoid"><div><dt>預計完成</dt><dd><input id="rDue" value="${esc(r.due)}" placeholder="例如 2026-12-31 或 2026-12"></dd></div>
+      <div class="r2x" data-show="mitigate transfer avoid"><div><dt>預計完成</dt><dd><input id="rDue" value="${esc(r.due)}" placeholder="例如 2026-12-31 或 2026-12"><div class="saved" id="rDueHint" style="margin-top:4px"></div></dd></div>
         <div><dt>處理狀態</dt><dd><select id="rStat">${RISK_STATUS.map(x=>`<option value="${x}" ${x===(r.status||"")?"selected":""}>${x||"未設定"}</option>`).join("")}</select></dd></div></div>
     </dl>
     <div data-show="mitigate transfer"><h3>處理後的殘餘風險</h3>
@@ -1751,6 +1772,9 @@ function openRiskDrawer(id){
     const needAppr=!!r.treat&&r.treat!=="avoid"&&!!eff&&policyOf(eff,cur())==="approve";
     $("#rApprRow").hidden=!(needAppr||r.accepted);
     $("#rApprText").textContent=r.treat==="accept"?"風險擁有者已核准接受此風險":"風險擁有者已核准處理計畫與殘餘風險";
+    {const d=planDue(r),h=$("#rDueHint"),bad=r.due&&!/^\d{4}-\d{2}(-\d{2})?$/.test(r.due);
+      h.className="saved"+(d&&d.state==="late"?" dlate":d&&d.state==="soon"?" dsoon":"");
+      h.textContent=bad?"格式請寫成 2026-12-31 或 2026-12":!d?"":d.state==="late"?`已超過 ${-d.days} 天，請更新進度或調整期限並記錄原因`:d.state==="soon"?(d.days?`還有 ${d.days} 天到期`:"今天到期"):d.state==="nodue"?"建議寫上預計完成日，方便追蹤":`還有 ${d.days} 天`}
     $("#rTreatHint").textContent=!s?"":r.treat?"":`目前 ${s} 分屬「${riskLevel(s,cur()).label}」：${pl(s)}`;
     const cks=riskChecks(cur()).filter(c=>c.rid===r.id);
     const und=cks.filter(c=>c.kind==="undecided").length,nw=cks.filter(c=>c.sev!=="info").length;

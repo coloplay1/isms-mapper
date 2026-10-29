@@ -38,7 +38,11 @@ function guideFacts(p,now){
     // 跨模組一致性：已驗證卻沒有證據位置；未結案的改善事項關聯到判為不適用的控制措施
     noEvidence:app.filter(v=>v.status===3&&!String(v.evidence||"").trim()).length,
     actOnNA:acts.filter(a=>a.status!==ACTION_CLOSED&&(a.refs||[]).some(c=>ANNEX_MAP[c]&&ctl(c).app==="N")).length,
-    scaleDefs:!!sanitizeScale(p.scale)
+    scaleDefs:!!sanitizeScale(p.scale),
+    // 風險處理計畫的期限（6.1.3、8.3）
+    planLate:risks.filter(r=>(planDue(r,now)||{}).state==="late").length,
+    planSoon:risks.filter(r=>(planDue(r,now)||{}).state==="soon").length,
+    planNoDue:risks.filter(r=>(planDue(r,now)||{}).state==="nodue").length
   };
 }
 
@@ -48,6 +52,7 @@ function nextSteps(p,now){
   const f=guideFacts(p,now),out=[];
   const add=(cond,o)=>{if(cond)out.push(o)};
   add(f.actOverdue,{key:"actOverdue",sev:"err",title:`追蹤 ${f.actOverdue} 項逾期的改善事項`,desc:"超過預計完成日仍未完成，稽核時會被追問（10.2）",tab:"improve",actf:"late",cta:"前往改善追蹤"});
+  add(f.planLate,{key:"planLate",sev:"err",title:`追蹤 ${f.planLate} 項逾期的風險處理計畫`,desc:"超過預計完成日仍未完成；處理計畫的執行情形是管理審查與稽核會檢視的重點（6.1.3、8.3）",tab:"risks",riskf:"late",cta:"前往風險評鑑"});
   add(f.conflicts,{key:"conflicts",sev:"err",title:`處理 ${f.conflicts} 項風險與 SoA 的衝突`,desc:"例如被風險引用的控制措施卻判為不適用，或不可接受的風險直接接受",tab:"risks",cta:"前往風險評鑑"});
   add(f.reassess,{key:"reassess",sev:"warn",title:`重新評估 ${f.reassess} 項沿用去年分數的風險`,desc:"建立新年度時保留了去年的可能性與衝擊，請依今年情況確認（6.1.2）",tab:"risks",cta:"前往風險評鑑"});
   add(!f.criteria,{key:"criteria",sev:"warn",title:"確認風險評鑑準則",desc:"新專案先帶入預設的四級準則，請確認符合組織可接受的風險程度（6.1.2 a）",tab:"risks",open:"criteria",cta:"開啟風險準則"});
@@ -63,6 +68,8 @@ function nextSteps(p,now){
   add(f.noEvidence,{key:"noEvidence",sev:"warn",title:`補上 ${f.noEvidence} 項已驗證控制措施的證據位置`,desc:"標為「已驗證」卻沒寫證據在哪裡，稽核時拿不出佐證",tab:"annex",filter:"noevid",cta:"前往附錄 A"});
   add(f.actOnNA,{key:"actOnNA",sev:"warn",title:`確認 ${f.actOnNA} 項改善事項關聯的控制措施`,desc:"改善事項關聯的控制措施在 SoA 判為不適用，兩邊說法互相矛盾；請調整關聯或重新檢討適用性",tab:"improve",cta:"前往改善追蹤"});
   add(f.actVerify,{key:"actVerify",sev:"info",title:`確認 ${f.actVerify} 項已完成改善的有效性`,desc:"措施完成後確認有效才能結案（10.2 d）",tab:"improve",actf:"verify",cta:"前往改善追蹤"});
+  add(!f.planLate&&f.planSoon,{key:"planSoon",sev:"info",title:`${f.planSoon} 項風險處理計畫 ${PLAN_SOON_DAYS} 天內到期`,desc:"確認進度，來不及時調整計畫或期限，並記錄原因",tab:"risks",riskf:"soon",cta:"前往風險評鑑"});
+  add(f.planNoDue,{key:"planNoDue",sev:"info",title:`替 ${f.planNoDue} 項風險處理計畫設定預計完成日`,desc:"處理計畫要寫明何時完成，才能追蹤是否如期執行（6.1.3 e）",tab:"risks",riskf:"nodue",cta:"前往風險評鑑"});
   add(f.applicable&&f.notStarted,{key:"notStarted",sev:"info",title:`落實 ${f.notStarted} 項尚未實施的控制措施`,desc:`適用的 ${f.applicable} 項中已實施 ${f.implemented} 項${p.baseline?"；去年已驗證的項目重新收集證據後可改回已驗證":"，記得填寫證據位置"}`,tab:"annex",cta:"前往附錄 A"});
   add(f.applicable&&f.noOwner,{key:"noOwner",sev:"info",title:`指定 ${f.noOwner} 項控制措施的負責人`,desc:"每一項都要有人負責（5.3）",tab:"annex",cta:"前往附錄 A"});
   add(f.clausesDone<f.clausesTotal,{key:"clauses",sev:"info",title:`完成 ${f.clausesTotal-f.clausesDone} 項管理系統條款`,desc:"條款 4–10 是驗證稽核第一階段的重點，可搭配文件範本",tab:"clauses",cta:"前往條款 4–10"});
@@ -89,8 +96,8 @@ function roadmapSteps(p,now){
       detail:[f.undecided&&`${f.undecided} 項未判定`,f.noReason&&`${f.noReason} 項缺排除理由`,f.conflicts&&`${f.conflicts} 項衝突`,f.riskWarn&&`${f.riskWarn} 項風險處理待確認`].filter(Boolean).join("、")||"適用性與風險處理一致"},
     {n:5,keys:["needApproval","approve"],short:"核准",title:"核准 SoA 與風險處理計畫",clause:"6.1.3 e、f",tab:"projects",anchor:"docctl",go:"文件管制資訊",done:f.docApproved&&!f.needApproval&&f.applicable>0,
       detail:[!f.docApproved&&"文件狀態尚未改為「已核准」（在專案管理的「文件管制資訊」填寫）",f.needApproval&&`${f.needApproval} 項殘餘風險待擁有者核准`].filter(Boolean).join("、")||approvalText(p)},
-    {n:6,keys:["notStarted","noOwner","noEvidence"],short:"落實",title:"落實控制措施並收集證據",clause:"8.1、附錄 A",tab:"annex",done:f.applicable>0&&!f.notStarted,
-      detail:f.applicable?`已實施 ${f.implemented}／${f.applicable} 項`:"尚無適用的控制措施"},
+    {n:6,keys:["notStarted","noOwner","noEvidence","planLate","planSoon","planNoDue"],short:"落實",title:"落實控制措施與風險處理計畫",clause:"8.1、8.3、附錄 A",tab:"annex",done:f.applicable>0&&!f.notStarted&&!f.planLate,
+      detail:(f.applicable?`已實施 ${f.implemented}／${f.applicable} 項`:"尚無適用的控制措施")+(f.planLate?`｜${f.planLate} 項風險處理計畫逾期`:f.planSoon?`｜${f.planSoon} 項處理計畫 ${PLAN_SOON_DAYS} 天內到期`:"")},
     {n:7,keys:["clauses"],short:"稽核",title:"完成管理系統條款、內部稽核與管理審查",clause:"4–10、9.2、9.3",tab:"clauses",done:f.clausesDone===f.clausesTotal,
       detail:`條款已完成 ${f.clausesDone}／${f.clausesTotal} 項｜內部稽核${f.auditDone?"已完成":"未完成"}｜管理審查${f.reviewDone?"已完成":"未完成"}`},
     {n:8,keys:["actOverdue","actVerify","actOnNA"],short:"改善",title:"改善事項結案",clause:"10.1、10.2",tab:"improve",done:f.auditDone&&!f.actOpen,
@@ -104,7 +111,7 @@ function roadmapSteps(p,now){
     3:f.risks?[f.unscored+f.reassess+n(!f.identOk)]:[0,"尚無風險"],
     4:[f.undecided+f.noReason+f.conflicts+f.riskWarn,f.conflicts?`衝突 ${f.conflicts}`:""],
     5:[n(!f.docApproved)+f.needApproval],
-    6:f.applicable?[f.notStarted]:[0,"未開始"],
+    6:f.planLate?[f.notStarted+f.planLate,`逾期 ${f.planLate}`]:f.applicable?[f.notStarted]:[0,"未開始"],
     7:[f.clausesTotal-f.clausesDone],
     8:f.actOverdue?[f.actOpen,`逾期 ${f.actOverdue}`]:f.auditDone?[f.actOpen]:[f.actOpen,"待稽核"]
   };
@@ -140,8 +147,11 @@ function roadmapItems(p,n,now){
     riskChecks(p).filter(c=>c.kind==="needApproval").forEach(c=>{if(c.rid&&!seen.has(c.rid)){seen.add(c.rid);items.push({kind:"risk",id:c.rid,label:rlabel(c.rid),note:"待擁有者核准"})}});
     more={tab:"risks"};
   }else if(n===6){
+    // 逾期的風險處理計畫排最前面
+    const late=risks.map(r=>({r,d:planDue(r,now)})).filter(x=>x.d&&x.d.state==="late").sort((a,b)=>a.d.days-b.d.days);
+    late.forEach(({r,d})=>items.push({kind:"risk",id:r.id,label:rlabel(r.id),note:`計畫逾期 ${-d.days} 天`,hot:true}));
     ANNEX.forEach(c=>{const v=ctl(c.code);if(v.app==="Y"&&v.status<2)items.push({kind:"ctl",id:c.code,label:c.code+" "+c.name,note:STATUS[v.status].label})});
-    more={tab:"annex",filter:"notimpl"};
+    more=items.length>late.length?{tab:"annex",filter:"notimpl"}:{tab:"risks",riskf:"late"};
   }else if(n===7){
     CLAUSES.forEach(c=>{const st=((p.clauses||{})[c.code]||{status:0}).status||0;if(st<2)items.push({kind:"ctl",id:c.code,label:c.code+" "+c.name,note:STATUS[st].label})});
     more={tab:"clauses"};
@@ -179,8 +189,7 @@ function riskStages(p,now){
   const scored=risks.filter(r=>inherentScore(r));
   const need=scored.filter(r=>pol(inherentScore(r))!=="accept");
   const n=k=>scored.filter(r=>pol(inherentScore(r))===k).length;
-  const today=new Date(now||Date.now()).toISOString().slice(0,10);
-  const late=ids(r=>r.due&&r.status!=="已完成"&&r.treat&&r.treat!=="accept"&&(r.due.length===7?r.due+"-31":r.due)<today);
+  const late=ids(r=>(planDue(r,now)||{}).state==="late");
   const ctxOk=!!String(p.scope||"").trim()&&p.criteriaOk!==false;
   const identDone=risks.length>0&&!!p.identOk&&!ckIds(["noOwner"]).length;
   const treatPend=ckIds(["noTreat","noControl","acceptTreat","conflict","undecided"]),accPend=ckIds(["noResidual","residualTreat","needApproval"]);

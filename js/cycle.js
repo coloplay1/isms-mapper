@@ -209,6 +209,16 @@ function nextActionId(p){
 const todayStr=now=>new Date(now||Date.now()).toISOString().slice(0,10);
 /* 期限只填到月份時，以該月最後一天計 */
 const dueEnd=d=>d.length===7?d+"-31":d;
+/* 風險處理計畫的期限：只看要執行計畫的處理方式（降低、移轉、避免），已完成或接受的不提醒。
+   state：late 逾期、soon 30 天內到期、ok、nodue 尚未設定；回傳 null 表示不需要期限。只寫月份的算到月底 */
+const PLAN_SOON_DAYS=30;
+function planDue(r,now){
+  if(!r||!["mitigate","transfer","avoid"].includes(r.treat)||r.status===RISK_DONE)return null;
+  if(!/^\d{4}-\d{2}(-\d{2})?$/.test(r.due||""))return {state:"nodue"};
+  const [y,m,d]=r.due.split("-").map(Number),end=d?Date.UTC(y,m-1,d):Date.UTC(y,m,0);
+  const days=Math.round((end-Date.parse(todayStr(now)+"T00:00:00Z"))/864e5);
+  return {state:days<0?"late":days<=PLAN_SOON_DAYS?"soon":"ok",days};
+}
 function actionOverdue(a,now){return !!a.due&&!["已完成",ACTION_CLOSED].includes(a.status)&&dueEnd(a.due)<todayStr(now)}
 /* 需要注意的地方：逾期、不符合未做原因分析、完成後未確認有效性 */
 function actionChecks(p,now){
