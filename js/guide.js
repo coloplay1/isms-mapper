@@ -111,6 +111,46 @@ function roadmapSteps(p,now){
   return steps;
 }
 
+/* 導入進度明細：某一步還沒完成的具體項目，讓使用者在總覽就能點開處理。
+   kind：ctl（附錄 A 或條款，點開抽屜）、risk（風險）、act（改善事項）；more 是「查看全部」要帶的分頁與篩選 */
+const RISK_NOTE={conflict:"適用性衝突",noTreat:"未決定處理方式",noControl:"未選控制措施",acceptTreat:"處理方式待確認",noResidual:"殘餘風險未評估",residualTreat:"殘餘風險待處理",orphan:"關聯的控制措施不存在",noOwner:"未指定擁有者"};
+function roadmapItems(p,n,now){
+  if(!p)return {items:[]};
+  const ctl=code=>(p.controls||{})[code]||{app:"",status:0};
+  const risks=p.risks||[],rmap=Object.fromEntries(risks.map(r=>[r.id,r]));
+  const rlabel=id=>id+" "+((rmap[id]&&rmap[id].title)||"（未命名風險）");
+  const items=[];let more=null;
+  if(n===3){
+    risks.forEach(r=>{if(!inherentScore(r))items.push({kind:"risk",id:r.id,label:rlabel(r.id),note:"未評分"});
+      else if(r.reassess)items.push({kind:"risk",id:r.id,label:rlabel(r.id),note:"待重新評估"})});
+    more={tab:"risks"};
+  }else if(n===4){
+    const ck=riskChecks(p),seen=new Set();
+    ck.filter(c=>c.sev==="err").forEach(c=>{const k=c.rid+c.kind;if(c.rid&&!seen.has(k)){seen.add(k);items.push({kind:"risk",id:c.rid,label:rlabel(c.rid),note:RISK_NOTE[c.kind]||"待確認",hot:true})}});
+    ANNEX.forEach(c=>{if(missingReason(ctl(c.code)))items.push({kind:"ctl",id:c.code,label:c.code+" "+c.name,note:"缺排除理由"})});
+    ANNEX.forEach(c=>{if(!ctl(c.code).app)items.push({kind:"ctl",id:c.code,label:c.code+" "+c.name,note:"未判定適用性"})});
+    ck.filter(c=>c.sev==="warn"&&!["needApproval","noScore","undecided"].includes(c.kind)).forEach(c=>{const k=c.rid+c.kind;if(c.rid&&!seen.has(k)){seen.add(k);items.push({kind:"risk",id:c.rid,label:rlabel(c.rid),note:RISK_NOTE[c.kind]||"待確認"})}});
+    const nr=items.filter(x=>x.note==="缺排除理由").length,ud=items.filter(x=>x.note==="未判定適用性").length;
+    more=ud?{tab:"annex",filter:"undec"}:nr?{tab:"annex",filter:"noreason"}:{tab:"risks"};
+  }else if(n===5){
+    const seen=new Set();
+    riskChecks(p).filter(c=>c.kind==="needApproval").forEach(c=>{if(c.rid&&!seen.has(c.rid)){seen.add(c.rid);items.push({kind:"risk",id:c.rid,label:rlabel(c.rid),note:"待擁有者核准"})}});
+    more={tab:"risks"};
+  }else if(n===6){
+    ANNEX.forEach(c=>{const v=ctl(c.code);if(v.app==="Y"&&v.status<2)items.push({kind:"ctl",id:c.code,label:c.code+" "+c.name,note:STATUS[v.status].label})});
+    more={tab:"annex",filter:"notimpl"};
+  }else if(n===7){
+    CLAUSES.forEach(c=>{const st=((p.clauses||{})[c.code]||{status:0}).status||0;if(st<2)items.push({kind:"ctl",id:c.code,label:c.code+" "+c.name,note:STATUS[st].label})});
+    more={tab:"clauses"};
+  }else if(n===8){
+    const acts=(p.actions||[]).filter(a=>a.status!==ACTION_CLOSED);
+    acts.sort((a,b)=>actionOverdue(b,now)-actionOverdue(a,now));
+    acts.forEach(a=>items.push({kind:"act",id:a.id,label:a.id+" "+(a.title||"（未填寫）"),note:actionOverdue(a,now)?"逾期":a.status,hot:actionOverdue(a,now)}));
+    more={tab:"improve"};
+  }
+  return {items,more};
+}
+
 /* ================= 風險管理流程（ISO/IEC 27005、ISO 31000） =================
    把風險登錄表的資料對應到標準的風險管理流程圖：每一步顯示進度，pending 是卡在這一步的風險編號。 */
 function riskStages(p,now){

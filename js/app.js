@@ -643,17 +643,23 @@ function nextCard(p){
   const sel=road.find(s=>s.n===roadSel)||curStep||road[road.length-1];
   const shown=nextAll?list:list.slice(0,3);
   const rel=sel.done?[]:list.filter(x=>sel.keys.includes(x.key));
+  const it=sel.done?{items:[]}:roadmapItems(p,sel.n),items=it.items,more=it.more;
+  const go=more&&items.length?{...sel,tab:more.tab,filter:more.filter}:sel;
+  const iattr=x=>x.kind==="risk"?`data-risk="${esc(x.id)}"`:x.kind==="act"?`data-act="${esc(x.id)}"`:`data-open="${esc(x.id)}"`;
   const state=st=>st.done?"已完成":st.current?"目前步驟":"未完成";
   return `<section class="nextcard" aria-label="導入進度與下一步建議">
     <div class="secthead"><h3>導入進度</h3><span class="note">${done}／${road.length} 步完成。圓點下方是該步驟還沒完成的項目數，點圓點可查看明細</span></div>
     <ol class="stepper">${road.map(st=>`<li class="${st.done?"done":""}${st.current?" current":""}${st===sel?" sel":""}">
       <button type="button" data-road="${st.n}" aria-pressed="${st===sel}" aria-label="步驟 ${st.n} ${esc(st.title)}：${state(st)}${st.badge?"，"+esc(st.badge):""}" title="${esc(st.detail)}">
       <span class="sdot" aria-hidden="true">${st.done?"✓":st.n}</span><span class="slab">${esc(st.short)}</span>${st.badge?`<span class="sbadge${st.hot?" hot":""}" aria-hidden="true">${esc(st.badge)}</span>`:""}</button></li>`).join("")}</ol>
-    <div class="sdetail" aria-live="polite">
+    <div class="sdetail${items.length?" hasitems":""}" aria-live="polite"><div class="sdmain">
       <div class="sdhead"><b>步驟 ${sel.n}　${esc(sel.title)}</b><span class="mono rcl">${esc(sel.clause)}</span><span class="rstate ${sel.done?"ok":sel.current?"warn":""}">${state(sel)}</span></div>
       <span class="rdetail">${esc(sel.detail)}</span>
       ${rel.length?`<ul class="rnext">${rel.map(x=>`<li>${esc(x.title)}</li>`).join("")}</ul>`:""}
-      <div>${stepBtn(sel,!sel.done,sel.done?"查看":sel.current?"繼續":"前往")}</div>
+      <div>${stepBtn(go,!sel.done,sel.done?"查看":sel.current?"繼續":"前往")}</div></div>
+      ${items.length?`<div class="sitems"><div class="sihead"><b>還沒完成的項目（${items.length}）</b><span class="note">點項目直接開啟處理</span></div>
+        <ul>${items.slice(0,5).map(x=>`<li><button type="button" ${iattr(x)}><span class="silab">${esc(x.label)}</span><span class="sinote${x.hot?" hot":""}">${esc(x.note)}</span></button></li>`).join("")}</ul>
+        ${items.length>5?`<button type="button" class="simore" data-goto="${more.tab}"${more.filter?` data-gofilter="${more.filter}"`:""}>查看全部 ${items.length} 項 →</button>`:""}</div>`:""}
     </div>
     <div class="secthead" style="margin-top:18px"><h3>下一步建議</h3><span class="note">依專案目前的資料自動產生，處理完會換下一項</span></div>
     ${list.length?`<ol class="nextlist">${shown.map((x,k)=>`<li class="${x.sev}${k===0?" first":""}"><span class="nnum">${k+1}</span>
@@ -787,7 +793,7 @@ function renderAnnex(){
       <details class="panel lcwrap" ${lcOpen?"open":""} id="lcWrap"><summary><b>依產品／服務生命週期檢視</b><span class="note">從需求到退休，每個階段該注意哪些控制措施。階段依 ISO/IEC 24748 的生命週期概念整理，與控制措施的對應為本工具歸納，非標準規定；與附錄 A.8.25「安全開發生命週期」最直接相關。點階段可篩選下方清單</span></summary><div id="lcStrip"></div></details>
       <div class="filters">
         <div class="seg" id="themeSeg"><button data-th="all" aria-pressed="true">全部</button>${THEMES.map(t=>`<button data-th="${t.id}" aria-pressed="false">A.${t.id} ${t.name}</button>`).join("")}</div>
-        <select id="stFilter" aria-label="狀態篩選"><option value="all">所有狀態</option><option value="undec">未決定適用性</option><option value="N">不適用</option>${STATUS.map(s=>`<option value="${s.v}">${s.label}</option>`).join("")}<option value="new">2022 新增</option><option value="noreason">不適用但未填理由</option><option value="noevid">已驗證但未填證據位置</option><option value="focus">產業建議重點</option><option value="nacand">可能不適用候選</option><option value="risk">有風險引用</option><option value="riskissue">風險連動待確認</option></select>
+        <select id="stFilter" aria-label="狀態篩選"><option value="all">所有狀態</option><option value="undec">未決定適用性</option><option value="notimpl">適用但未實施</option><option value="N">不適用</option>${STATUS.map(s=>`<option value="${s.v}">${s.label}</option>`).join("")}<option value="new">2022 新增</option><option value="noreason">不適用但未填理由</option><option value="noevid">已驗證但未填證據位置</option><option value="focus">產業建議重點</option><option value="nacand">可能不適用候選</option><option value="risk">有風險引用</option><option value="riskissue">風險連動待確認</option></select>
         <input id="qFilter" class="grow" type="search" placeholder="篩選編號、名稱或負責人">
         <button class="btn primary" id="xlsBtn" data-tip="正式文件格式，8 欄＋公式統計，可直接提供稽核">匯出稽核用 SoA</button><button class="btn" id="xlsFull" data-tip="含產業建議、關聯風險、風險登錄表、連動檢查等工作資訊">匯出工作底稿</button>
       </div>
@@ -837,6 +843,7 @@ function renderAnnexRows(){
     if(filt.theme!=="all"&&c.theme!==filt.theme)return false;
     if(filt.lc&&LIFECYCLE_MAP[filt.lc]&&!LIFECYCLE_MAP[filt.lc].codes.includes(c.code))return false;
     if(filt.status==="undec"&&v.app!=="")return false;
+    if(filt.status==="notimpl"&&!(v.app==="Y"&&v.status<2))return false;
     if(filt.status==="N"&&v.app!=="N")return false;
     if(filt.status==="new"&&!c.isNew)return false;
     if(filt.status==="focus"&&!FM[c.code])return false;

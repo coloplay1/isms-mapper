@@ -73,6 +73,26 @@ test('未完成的步驟有待辦數標示；逾期與衝突標成紅色；完�
   assert.ok(A.roadmapSteps(full, NOW).every(s => !s.badge));
 });
 
+test('進度明細列出每一步還沒完成的項目，逾期排最前面', () => {
+  const p = { ...A.blankProject('X', ''), scope: '總部', controls: { ...allControls(), 'A.5.1': { app: 'Y', status: 0, owner: '' }, 'A.5.2': { app: 'Y', status: 1, owner: '' }, 'A.5.3': { app: '', status: 0 } },
+    risks: [{ ...A.blankRisk('R-001'), title: '未評分', owner: '甲' }, { ...A.blankRisk('R-002'), title: 'x', owner: '甲', l: 2, i: 2, treat: 'accept', reassess: true }],
+    actions: [{ ...A.blankAction('I-001'), title: '一般', status: '處理中' }, { ...A.blankAction('I-002'), title: '過期', due: '2026-01-31', status: '處理中' }, { ...A.blankAction('I-003'), title: '結案', status: '已確認有效' }] };
+  const s3 = A.roadmapItems(p, 3, NOW);
+  assert.deepEqual(s3.items.map(x => [x.id, x.note]), [['R-001', '未評分'], ['R-002', '待重新評估']]);
+  const s6 = A.roadmapItems(p, 6, NOW);
+  assert.deepEqual(s6.items.map(x => x.id), ['A.5.1', 'A.5.2']);
+  assert.deepEqual(s6.items.map(x => x.note), ['未開始', '部分實施']);
+  assert.deepEqual(s6.more, { tab: 'annex', filter: 'notimpl' });
+  assert.ok(A.roadmapItems(p, 4, NOW).items.some(x => x.id === 'A.5.3' && x.note === '未判定適用性'));
+  assert.equal(A.roadmapItems(p, 4, NOW).more.filter, 'undec');
+  const s8 = A.roadmapItems(p, 8, NOW);
+  assert.deepEqual(s8.items.map(x => x.id), ['I-002', 'I-001'], '逾期在前、已結案不列');
+  assert.equal(s8.items[0].hot, true);
+  assert.equal(A.roadmapItems(p, 7, NOW).items.length, A.CLAUSES.length);
+  assert.deepEqual(A.roadmapItems(p, 1, NOW).items, []);
+  assert.deepEqual(A.roadmapItems(null, 6).items, []);
+});
+
 test('沒有開啟專案時回傳空清單', () => {
   for (const p of [null, undefined]) { assert.deepEqual(A.nextSteps(p), []); assert.deepEqual(A.roadmapSteps(p), []); }
 });
