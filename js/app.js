@@ -655,7 +655,7 @@ function nextCard(p){
     <div class="sdetail${items.length?" hasitems":""}" aria-live="polite"><div class="sdmain">
       <div class="sdhead"><b>步驟 ${sel.n}　${esc(sel.title)}</b><span class="mono rcl">${esc(sel.clause)}</span><span class="rstate ${sel.done?"ok":sel.current?"warn":""}">${state(sel)}</span></div>
       <span class="rdetail">${esc(sel.detail)}</span>
-      ${rel.length?`<ul class="rnext">${rel.map(x=>`<li>${esc(x.title)}</li>`).join("")}</ul>`:""}
+      ${rel.length&&!items.length?`<ul class="rnext">${rel.map(x=>`<li>${esc(x.title)}</li>`).join("")}</ul>`:""}
       <div>${stepBtn(go,!sel.done,sel.done?"查看":sel.current?"繼續":"前往")}</div></div>
       ${items.length?`<div class="sitems"><div class="sihead"><b>還沒完成的項目（${items.length}）</b><span class="note">點項目直接開啟處理</span></div>
         <ul>${items.slice(0,5).map(x=>`<li><button type="button" ${iattr(x)}><span class="silab">${esc(x.label)}</span><span class="sinote${x.hot?" hot":""}">${esc(x.note)}</span></button></li>`).join("")}</ul>
