@@ -46,3 +46,17 @@ test('匯入專案檔時保留自訂案例並去除重複', () => {
   const p = A.sanitizeProject({ name: 'x', controls: {}, cases: [{ id: 'C-001', t: 'a', r: ['A.5.1'] }, { id: 'C-001', t: 'b' }, { id: 'bad', t: 'c' }] });
   assert.deepEqual(p.cases.map(c => c.id + c.t), ['C-001a']);
 });
+
+test('詳細頁的相關案例：展開內容來自案例本身，「也對應到」不含目前這一項', () => {
+  const c = A.CASES.find(x => x.r.length > 1);
+  const b = A.caseBrief(c, c.r[0]);
+  assert.equal(b.t, c.t);
+  assert.equal(b.w, c.w || '');
+  assert.equal(b.e, c.e || '');
+  assert.deepEqual(b.others, c.r.slice(1));
+  assert.equal(b.custom, false);
+  const own = A.caseBrief(mk({}), 'A.8.7');
+  assert.deepEqual(own.others, ['A.7.10']);
+  assert.equal(own.custom, true);
+  assert.equal(own.s, '');
+});

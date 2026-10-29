@@ -248,6 +248,8 @@ function parseRefCodes(text){
   return [...new Set(out)].filter(c=>ANNEX_MAP[c]||CLAUSE_MAP[c]);
 }
 function splitKeywords(text){return [...new Set(String(text||"").split(/[、，,；;\n]+/).map(x=>x.trim()).filter(Boolean))]}
+/* 控制措施／條款詳細頁的相關案例：點開時在原地顯示的內容，以及同一案例還對應到哪些控制措施（不含目前這一項） */
+function caseBrief(c,code){return {t:c.t,s:c.s||"",w:c.w||"",e:c.e||"",others:(c.r||[]).filter(x=>x!==code),custom:!!c.custom}}
 function sanitizeCase(raw){
   if(!isObj(raw)||!/^C-\d{1,4}$/.test(raw.id))return null;
   const t=str(raw.t,80).trim();if(!t)return null;

@@ -1376,7 +1376,10 @@ function openDrawer(code,fromList){
     <h3>修改紀錄</h3>
     <div id="dHist">${historyHTML(((cur()&&cur().log)||[]).filter(e=>e.c===code).slice(-10).reverse(),false)}</div>
     <h3 style="margin-top:18px">相關案例（${rel.length}）</h3>
-    <div class="rel">${rel.map(x=>`<button data-case="${esc(x.t)}">${x.custom?`<span class="ctag2">自訂</span>`:""}${esc(x.t)}</button>`).join("")||`<p class="note">目前沒有內建案例對應到這一項。</p>`}</div>
+    <div class="relcases">${rel.map((x,i)=>{const b=caseBrief(x,code);return `<div class="relc"><button class="relh" data-casetoggle="${i}" aria-expanded="false" aria-controls="rc${i}"><span class="chev" aria-hidden="true">▸</span>${b.custom?`<span class="ctag2">自訂</span>`:""}${esc(b.t)}</button>
+      <div class="relbody" id="rc${i}" hidden>${b.s?`<p>${esc(b.s)}</p>`:""}${b.w?`<div class="rec"><b>為什麼</b>${esc(b.w)}</div>`:""}${b.e?`<div class="rec"><b>應留紀錄</b>${esc(b.e)}</div>`:""}
+        ${b.others.length?`<div class="rec"><b>也對應到</b><div class="refs">${b.others.map(refChip).join("")}</div></div>`:""}
+        <button class="linkbtn" data-casego="${esc(b.t)}">在案例搜尋中查看 →</button></div></div>`}).join("")||`<p class="note">目前沒有內建案例對應到這一項。</p>`}</div>
   </aside>`;
   const FIELDS={dApp:"app",dReason:"reason",dImpl:"impl",dStatus:"status",dOwner:"owner",dEv:"evidence"};
   const refreshHist=()=>{const h=$("#dHist");if(h)h.innerHTML=historyHTML(((cur()&&cur().log)||[]).filter(e=>e.c===code).slice(-10).reverse(),false)};
@@ -1386,7 +1389,8 @@ function openDrawer(code,fromList){
     el.addEventListener(el.tagName==="SELECT"?"change":"input",fn)});
   host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>{lastList=null;closeDrawer()}));
   const back=$("#dBack");if(back)back.addEventListener("click",()=>{renderOverviewQuiet();openList(lastList)});
-  host.querySelectorAll("[data-case]").forEach(b=>b.addEventListener("click",()=>{closeDrawer();searchQ=b.dataset.case;tab="search";
+  host.querySelectorAll("[data-casetoggle]").forEach(b=>b.addEventListener("click",()=>{const body=$("#rc"+b.dataset.casetoggle);const open=body.hidden;body.hidden=!open;b.setAttribute("aria-expanded",String(open))}));
+  host.querySelectorAll("[data-casego]").forEach(b=>b.addEventListener("click",()=>{closeDrawer();searchQ=b.dataset.casego;tab="search";
     const si=$("#sInput"); if(si) si.value=searchQ; render(); if($("#sInput")) $("#sInput").value=searchQ;}));
   host.querySelector(".x").focus();
 }
