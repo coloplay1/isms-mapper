@@ -164,7 +164,7 @@ function docNeed(p,d){
   if(d.mandatory)return {level:"req",label:"標準要求",why:`條款 ${d.clauses.join("、")} 要求`,codes:[],risks:rk};
   if(!d.controls.length)return {level:"opt",label:"選用",why:d.clauses.length?`支援條款 ${d.clauses.join("、")} 的作法，標準未要求一定要有這份`:"標準未要求一定要有這份",codes:[],risks:rk};
   const app=d.controls.filter(c=>ctl(c)==="Y"),und=d.controls.filter(c=>!ctl(c));
-  if(app.length)return {level:"need",label:"本專案需要",why:`對應的 ${d.controls.length} 項控制措施中，${app.length} 項判為適用`,codes:app,risks:rk};
+  if(app.length)return {level:"need",label:"本專案需要",why:app.length===d.controls.length?`對應的 ${d.controls.length} 項控制措施都判為適用`:`對應的 ${d.controls.length} 項控制措施中，${app.length} 項判為適用`,codes:app,risks:rk};
   if(und.length)return {level:"undec",label:"尚未判定",why:und.length===d.controls.length?`對應的 ${d.controls.length} 項控制措施都還沒判定適用性，判定後才知道需不需要`:`對應的 ${d.controls.length} 項控制措施中，${und.length} 項尚未判定、其餘不適用`,codes:und,risks:rk};
   return {level:"none",label:"可能不需要",why:`對應的 ${d.controls.length} 項控制措施都判為不適用，可考慮不建立`,codes:[],risks:rk};
 }
