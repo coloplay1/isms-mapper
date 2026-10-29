@@ -542,44 +542,39 @@ table.cmptable.sum th{white-space:nowrap}
 .tlink.warn{border-left-color:var(--amber)}
 .tlink.bad{border-left-color:var(--seal)}
 .tlink.bad span{color:var(--seal)}
-/* 稽核員會怎麼看 */
-.audview{margin-top:18px}
-.audview>summary{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;cursor:pointer;list-style:none}
-.audview>summary::-webkit-details-marker{display:none}
-.audview>summary::before{content:"▸";color:var(--muted);font-size:12px;transition:transform .15s}
-.audview[open]>summary::before{transform:rotate(90deg)}
+/* 稽核準備 */
+.audbar{margin:18px 0;display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:12px 16px}
+.audbar>.btn{margin-left:auto}
 .audsum{display:flex;flex-wrap:wrap;gap:6px 16px}
 .audst{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
-.audhint{margin-left:auto}
 .ag{display:inline-block;font-size:12px;line-height:1.6;padding:0 8px;border-radius:999px;white-space:nowrap;font-weight:600}
 .ag.nc{background:var(--seal);color:var(--on-fill)}
 .ag.obs{color:var(--amber);box-shadow:inset 0 0 0 1px var(--amber)}
 .ag.ok{color:var(--s3);box-shadow:inset 0 0 0 1px var(--s3)}
 .ag.nd{color:var(--muted);box-shadow:inset 0 0 0 1px var(--line);font-weight:500}
-.audgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.audwarn{margin:0 0 18px;font-size:13px;padding:8px 12px;border-radius:6px;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--amber);color:var(--ink)}
+.audgrid{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
 @media (max-width:860px){.audgrid{grid-template-columns:1fr}}
-.audcol h4{margin:0 0 2px;font-size:15px}
+.audch{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+.audch h3{margin:0}
 .audlist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .audlist>li{border:1px solid var(--line);border-left:4px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--surface)}
 .audlist>li.nc{border-left-color:var(--seal)}
 .audlist>li.obs{border-left-color:var(--amber)}
 .audlist>li.ok{border-left-color:var(--s3);padding:8px 12px}
-.audlist>li.ok .audask{display:none}
-.audlist>li.nd{border-left-style:dashed;background:var(--surface2);padding:8px 12px}
-.audlist>li.nd .auddet{margin-top:2px;list-style:none;padding-left:0;font-size:13px}
-.audlist>li.nd .audask{display:none}
-.audlist>li.nd .auddet{color:var(--muted)}
 .audh{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
 .audh .rcl{font-size:12px;color:var(--muted)}
-.audask{font-size:13px;color:var(--muted);margin-top:4px}
+.audask{font-size:13.5px;margin-top:6px}
 .auddet{margin:6px 0 0;padding-left:18px;font-size:13.5px}
+.audrule{margin-top:6px;font-size:12.5px;color:var(--muted)}
+.audrule b{font-weight:600;margin-right:6px}
+.audlist>li.ok .audrule{margin-top:2px}
 .audgo{margin-top:8px}
-.audwarn{margin:0 0 14px;font-size:13px;padding:6px 10px;border-radius:6px;background:var(--surface2);border-left:3px solid var(--amber);color:var(--ink)}
-.audrule{margin-top:4px;font-size:12.5px;color:var(--muted)}
-.audrule>summary{cursor:pointer;width:max-content;text-decoration:underline dotted;text-underline-offset:3px}
-.audrule>span{display:block;margin-top:2px;color:var(--ink)}
-.audlist>li.ok .audrule,.audlist>li.nd .audrule{display:inline-block;margin-top:2px}
 .audgo .btn{font-size:13px;padding:4px 10px}
+.audnd{margin-top:10px;border:1px dashed var(--line);border-radius:6px;padding:8px 12px;font-size:13px;color:var(--muted)}
+.audnd>b{color:var(--ink);margin-right:8px}
+.audnd ul{margin:4px 0 0;padding-left:18px}
+.audnd li b{color:var(--ink);font-weight:500}
 /* 導入進度：步驟圖示 */
 .stepper{list-style:none;margin:6px 0 12px;padding:0;display:grid;grid-template-columns:repeat(8,minmax(0,1fr))}
 .stepper li{position:relative;display:flex;justify-content:center;align-items:flex-start}

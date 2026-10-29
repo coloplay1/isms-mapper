@@ -413,7 +413,7 @@ let tab="overview";
 const filt={theme:"all",status:"all",q:"",lc:""};
 let searchQ="";
 
-const NEEDS_PROJECT=new Set(["overview","risks","annex","clauses","improve"]);
+const NEEDS_PROJECT=new Set(["overview","risks","annex","clauses","audit","improve"]);
 function render(){
   if(!document.getElementById("view-"+tab))tab="overview";   // 已移除的分頁（例如舊版的路線圖）
   if(!cur()&&NEEDS_PROJECT.has(tab))tab="home";
@@ -423,8 +423,8 @@ function render(){
   const fv=$("#footVer");if(fv&&!fv.dataset.v){const m=(document.querySelector('script[src*="js/app.js"]')||{}).src?.match(/[?&]v=([\d.]+)/);if(m){fv.dataset.v=m[1];fv.textContent=`版本 ${m[1]}｜更新紀錄`}}   // 版本號取自載入網址，不另外維護   // 首頁已有使用指南連結，頁尾不重複
   document.querySelectorAll("#tabs button").forEach(b=>{b.setAttribute("aria-selected",b.dataset.tab===tab);
     b.setAttribute("aria-disabled",!cur()&&NEEDS_PROJECT.has(b.dataset.tab))});
-  ["home","overview","search","risks","annex","clauses","improve","docs","projects"].forEach(v=>$("#view-"+v).hidden=v!==tab);
-  ({home:renderHome,overview:renderOverview,search:renderSearch,risks:renderRisks,annex:renderAnnex,docs:renderDocs,clauses:renderClauses,improve:renderImprove,projects:renderProjects})[tab]();
+  ["home","overview","search","risks","annex","clauses","audit","improve","docs","projects"].forEach(v=>$("#view-"+v).hidden=v!==tab);
+  ({home:renderHome,overview:renderOverview,search:renderSearch,risks:renderRisks,annex:renderAnnex,docs:renderDocs,clauses:renderClauses,audit:renderAudit,improve:renderImprove,projects:renderProjects})[tab]();
 }
 function renderProjSel(){
   const sel=$("#projSel");
@@ -647,7 +647,7 @@ document.addEventListener("click",e=>{const g=e.target.closest("[data-goto]");if
 let nextAll=false;
 function stepBtn(x,primary,label){return `<button class="btn ${primary?"primary":""}" data-goto="${x.tab}"${x.filter?` data-gofilter="${x.filter}"`:""}${x.open?` data-openx="${x.open}"`:""}${x.anchor?` data-anchor="${x.anchor}"`:""}${x.actf?` data-actf="${x.actf}"`:""}${x.riskf?` data-riskf="${x.riskf}"`:""}>${esc(label||(x.cta||"前往")+" →")}</button>`}
 /* 按鈕上顯示要前往的分頁，點之前就知道會離開總覽 */
-const TAB_LABEL={home:"首頁",overview:"總覽",search:"案例搜尋",risks:"風險評鑑",annex:"附錄 A",clauses:"條款 4–10",improve:"改善追蹤",docs:"文件範本",projects:"專案管理"};
+const TAB_LABEL={home:"首頁",overview:"總覽",search:"案例搜尋",risks:"風險評鑑",annex:"附錄 A",clauses:"條款 4–10",audit:"稽核準備",improve:"改善追蹤",docs:"文件範本",projects:"專案管理"};
 let roadSel=null;   // 步驟圖示中選取的步驟（null = 目前步驟）
 function nextCard(p){
   const list=nextSteps(p),road=roadmapSteps(p),done=road.filter(s=>s.done).length,curStep=road.find(s=>s.current);
@@ -683,27 +683,33 @@ function nextCard(p){
 document.addEventListener("click",e=>{
   if(e.target.closest("#nextMore")){nextAll=!nextAll;render();return}
   const r=e.target.closest("[data-road]");if(r){roadSel=+r.dataset.road;renderOverview();const b=document.querySelector(`[data-road="${roadSel}"]`);if(b)b.focus()}});
-/* 稽核員會怎麼看：把同一份資料換成驗證稽核兩個階段的角度，預設收合，摘要列直接看到各階段的數量 */
-let audOpen=false;
+/* ================= 稽核準備 =================
+   把同一份資料換成驗證稽核兩個階段的角度。總覽只放一行摘要，完整內容在「稽核準備」分頁。 */
 const AUD_GRADE={nc:"可能不符合",obs:"可能列為觀察",ok:"資料齊全",na:"尚無資料"};
-function auditPanel(p){
+function auditSum(s){const n=g=>s.items.filter(x=>x.grade===g).length,nc=n("nc"),ob=n("obs"),na=n("na");
+  return nc||ob||na?(nc?`<span class="ag nc">不符合 ${nc}</span>`:"")+(ob?`<span class="ag obs">觀察 ${ob}</span>`:"")+(na?`<span class="ag nd">尚無資料 ${na}</span>`:""):`<span class="ag ok">資料齊全</span>`}
+function auditBar(p){
   const st=auditReadiness(p);
-  const sum=s=>{const n=g=>s.items.filter(x=>x.grade===g).length,nc=n("nc"),ob=n("obs"),na=n("na");
-    return nc||ob||na?(nc?`<span class="ag nc">不符合 ${nc}</span>`:"")+(ob?`<span class="ag obs">觀察 ${ob}</span>`:"")+(na?`<span class="ag nd">尚無資料 ${na}</span>`:""):`<span class="ag ok">資料齊全</span>`};
-  return `<details class="panel audview" id="audView" ${audOpen?"open":""}><summary><b>稽核員會怎麼看</b>
-    <span class="audsum">${st.map(s=>`<span class="audst">${esc(s.name.split("：")[0])}${sum(s)}</span>`).join("")}</span><span class="note audhint">${audOpen?"收合":"展開"}</span></summary>
-    <p class="note" style="margin:8px 0 6px">同一份資料，換成驗證稽核的角度：第一階段看 ISMS 有沒有建立，第二階段抽樣看有沒有確實執行。標示為依常見稽核做法的參考判斷，實際結果依稽核員與驗證機構而定。</p>
-    <p class="audwarn">「資料齊全」只代表工具裡填的資料沒有缺口。工具看不到證據檔案本身，稽核前請抽查證據位置的檔案確實存在、而且是最新的。</p>
-    <div class="audgrid">${st.map(s=>`<div class="audcol"><h4>${esc(s.name)}</h4><p class="note" style="margin:0 0 10px">${esc(s.desc)}</p>
-      <ul class="audlist">${s.items.map(x=>{const g=x.grade==="na"?"nd":x.grade;return `<li class="${g}">
-        <div class="audh"><span class="ag ${g}">${x.grade==="ok"?"✓ ":""}${AUD_GRADE[x.grade]}</span><b>${esc(x.title)}</b><span class="mono rcl">${esc(x.clause)}</span></div>
-        <div class="audask">稽核員會問：${esc(x.ask)}</div>
-        ${x.detail.length?`<ul class="auddet">${x.detail.map(d=>`<li>${esc(d)}</li>`).join("")}</ul>`:""}
-        ${x.rule?`<details class="audrule"><summary>怎樣算資料齊全</summary><span>${esc(x.rule)}</span></details>`:""}
-        ${x.go&&g!=="nd"?`<div class="audgo">${stepBtn(x.go,false)}</div>`:""}</li>`}).join("")}</ul></div>`).join("")}</div>
-  </details>`;
+  return `<div class="panel audbar"><b>稽核準備</b><span class="audsum">${st.map(s=>`<span class="audst">${esc(s.name.split("：")[0])}${auditSum(s)}</span>`).join("")}</span>
+    <button class="btn" data-goto="audit">查看稽核準備 →</button></div>`;
 }
-document.addEventListener("click",e=>{const s=e.target.closest("#audView>summary");if(s){audOpen=!s.parentElement.open;const h=s.querySelector(".audhint");if(h)h.textContent=audOpen?"收合":"展開"}});
+function renderAudit(){
+  const p=cur(),st=auditReadiness(p);
+  const card=x=>{const g=x.grade;return `<li class="${g}">
+      <div class="audh"><span class="ag ${g}">${g==="ok"?"✓ ":""}${AUD_GRADE[g]}</span><b>${esc(x.title)}</b><span class="mono rcl">${esc(x.clause)}</span></div>
+      ${g==="ok"?"":`<div class="audask">稽核員會問：${esc(x.ask)}</div>`}
+      ${x.detail.length&&g!=="ok"?`<ul class="auddet">${x.detail.map(d=>`<li>${esc(d)}</li>`).join("")}</ul>`:""}
+      <div class="audrule"><b>資料齊全的條件</b>${esc(x.rule)}</div>
+      ${x.go?`<div class="audgo">${stepBtn(x.go,false)}</div>`:""}</li>`};
+  $("#view-audit").innerHTML=`<h2>稽核準備</h2>
+  <p class="lede">用驗證稽核的角度看同一份資料：第一階段看 ISMS 有沒有建立，第二階段抽樣看有沒有確實執行。標示為依常見稽核做法的參考判斷，實際結果依稽核員與驗證機構而定。</p>
+  <p class="audwarn">「資料齊全」只代表工具裡填的資料沒有缺口。工具看不到證據檔案本身，稽核前請抽查證據位置的檔案確實存在、而且是最新的。</p>
+  <div class="audgrid">${st.map(s=>{const shown=s.items.filter(x=>x.grade!=="na"),nd=s.items.filter(x=>x.grade==="na");
+    return `<section class="audcol"><div class="audch"><h3>${esc(s.name)}</h3><span class="audsum">${auditSum(s)}</span></div><p class="note" style="margin:0 0 10px">${esc(s.desc)}</p>
+      <ul class="audlist">${shown.map(card).join("")}</ul>
+      ${nd.length?`<div class="audnd"><b>尚無資料（${nd.length}）</b><span class="note">這些項目要先有資料才查得到</span><ul>${nd.map(x=>`<li><b>${esc(x.title)}</b>：${esc(x.detail[0]||"")}</li>`).join("")}</ul></div>`:""}
+    </section>`}).join("")}</div>`;
+}
 function renderOverview(){
   const c=counts(), p=cur();
   const pct=c.app?Math.round(c.impl/c.app*100):0;
@@ -722,14 +728,11 @@ function renderOverview(){
     return `<div class="heat-row"><div class="lab"><span>A.${t.id}　${t.name}（${list.length} 項）</span></div><div class="cells">${
       list.map(x=>{const v=ctl(x.code);const k=v.app==="N"?"na":v.app===""?"undec":"";
         return `<button class="cell ${k} ${x.isNew?"new":""} ${FM[x.code]?"focus":""} ${v.app==="Y"&&v.status===3?"lvl3":""} ${v.app==="Y"?"st"+v.status:""}" style="background:${v.app==="Y"?lvlColor(v.status):""}" data-open="${x.code}" data-tip="${x.code} ${esc(x.name)}｜${v.app==="N"?"不適用":v.app===""?"未決定":STATUS[v.status].label}${FM[x.code]?"｜建議重點":""}" aria-label="${x.code} ${esc(x.name)}">${x.code.split(".")[2]}</button>`}).join("")}</div></div>`}).join("");
-  const todo=ANNEX.filter(x=>{const v=ctl(x.code);return v.app===""||(v.app==="Y"&&v.status===0)}).slice(0,8);
-  const noReason=ANNEX.filter(x=>missingReason(ctl(x.code))).length;
-  const riskIssues=riskChecks(p).filter(c=>c.sev!=="info").length;
   $("#view-overview").innerHTML=`
     <h2>${esc(p.name)}</h2>
     <p class="lede">${p.scope?`驗證範圍：${esc(p.scope)}。`:""}附錄 A 共 93 項控制措施的適用與執行狀況。滑過圖表可看數字，點熱圖方格可查看說明並更新狀態。</p>
     ${nextCard(p)}
-    ${auditPanel(p)}
+    ${auditBar(p)}
     <div class="stats">
       <div class="stat"><b>${c.app}</b><span>適用控制措施</span></div>
       <div class="stat"><b>${c.na}</b><span>不適用</span></div>
@@ -756,7 +759,6 @@ function renderOverview(){
       </div>
       <div style="display:grid;gap:18px;align-content:start">
         <div class="panel"><div class="secthead"><h3>負責人工作量</h3><button class="chip" data-goto="projects" data-anchor="pplPanel" style="margin-left:auto">管理名單</button></div>${ownerBars||`<p class="note">尚未指派負責人。</p>`}</div>
-        <div class="panel"><h3>待處理</h3>${riskIssues?`<button class="alertrow" data-goto="risks"><b>${riskIssues} 項</b>風險評鑑與 SoA 待確認<span>前往風險評鑑 →</span></button>`:""}${noReason?`<button class="alertrow" data-goto="annex" data-gofilter="noreason"><b>${noReason} 項</b>標為不適用但未填排除理由<span>前往補填 →</span></button>`:""}${todo.length?`<ul class="todo">${todo.map(x=>{const v=ctl(x.code);return `<li><span class="mono">${x.code}</span><button data-open="${x.code}">${esc(x.name)}</button><span class="saved" style="margin-left:auto">${v.app===""?"未決定適用性":"未開始"}</span></li>`}).join("")}</ul>`:`<p class="note">所有適用項目都已開始處理。</p>`}</div>
       </div>
     </div>`;
 }
@@ -1447,18 +1449,19 @@ function openDrawer(code,fromList,trail){
   host.querySelector(".x").focus();
 }
 /* 追蹤鏈：稽核員從這一項往下追的路線，斷掉的地方標紅；點連結開啟相關的風險、控制措施或改善事項（可返回） */
-let traceOpen=true;
+const traceOpen={ctl:true,risk:false};   // 控制措施的鏈短，預設展開；風險頁欄位多，預設收合只看摘要
 const TRACE_ST={ok:"✓",warn:"待補強",bad:"斷掉",idle:""};
 function traceHTML(ch){
+  const open=traceOpen[ch&&ch.kind];
   if(!ch)return "";
   const sum=ch.broken?`<span class="ag nc">斷在「${esc(ch.broken)}」</span>`:ch.warn?`<span class="ag obs">${ch.warn} 處待補強</span>`:`<span class="ag ok">✓ 完整</span>`;
   const lk=l=>`<button class="tlink ${l.state}" ${l.kind==="risk"?`data-risk="${esc(l.id)}"`:l.kind==="act"?`data-act="${esc(l.id)}"`:`data-open="${esc(l.id)}"`}>${esc(l.label)}${l.note?`<span>${esc(l.note)}</span>`:""}</button>`;
-  return `<details class="trace" ${traceOpen?"open":""}><summary><b>追蹤鏈</b><span class="note">稽核員會這樣往下追</span>${sum}</summary>
+  return `<details class="trace" data-kind="${ch.kind}" ${open?"open":""}><summary><b>追蹤鏈</b><span class="note">稽核員會這樣往下追</span>${sum}</summary>
     <ol class="tchain">${ch.nodes.map(n=>`<li class="${n.state}"><span class="tdot" aria-hidden="true"></span><div class="tbody">
       <div class="th"><b>${esc(n.label)}</b>${n.clause?`<span class="mono rcl">${esc(n.clause)}</span>`:""}${TRACE_ST[n.state]?`<span class="tst">${TRACE_ST[n.state]}</span>`:""}</div>
       <div class="tt">${esc(n.text)}</div>${n.links&&n.links.length?`<div class="tlinks">${n.links.map(lk).join("")}</div>`:""}</div></li>`).join("")}</ol></details>`;
 }
-document.addEventListener("click",e=>{const s=e.target.closest(".trace>summary");if(s)traceOpen=!s.parentElement.open});
+document.addEventListener("click",e=>{const s=e.target.closest(".trace>summary");if(s)traceOpen[s.parentElement.dataset.kind]=!s.parentElement.open});
 function riskLinkHTML(code,v){
   const ids=RBC[code]||[];
   if(!ids.length)return String(v.reason||"").includes(RISK_REASON)?`<div class="why" style="background:var(--surface2)"><b style="color:var(--muted)">風險評鑑</b>：納入理由是風險評鑑結果，但目前沒有風險引用這一項。可到「風險評鑑」把它加進對應的風險。</div>`:"";
