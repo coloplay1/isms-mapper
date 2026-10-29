@@ -75,3 +75,13 @@ test('勾選上市櫃特性會帶出管控指引與建議重點', () => {
   assert.ok(A.baseFocus(p)['A.5.24'].includes('listed'));
   assert.ok(!A.lawsFor({ industry: '', features: [] }).some(l => l.name.includes('管控指引')));
 });
+
+test('A.8.26、8.27、8.31 只在自行開發與委外開發都沒勾時才列為候選，並說明仍可能適用的情況', () => {
+  const v = A.naCandidates(proj({ industry: 'general', features: ['vendor'] }));
+  for (const c of ['A.8.26', 'A.8.27', 'A.8.30', 'A.8.31']) assert.equal(v[c], undefined, `勾了委外開發時 ${c} 不應列為候選`);
+  assert.ok(v['A.8.25'] && v['A.8.28'], '自行開發才需要的項目仍列為候選');
+  const none = A.naCandidates(proj({ industry: 'general', features: ['cloud'] }));
+  assert.match(none['A.8.26'], /採購或導入應用系統/);
+  assert.match(none['A.8.31'], /測試環境/);
+  for (const c of Object.keys(A.DEV_OR_VENDOR)) assert.ok(A.ANNEX_MAP[c], c);
+});

@@ -12,8 +12,8 @@ function focusMap(p){const m=baseFocus(p);if(!p)return m;
 function naCandidates(p){
   const fs=projFeatures(p);if(!p||(!p.industry&&!fs.length))return {};
   const m={};
-  if(!fs.includes("dev")){DEV_ONLY.forEach(c=>m[c]="未勾選「自行開發系統」，若組織確實沒有開發活動，可評估排除");
-    if(!fs.includes("vendor"))m["A.8.30"]="未勾選自行開發或委外開發，若沒有委外開發活動，可評估排除"}
+  if(!fs.includes("dev")){DEV_ONLY.filter(c=>!DEV_OR_VENDOR[c]).forEach(c=>m[c]="未勾選「自行開發系統」，若組織確實沒有開發活動，可評估排除");
+    if(!fs.includes("vendor"))Object.entries(DEV_OR_VENDOR).forEach(([c,t])=>m[c]=t)}
   return m;
 }
 function lawsFor(p){const fs=projFeatures(p);return LAWS.filter(l=>(l.when.f&&fs.includes(l.when.f))||(l.when.i&&l.when.i.includes(p&&p.industry)))}
