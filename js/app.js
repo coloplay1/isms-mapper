@@ -636,7 +636,7 @@ document.addEventListener("click",e=>{const g=e.target.closest("[data-goto]");if
   if(g.dataset.openx==="criteria")openCriteriaDrawer()});
 /* ---------- 下一步建議（總覽上方）與導入路線圖 ---------- */
 let nextAll=false;
-function stepBtn(x,primary,label){return `<button class="btn ${primary?"primary":""}" data-goto="${x.tab}"${x.filter?` data-gofilter="${x.filter}"`:""}${x.open?` data-openx="${x.open}"`:""}>${esc(label||x.cta||"前往")}</button>`}
+function stepBtn(x,primary,label){return `<button class="btn ${primary?"primary":""}" data-goto="${x.tab}"${x.filter?` data-gofilter="${x.filter}"`:""}${x.open?` data-openx="${x.open}"`:""}${x.anchor?` data-anchor="${x.anchor}"`:""}>${esc(label||x.cta||"前往")}</button>`}
 let roadSel=null;   // 步驟圖示中選取的步驟（null = 目前步驟）
 function nextCard(p){
   const list=nextSteps(p),road=roadmapSteps(p),done=road.filter(s=>s.done).length,curStep=road.find(s=>s.current);
@@ -656,7 +656,7 @@ function nextCard(p){
       <div class="sdhead"><b>步驟 ${sel.n}　${esc(sel.title)}</b><span class="mono rcl">${esc(sel.clause)}</span><span class="rstate ${sel.done?"ok":sel.current?"warn":""}">${state(sel)}</span></div>
       <span class="rdetail">${esc(sel.detail)}</span>
       ${rel.length&&!items.length?`<ul class="rnext">${rel.map(x=>`<li>${esc(x.title)}</li>`).join("")}</ul>`:""}
-      <div>${stepBtn(go,!sel.done,sel.done?"查看":sel.current?"繼續":"前往")}</div></div>
+      <div>${stepBtn(go,!sel.done,(sel.done?"查看":sel.current?"繼續":"前往")+(sel.go?sel.go:""))}</div></div>
       ${items.length?`<div class="sitems"><div class="sihead"><b>還沒完成的項目（${items.length}）</b><span class="note">點項目直接開啟處理</span></div>
         <ul>${items.slice(0,5).map(x=>`<li><button type="button" ${iattr(x)}><span class="silab">${esc(x.label)}</span><span class="sinote${x.hot?" hot":""}">${esc(x.note)}</span></button></li>`).join("")}</ul>
         ${items.length>5?`<button type="button" class="simore" data-goto="${more.tab}"${more.filter?` data-gofilter="${more.filter}"`:""}>查看全部 ${items.length} 項 →</button>`:""}</div>`:""}
@@ -1071,7 +1071,7 @@ function resetBuilt(){["annex"].forEach(v=>delete $("#view-"+v).dataset.built)}
 $("#xlsxFile").addEventListener("change",e=>{const f=e.target.files[0];e.target.value="";if(f)importExcelFile(f)});
 function docPanel(p){
   const d=sanitizeDoc(p.doc);
-  return `<div class="panel" style="margin-top:18px"><div class="secthead"><h3>文件管制資訊</h3><span class="note">會印在匯出 Excel 每個工作表的表頭（條款 7.5）。正式送審前請填寫並完成簽核。</span></div>
+  return `<div class="panel" id="docctl" style="margin-top:18px;scroll-margin-top:120px"><div class="secthead"><h3>文件管制資訊</h3><span class="note">會印在匯出 Excel 每個工作表的表頭（條款 7.5）。正式送審前請填寫並完成簽核。</span></div>
     <div id="docForm" class="docgrid">
       ${DOC_FIELDS.map(([k,l])=>`<label>${l}<input data-doc="${k}" value="${esc(d[k])}" ${k==="date"||k==="approvedAt"?'placeholder="例如 2026/10/25"':""}></label>`).join("")}
       <label>狀態<select data-doc="status">${DOC_STATUS.map(x=>`<option ${x===d.status?"selected":""}>${x}</option>`).join("")}</select></label>

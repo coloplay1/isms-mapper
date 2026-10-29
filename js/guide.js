@@ -67,10 +67,13 @@ function nextSteps(p,now){
   add(f.applicable&&f.noOwner,{key:"noOwner",sev:"info",title:`指定 ${f.noOwner} 項控制措施的負責人`,desc:"每一項都要有人負責（5.3）",tab:"annex",cta:"前往附錄 A"});
   add(f.clausesDone<f.clausesTotal,{key:"clauses",sev:"info",title:`完成 ${f.clausesTotal-f.clausesDone} 項管理系統條款`,desc:"條款 4–10 是驗證稽核第一階段的重點，可搭配文件範本",tab:"clauses",cta:"前往條款 4–10"});
   add(!f.scope,{key:"scope",sev:"info",title:"填寫驗證範圍",desc:"範圍決定哪些系統、地點與人員納入 ISMS（4.3）",tab:"projects",cta:"前往專案管理"});
-  add(f.applicable>0&&!f.docApproved&&!f.undecided&&!f.noReason,{key:"approve",sev:"info",title:"核准 SoA 並填寫文件管制資訊",desc:"SoA 與風險處理計畫需經核准（6.1.3 e、f），核准後把狀態改為「已核准」",tab:"projects",cta:"前往專案管理"});
+  add(f.applicable>0&&!f.docApproved&&!f.undecided&&!f.noReason,{key:"approve",sev:"info",title:"核准 SoA 並填寫文件管制資訊",desc:"SoA 與風險處理計畫需經核准（6.1.3 e、f），核准後把狀態改為「已核准」",tab:"projects",anchor:"docctl",cta:"前往文件管制資訊"});
   return out;
 }
 
+/* 核准步驟完成時，直接顯示核准資訊，不用切到專案管理才看得到 */
+function approvalText(p){const d=sanitizeDoc(p.doc);
+  return ["已核准",d.no&&"文件編號 "+d.no,d.ver&&"版次 "+d.ver,d.approver&&"核准 "+d.approver+(d.approvedAt?"（"+d.approvedAt+"）":"")].filter(Boolean).join("｜")}
 /* 導入路線圖：done 依資料判斷；第一個未完成的是目前步驟 */
 function roadmapSteps(p,now){
   if(!p)return [];
@@ -84,8 +87,8 @@ function roadmapSteps(p,now){
       detail:!f.risks?"還沒有登錄風險":[!f.identOk&&"尚未確認風險清單已涵蓋範圍",f.unscored&&`${f.unscored} 項未評估`,f.reassess&&`${f.reassess} 項沿用去年分數，待重新評估`].filter(Boolean).join("、")||`已識別並評估 ${f.risks} 項風險；處理方式與控制措施在下一步決定（6.1.3）`},
     {n:4,keys:["riskCtl","undecided","noReason","conflicts","riskWarn"],short:"處理・SoA",title:"決定風險處理與適用性（SoA）",clause:"6.1.3",tab:"annex",done:f.risks>0&&!f.undecided&&!f.noReason&&!f.conflicts&&!f.riskWarn,
       detail:[f.undecided&&`${f.undecided} 項未判定`,f.noReason&&`${f.noReason} 項缺排除理由`,f.conflicts&&`${f.conflicts} 項衝突`,f.riskWarn&&`${f.riskWarn} 項風險處理待確認`].filter(Boolean).join("、")||"適用性與風險處理一致"},
-    {n:5,keys:["needApproval","approve"],short:"核准",title:"核准 SoA 與風險處理計畫",clause:"6.1.3 e、f",tab:"projects",done:f.docApproved&&!f.needApproval&&f.applicable>0,
-      detail:[!f.docApproved&&"文件狀態尚未改為「已核准」",f.needApproval&&`${f.needApproval} 項殘餘風險待擁有者核准`].filter(Boolean).join("、")||"已核准"},
+    {n:5,keys:["needApproval","approve"],short:"核准",title:"核准 SoA 與風險處理計畫",clause:"6.1.3 e、f",tab:"projects",anchor:"docctl",go:"文件管制資訊",done:f.docApproved&&!f.needApproval&&f.applicable>0,
+      detail:[!f.docApproved&&"文件狀態尚未改為「已核准」（在專案管理的「文件管制資訊」填寫）",f.needApproval&&`${f.needApproval} 項殘餘風險待擁有者核准`].filter(Boolean).join("、")||approvalText(p)},
     {n:6,keys:["notStarted","noOwner","noEvidence"],short:"落實",title:"落實控制措施並收集證據",clause:"8.1、附錄 A",tab:"annex",done:f.applicable>0&&!f.notStarted,
       detail:f.applicable?`已實施 ${f.implemented}／${f.applicable} 項`:"尚無適用的控制措施"},
     {n:7,keys:["clauses"],short:"稽核",title:"完成管理系統條款、內部稽核與管理審查",clause:"4–10、9.2、9.3",tab:"clauses",done:f.clausesDone===f.clausesTotal,
