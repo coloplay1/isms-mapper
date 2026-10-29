@@ -14,14 +14,17 @@ test('新專案：第一階段的範圍、風險評鑑、SoA 都可能不符合'
   assert.ok(k.soa.detail[0].includes('93 項未判定'));
   assert.equal(k.soa.go.filter, 'undec');
   assert.ok(st.flatMap(s => s.items).every(x => x.title && x.ask && x.clause));
+  assert.deepEqual(st.flatMap(s => s.items).filter(x => x.grade === 'ok').map(x => x.key), [], '沒有資料的項目不能算已備妥');
+  for (const key of ['consistent', 'impl', 'evidence', 'owner', 'plan', 'reassess', 'correct']) assert.equal(k[key].grade, 'na', key);
 });
 
 test('準備好的專案：全部已備妥，沒有前往按鈕', () => {
   const controls = Object.fromEntries(A.ANNEX.map(c => [c.code, { app: 'Y', status: 3, owner: '甲', evidence: '紀錄', reason: '依風險評鑑結果' }]));
   const clauses = Object.fromEntries(A.CLAUSES.map(c => [c.code, { status: 3, owner: '甲', evidence: '紀錄' }]));
   const risk = { id: 'R-001', title: 'x', owner: '甲', l: 2, i: 2, treat: 'accept', accepted: true, controls: [] };
+  const risk2 = { id: 'R-002', title: 'y', owner: '甲', l: 4, i: 4, treat: 'mitigate', controls: ['A.8.13'], plan: '異地備份', due: '2026-03', status: '已完成', rl: 1, ri: 2 };
   const p = { ...A.blankProject('好', ''), scope: '總部', identOk: true, criteria: A.presetCriteria('four'), criteriaOk: true,
-    scale: { l: [...A.SCALE_REF.l], i: [...A.SCALE_REF.i] }, controls, clauses, risks: [risk], doc: { status: '已核准' } };
+    scale: { l: [...A.SCALE_REF.l], i: [...A.SCALE_REF.i] }, controls, clauses, risks: [risk, risk2], doc: { status: '已核准' }, baseline: { label: '2025 年度' } };
   const items = A.auditReadiness(p, NOW).flatMap(s => s.items);
   assert.deepEqual(items.filter(x => x.grade !== 'ok').map(x => x.key + ':' + x.detail.join('/')), []);
   assert.ok(items.every(x => x.go === null));

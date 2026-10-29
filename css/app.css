@@ -555,6 +555,7 @@ table.cmptable.sum th{white-space:nowrap}
 .ag.nc{background:var(--seal);color:var(--on-fill)}
 .ag.obs{color:var(--amber);box-shadow:inset 0 0 0 1px var(--amber)}
 .ag.ok{color:var(--s3);box-shadow:inset 0 0 0 1px var(--s3)}
+.ag.nd{color:var(--muted);box-shadow:inset 0 0 0 1px var(--line);font-weight:500}
 .audgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 @media (max-width:860px){.audgrid{grid-template-columns:1fr}}
 .audcol h4{margin:0 0 2px;font-size:15px}
@@ -564,6 +565,10 @@ table.cmptable.sum th{white-space:nowrap}
 .audlist>li.obs{border-left-color:var(--amber)}
 .audlist>li.ok{border-left-color:var(--s3);padding:8px 12px}
 .audlist>li.ok .audask{display:none}
+.audlist>li.nd{border-left-style:dashed;background:var(--surface2);padding:8px 12px}
+.audlist>li.nd .auddet{margin-top:2px;list-style:none;padding-left:0;font-size:13px}
+.audlist>li.nd .audask{display:none}
+.audlist>li.nd .auddet{color:var(--muted)}
 .audh{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
 .audh .rcl{font-size:12px;color:var(--muted)}
 .audask{font-size:13px;color:var(--muted);margin-top:4px}

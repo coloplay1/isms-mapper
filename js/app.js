@@ -685,20 +685,20 @@ document.addEventListener("click",e=>{
   const r=e.target.closest("[data-road]");if(r){roadSel=+r.dataset.road;renderOverview();const b=document.querySelector(`[data-road="${roadSel}"]`);if(b)b.focus()}});
 /* 稽核員會怎麼看：把同一份資料換成驗證稽核兩個階段的角度，預設收合，摘要列直接看到各階段的數量 */
 let audOpen=false;
-const AUD_GRADE={nc:"可能不符合",obs:"可能列為觀察",ok:"已備妥"};
+const AUD_GRADE={nc:"可能不符合",obs:"可能列為觀察",ok:"已備妥",na:"尚無資料"};
 function auditPanel(p){
   const st=auditReadiness(p);
-  const sum=s=>{const nc=s.items.filter(x=>x.grade==="nc").length,ob=s.items.filter(x=>x.grade==="obs").length;
-    return nc||ob?(nc?`<span class="ag nc">不符合 ${nc}</span>`:"")+(ob?`<span class="ag obs">觀察 ${ob}</span>`:""):`<span class="ag ok">已備妥</span>`};
+  const sum=s=>{const n=g=>s.items.filter(x=>x.grade===g).length,nc=n("nc"),ob=n("obs"),na=n("na");
+    return nc||ob||na?(nc?`<span class="ag nc">不符合 ${nc}</span>`:"")+(ob?`<span class="ag obs">觀察 ${ob}</span>`:"")+(na?`<span class="ag nd">尚無資料 ${na}</span>`:""):`<span class="ag ok">已備妥</span>`};
   return `<details class="panel audview" id="audView" ${audOpen?"open":""}><summary><b>稽核員會怎麼看</b>
     <span class="audsum">${st.map(s=>`<span class="audst">${esc(s.name.split("：")[0])}${sum(s)}</span>`).join("")}</span><span class="note audhint">${audOpen?"收合":"展開"}</span></summary>
     <p class="note" style="margin:8px 0 14px">同一份資料，換成驗證稽核的角度：第一階段看 ISMS 有沒有建立，第二階段抽樣看有沒有確實執行。標示為依常見稽核做法的參考判斷，實際結果依稽核員與驗證機構而定。</p>
     <div class="audgrid">${st.map(s=>`<div class="audcol"><h4>${esc(s.name)}</h4><p class="note" style="margin:0 0 10px">${esc(s.desc)}</p>
-      <ul class="audlist">${s.items.map(x=>`<li class="${x.grade}">
-        <div class="audh"><span class="ag ${x.grade}">${x.grade==="ok"?"✓ ":""}${AUD_GRADE[x.grade]}</span><b>${esc(x.title)}</b><span class="mono rcl">${esc(x.clause)}</span></div>
+      <ul class="audlist">${s.items.map(x=>{const g=x.grade==="na"?"nd":x.grade;return `<li class="${g}">
+        <div class="audh"><span class="ag ${g}">${x.grade==="ok"?"✓ ":""}${AUD_GRADE[x.grade]}</span><b>${esc(x.title)}</b><span class="mono rcl">${esc(x.clause)}</span></div>
         <div class="audask">稽核員會問：${esc(x.ask)}</div>
         ${x.detail.length?`<ul class="auddet">${x.detail.map(d=>`<li>${esc(d)}</li>`).join("")}</ul>`:""}
-        ${x.go?`<div class="audgo">${stepBtn(x.go,false)}</div>`:""}</li>`).join("")}</ul></div>`).join("")}</div>
+        ${x.go&&g!=="nd"?`<div class="audgo">${stepBtn(x.go,false)}</div>`:""}</li>`}).join("")}</ul></div>`).join("")}</div>
   </details>`;
 }
 document.addEventListener("click",e=>{const s=e.target.closest("#audView>summary");if(s){audOpen=!s.parentElement.open;const h=s.querySelector(".audhint");if(h)h.textContent=audOpen?"收合":"展開"}});
