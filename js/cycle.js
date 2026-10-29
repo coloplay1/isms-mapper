@@ -63,6 +63,8 @@ function rolloverProject(prev,opts={}){
   const prevLabel=str(opts.prevLabel,20)||str(prev.period,20)||"去年";
   p.actions=p.actions.filter(a=>a.status!==ACTION_CLOSED);
   p.actions.forEach(a=>{if(!a.carried)a.carried=prevLabel});sum.carried=p.actions.length;
+  // 抽查紀錄留在去年的專案；最近確認日期保留，超過一年會被列為需要重新確認
+  p.spots=[];
   const d=sanitizeDoc(p.doc);
   p.doc={...d,ver:bumpVersion(d.ver),date:"",approvedAt:"",status:"草案"};
   p.baseline=snapshotProject(prev,opts.prevLabel,now);
@@ -238,3 +240,53 @@ function actionStats(p,now){
   return {total:list.length,open:list.filter(a=>a.status!==ACTION_CLOSED).length,overdue:list.filter(a=>actionOverdue(a,now)).length,
     toVerify:list.filter(a=>a.status==="已完成").length,closed:list.filter(a=>a.status===ACTION_CLOSED).length};
 }
+
+/* ================= 模擬抽查 =================
+   像稽核員一樣從「已實施／已驗證」的控制措施抽樣，請使用者實際打開證據確認；
+   另外抽 1～2 個高風險，追處理計畫的執行。結果存成抽查紀錄，可作為內部稽核或稽核前自我檢查的證據。
+   抽樣偏重：被高風險引用、2022 新增、從未確認或超過一年未確認、標為已驗證的項目。 */
+const SPOT_STALE_DAYS=365;
+const SPOT_RESULTS=["","ok","fail","skip"];
+const dateOnly=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||"")?d:"";
+function evidenceAge(v,now){const d=dateOnly(v&&v.checked);if(!d)return null;
+  return Math.floor((Date.parse(todayStr(now)+"T00:00:00Z")-Date.parse(d+"T00:00:00Z"))/864e5)}
+function spotCandidates(p,now){
+  if(!p)return {ctls:[],risks:[]};
+  const risks=p.risks||[],pol=s=>policyOf(s,p);
+  const hot=new Set();risks.forEach(r=>{const s=inherentScore(r);if(s&&pol(s)!=="accept")(r.controls||[]).forEach(c=>hot.add(c))});
+  const ctls=ANNEX.map(c=>({c,v:(p.controls||{})[c.code]})).filter(x=>x.v&&x.v.app==="Y"&&x.v.status>=2).map(({c,v})=>{
+    const why=[],age=evidenceAge(v,now);let w=1;
+    if(hot.has(c.code)){w+=2;why.push("高風險引用")}
+    if(c.isNew){w+=1;why.push("2022 新增")}
+    if(age===null){w+=2;why.push("從未確認")}else if(age>SPOT_STALE_DAYS){w+=2;why.push("超過一年未確認")}
+    if(v.status===3){w+=1;why.push("標為已驗證")}
+    return {kind:"ctl",id:c.code,w,why}});
+  const rk=risks.filter(r=>{const s=inherentScore(r);return s&&pol(s)!=="accept"&&r.treat}).map(r=>({kind:"risk",id:r.id,w:inherentScore(r),why:["高風險"]}));
+  return {ctls,risks:rk};
+}
+/* 依權重不重複抽樣；rnd 可指定，方便測試 */
+function weightedPick(list,n,rnd){const pool=list.slice(),out=[];
+  while(out.length<n&&pool.length){const tot=pool.reduce((a,x)=>a+x.w,0);let t=rnd()*tot,i=0;
+    for(;i<pool.length-1;i++){t-=pool[i].w;if(t<0)break}out.push(pool.splice(i,1)[0])}
+  return out}
+function pickSpot(p,n,opts={}){
+  const rnd=opts.rnd||Math.random,{ctls,risks}=spotCandidates(p,opts.now);
+  const nr=opts.risks===false?0:Math.min(risks.length,n>=10?2:1);
+  return [...weightedPick(ctls,n,rnd),...weightedPick(risks,nr,rnd)].map(x=>({kind:x.kind,id:x.id,why:x.why,result:"",note:"",act:"",prev:""}));
+}
+function sanitizeSpotItem(raw){
+  if(!isObj(raw)||!["ctl","risk"].includes(raw.kind))return null;
+  if(raw.kind==="ctl"?!ANNEX_MAP[raw.id]:!/^R-\d{1,4}$/.test(raw.id))return null;
+  return {kind:raw.kind,id:raw.id,why:Array.isArray(raw.why)?raw.why.map(x=>str(x,20)).filter(Boolean).slice(0,5):[],
+    result:SPOT_RESULTS.includes(raw.result)?raw.result:"",note:str(raw.note,300),act:/^I-\d{1,4}$/.test(raw.act)?raw.act:"",prev:dateOnly(raw.prev)};
+}
+function sanitizeSpot(raw){
+  if(!isObj(raw)||!/^S-\d{1,4}$/.test(raw.id))return null;
+  const items=Array.isArray(raw.items)?raw.items.slice(0,30).map(sanitizeSpotItem).filter(Boolean):[];
+  return {id:raw.id,date:dateOnly(raw.date),done:raw.done===true,items};
+}
+function sanitizeSpots(list){const seen=new Set();
+  return Array.isArray(list)?list.slice(-50).map(sanitizeSpot).filter(s=>s&&!seen.has(s.id)&&seen.add(s.id)):[]}
+function nextSpotId(p){const n=Math.max(0,...((p&&p.spots)||[]).map(s=>Number(String(s.id).slice(2))||0));return "S-"+String(n+1).padStart(3,"0")}
+function spotStats(s){const it=(s&&s.items)||[],n=r=>it.filter(x=>x.result===r).length;
+  return {total:it.length,ok:n("ok"),fail:n("fail"),skip:n("skip"),pending:n("")}}

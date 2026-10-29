@@ -109,6 +109,11 @@ function buildWorkbook(p,opts={}){
   const actData=[...top("改善追蹤（不符合、矯正措施與改善事項）"),
     ...table(["編號","類型","來源","提出日期","事項描述","原因分析","立即處置","改善或矯正措施","關聯條款／控制措施","負責人","預計完成","狀態","完成日期","有效性確認","備註"],acts),
     [],[T("依條款 9.2 內部稽核、9.3 管理審查、10.1 持續改善、10.2 不符合事項與矯正措施登錄。不符合事項應完成原因分析，並在措施完成後確認有效性再結案。")]];
+  const spotRes={ok:"證據已確認",fail:"找不到或已過期",skip:"略過","":"未完成"};
+  const spots=(p.spots||[]).slice().reverse().flatMap(s=>s.items.map(x=>{const c=ANNEX_MAP[x.id],r=x.kind==="risk"?(p.risks||[]).find(y=>y.id===x.id):null;
+    return [s.id,s.date,x.kind==="ctl"?"控制措施":"風險",x.id,c?c.name:(r&&r.title)||"",x.kind==="ctl"?(ctl(x.id).evidence||""):(r&&r.plan)||"",(x.why||[]).join("、"),spotRes[x.result]||"",x.act,x.note]}));
+  const spotData=[...top("模擬抽查紀錄"),...table(["抽查編號","日期","類型","編號","名稱","證據位置／處理計畫","抽樣原因","結果","改善事項","備註"],spots),
+    [],[T("依稽核抽樣的方式，從已實施的控制措施與高風險中抽查，實際打開證據確認。找不到或已過期的項目登錄為改善事項（10.2）。可作為內部稽核（9.2）或稽核前自我檢查的紀錄。")]];
   const lg=(p.log||[]).slice().reverse().map(e=>{const c=ANNEX_MAP[e.c]||CLAUSE_MAP[e.c];
     return [new Date(e.t).toLocaleString("zh-TW",{hour12:false}),e.c,c?c.name:"",FIELD_LABEL[e.f]||e.f,fmtVal(e.f,e.from),fmtVal(e.f,e.to)]});
 
@@ -118,6 +123,7 @@ function buildWorkbook(p,opts={}){
     {sheet:"風險評鑑準則",data:critData,columns:W([14,30,20,36,44])},
     {sheet:"連動檢查",data:[...top("風險評鑑與 SoA 連動檢查"),...table(["類型","風險","控制措施","說明"],ck)],columns:W([8,9,10,70])},
     {sheet:"改善追蹤",data:actData,columns:W([8,12,16,11,30,24,22,28,14,12,11,12,11,24,12]),stickyRowsCount:5},
+    {sheet:"抽查紀錄",data:spotData,columns:W([9,11,9,9,24,26,20,14,9,24]),stickyRowsCount:5},
     {sheet:"條款4-10檢核",data:[...top("管理系統條款 4–10 檢核"),...table(["條款","名稱","PDCA","說明","執行狀態","負責人","證據位置"],clRows)],columns:W([8,24,6,40,10,14,26]),stickyRowsCount:5},
     {sheet:"統計摘要",data:sum,columns:W([22,14,10,10,10,10,10])},
     {sheet:"修改紀錄",data:table(["時間","編號","名稱","欄位","變更前","變更後"],lg),columns:W([20,9,24,10,18,18]),stickyRowsCount:1}

@@ -87,7 +87,8 @@ function sanitizeProject(raw){
   const st=v=>{const n=Number(v);return Number.isInteger(n)&&n>=0&&n<=3?n:0};
   for(const [code,v] of Object.entries(raw.controls)){ if(!ANNEX_MAP[code]||!isObj(v))continue;
     p.controls[code]={app:["","Y","N"].includes(v.app)?v.app:"",status:st(v.status),owner:str(v.owner,60),evidence:str(v.evidence,300),reason:str(v.reason,500)};
-    if(v.impl)p.controls[code].impl=str(v.impl,500) }
+    if(v.impl)p.controls[code].impl=str(v.impl,500);
+    if(/^\d{4}-\d{2}-\d{2}$/.test(v.checked||""))p.controls[code].checked=v.checked }   // 最近一次抽查確認證據的日期
   if(isObj(raw.clauses))for(const [code,v] of Object.entries(raw.clauses)){ if(!CLAUSE_MAP[code]||!isObj(v))continue;
     p.clauses[code]={status:st(v.status),owner:str(v.owner,60),evidence:str(v.evidence,300)} }
   p.log=Array.isArray(raw.log)?raw.log.filter(e=>isObj(e)&&CODE_OK.has(e.c)&&FIELD_LABEL[e.f]).slice(-3000)
@@ -106,6 +107,7 @@ function sanitizeProject(raw){
   p.period=str(raw.period,20);
   if(Number(raw.lastExcelAt)>0)p.lastExcelAt=Number(raw.lastExcelAt);
   p.actions=sanitizeActions(raw.actions);
+  p.spots=sanitizeSpots(raw.spots);
   const base=sanitizeBaseline(raw.baseline);if(base)p.baseline=base;
   p.lastBackupAt=Date.now();p.changesSinceBackup=0;
   return p;

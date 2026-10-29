@@ -194,7 +194,7 @@ const AUDIT_RULES={
   approve:"文件管制狀態為「已核准」、需核准的殘餘風險都已勾選擁有者核准、處理計畫都有預計完成日",
   clauses:"條款 4–10 都標為「已實施」或「已驗證」",
   impl:"判為適用的控制措施都標為「已實施」或「已驗證」",
-  evidence:"已實施與已驗證的控制措施都有填寫證據位置",
+  evidence:"已實施與已驗證的控制措施都有填寫證據位置，抽查確認過的不超過一年；建議用下方的模擬抽查實際打開證據確認",
   owner:"判為適用的控制措施都有負責人",
   plan:"降低、移轉或避免的處理計畫都沒有逾期，也沒有 30 天內到期",
   reassess:"建立過新年度，沿用去年分數的風險都已重新評估",
@@ -208,6 +208,7 @@ function auditReadiness(p,now){
   const vs=ANNEX.map(c=>({c,v:(p.controls||{})[c.code]||{app:"",status:0,evidence:""}})).filter(x=>x.v.app==="Y");
   const notStart=vs.filter(x=>x.v.status===0).length,partial=vs.filter(x=>x.v.status===1).length;
   const implNoEv=vs.filter(x=>x.v.status===2&&!String(x.v.evidence||"").trim()).length;
+  const stale=vs.filter(x=>x.v.status>=2&&(evidenceAge(x.v,now)||0)>SPOT_STALE_DAYS).length;
   const it=(key,clause,title,ask,checks,go,na)=>{
     const rule=AUDIT_RULES[key]||"";
     if(na)return {key,clause,title,ask,rule,grade:"na",detail:[na],go};
@@ -244,7 +245,7 @@ function auditReadiness(p,now){
       [["nc",notStart,`${notStart} 項適用但未開始`],["obs",partial,`${partial} 項部分實施`]],
       {tab:"annex",filter:"notimpl",cta:"前往附錄 A"},noApp),
     it("evidence","7.5、附錄 A","執行證據","請出示最近一次執行的紀錄。",
-      [["nc",f.noEvidence,`${f.noEvidence} 項標為已驗證但沒有證據位置`],["obs",implNoEv,`${implNoEv} 項已實施但沒寫證據位置`]],
+      [["nc",f.noEvidence,`${f.noEvidence} 項標為已驗證但沒有證據位置`],["obs",implNoEv,`${implNoEv} 項已實施但沒寫證據位置`],["obs",stale,`${stale} 項證據超過一年沒有抽查確認`]],
       {tab:"annex",filter:"noevany",cta:"前往附錄 A"},noApp),
     it("owner","5.3","責任分工","這項控制措施由誰負責？他知道嗎？",
       [["obs",f.applicable&&f.noOwner,`${f.noOwner} 項沒有負責人`]],
@@ -305,8 +306,9 @@ function traceChain(p,kind,id,now){
       else{
         nodes.push({k:"owner",label:"負責人",clause:"5.3",state:owner?"ok":"warn",text:owner||"沒有指定負責人"});
         nodes.push({k:"impl",label:"執行",clause:"8.1",state:v.status>=2?"ok":v.status===1?"warn":"bad",text:STATUS[v.status].label});
-        nodes.push({k:"ev",label:"證據",clause:"7.5",state:ev?"ok":v.status===3?"bad":v.status===2?"warn":"idle",
-          text:ev?ev:v.status===3?"標為已驗證，卻沒寫證據在哪裡":v.status===2?"已實施，但沒寫證據位置":"實施後補上證據位置"});
+        const age=evidenceAge(v,now);
+        nodes.push({k:"ev",label:"證據",clause:"7.5",state:ev?(age!==null&&age>SPOT_STALE_DAYS?"warn":"ok"):v.status===3?"bad":v.status===2?"warn":"idle",
+          text:ev?ev+(age===null?"（尚未抽查確認）":age>SPOT_STALE_DAYS?`（${v.checked} 抽查確認，已超過一年）`:`（${v.checked} 抽查確認）`):v.status===3?"標為已驗證，卻沒寫證據在哪裡":v.status===2?"已實施，但沒寫證據位置":"實施後補上證據位置"});
       }
       nodes.push(actNode([id]));
     }

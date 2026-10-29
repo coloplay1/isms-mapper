@@ -514,7 +514,7 @@ function renderHome(){
         <p class="note" style="margin:12px 0 0">還沒有自己的格式？可下載<a href="${TPL_BASE}isms-soa-risk-template.xlsx" download>空白範本</a>或<a href="${TPL_BASE}isms-soa-risk-example.xlsx" download>填寫範例</a>，填好後再匯入。</p>
       </div>
       </div>
-      <p class="guidehint" style="margin:10px 0 0"><span>不確定怎麼用？<a href="${GUIDE_URL}" target="_blank" rel="noopener">看使用指南（PDF，15 頁）</a></span><span class="ghsep" aria-hidden="true">｜</span><span>只需要文件？<a href="#" data-goto="docs">下載 ${nDocs} 份文件範本</a>直接編輯</span></p>
+      <p class="guidehint" style="margin:10px 0 0"><span>不確定怎麼用？<a href="${GUIDE_URL}" target="_blank" rel="noopener">看使用指南（PDF，16 頁）</a></span><span class="ghsep" aria-hidden="true">｜</span><span>只需要文件？<a href="#" data-goto="docs">下載 ${nDocs} 份文件範本</a>直接編輯</span></p>
     </section>
   </div>`;
   const v=$("#view-home");
@@ -711,8 +711,79 @@ function renderAudit(){
     return `<section class="audcol"><div class="audch"><h3>${esc(s.name)}</h3><span class="audsum">${auditSum(s)}</span></div><p class="note" style="margin:0 0 10px">${esc(s.desc)}</p>
       <ul class="audlist">${shown.map(card).join("")}</ul>
       ${nd.length?`<div class="audnd"><b>尚無資料（${nd.length}）</b><span class="note">這些項目要先有資料才查得到</span><ul>${nd.map(x=>`<li><b>${esc(x.title)}</b>：${esc(x.detail[0]||"")}</li>`).join("")}</ul></div>`:""}
-    </section>`}).join("")}</div>`;
+    </section>`}).join("")}</div>
+  ${spotHTML(p)}`;
 }
+/* ---------- 模擬抽查 ---------- */
+let spotN=5,spotRisk=true,spotOpenHist=null;
+const SPOT_LABEL={ctl:{ok:"證據已確認",fail:"找不到或已過期",skip:"略過"},risk:{ok:"進度已確認",fail:"未如期執行",skip:"略過"}};
+function activeSpot(p){const l=p.spots||[];const s=l[l.length-1];return s&&!s.done?s:null}
+function spotItemHTML(x,i){
+  const p=cur(),done=!!x.result;
+  let head,body;
+  if(x.kind==="ctl"){const c=ANNEX_MAP[x.id],v=ctl(x.id);
+    head=`<button class="ref" data-open="${x.id}"><span class="mono">${x.id}</span>${esc(c.name)}</button>`;
+    body=`<div class="audask">稽核員會問：請出示最近一次執行的紀錄。</div>
+      <dl class="spotdl"><div><dt>你填的證據位置</dt><dd>${v.evidence?esc(v.evidence):`<span class="muted">（沒有填寫）</span>`}</dd></div>
+      <div><dt>負責人</dt><dd>${v.owner?esc(v.owner):`<span class="muted">未指定</span>`}</dd></div>
+      <div><dt>常見證據</dt><dd>${esc(c.ev)}</dd></div>
+      <div><dt>上次確認</dt><dd>${(x.result==="ok"?x.prev:v.checked)?esc(x.result==="ok"?x.prev:v.checked):`<span class="muted">從未</span>`}</dd></div></dl>`;
+  }else{const r=riskById(x.id);
+    head=r?`<button class="ref" data-risk="${x.id}"><span class="mono">${x.id}</span>${esc(r.title||"（未命名風險）")}</button>`:`<span class="mono">${x.id}</span>（風險已刪除）`;
+    const d=r?planDue(r):null;
+    body=`<div class="audask">稽核員會問：這個風險的處理計畫執行到哪裡？請出示進度或完成的紀錄。</div>
+      ${r?`<dl class="spotdl"><div><dt>處理計畫</dt><dd>${r.plan?esc(r.plan):`<span class="muted">（沒有填寫）</span>`}</dd></div>
+      <div><dt>預計完成</dt><dd>${r.due?esc(r.due):`<span class="muted">未設定</span>`}${dueTag(d)}</dd></div>
+      <div><dt>處理狀態</dt><dd>${r.status?esc(r.status):`<span class="muted">未設定</span>`}</dd></div></dl>`:""}`;
+  }
+  const L=SPOT_LABEL[x.kind];
+  return `<li class="spotitem ${x.result||"todo"}"><div class="spoth"><span class="spotn">${i+1}</span>${head}${(x.why||[]).map(w=>`<span class="spotwhy">${esc(w)}</span>`).join("")}</div>
+    ${body}
+    ${done?`<div class="spotres"><span class="ag ${x.result==="ok"?"ok":x.result==="fail"?"nc":"nd"}">${L[x.result]}</span>${x.act?`<button class="linkbtn" data-act="${x.act}">已建立改善事項 ${x.act} →</button>`:""}<button class="linkbtn" data-spotundo="${i}">改回未確認</button></div>`
+      :`<div class="spotbtns"><button class="btn primary" data-spotres="${i}" data-r="ok">✓ ${L.ok}</button><button class="btn" data-spotres="${i}" data-r="fail">✕ ${L.fail}</button><button class="btn" data-spotres="${i}" data-r="skip">${L.skip}</button></div>
+      <p class="note" style="margin:6px 0 0">${x.kind==="ctl"?"打開證據位置，確認檔案存在、是最新的，而且真的能證明有在執行。":"對照實際進度與紀錄，確認是否照計畫執行。"}${x.kind==="ctl"?"「找不到或已過期」會自動建立一筆觀察事項。":"「未如期執行」會自動建立一筆觀察事項。"}</p>`}
+  </li>`;
+}
+function spotHTML(p){
+  const s=activeSpot(p),cand=spotCandidates(p),hist=(p.spots||[]).filter(x=>x.done).slice().reverse();
+  const start=cand.ctls.length?`<div class="spotstart"><label>抽查 <select id="spotN">${[3,5,10].map(n=>`<option ${n===spotN?"selected":""}>${n}</option>`).join("")}</select> 項控制措施</label>
+      ${cand.risks.length?`<label class="chk"><input type="checkbox" id="spotRisk" ${spotRisk?"checked":""}> 另外抽 ${spotN>=10?"2":"1"} 個高風險，追處理計畫</label>`:""}
+      <button class="btn primary" id="spotGo">開始抽查</button><span class="note">可抽 ${cand.ctls.length} 項（已實施或已驗證的控制措施）</span></div>`
+    :`<p class="note">還沒有標為「已實施」或「已驗證」的控制措施，落實後就可以抽查。</p>`;
+  const st=s?spotStats(s):null;
+  return `<section class="panel spot" id="spotPanel"><div class="secthead"><h3>模擬抽查</h3><span class="note">像稽核員一樣抽幾項，實際打開證據確認；結果會記錄下來，可匯出到 Excel 的「抽查紀錄」</span></div>
+    ${s?`<div class="spotbar"><b>${esc(s.id)}　${esc(s.date)}</b><span class="note">已確認 ${st.ok}・找不到 ${st.fail}・略過 ${st.skip}・未完成 ${st.pending}</span><button class="btn" id="spotEnd" style="margin-left:auto">${st.pending?"結束抽查":"完成抽查"}</button></div>
+      <ol class="spotlist">${s.items.map(spotItemHTML).join("")}</ol>`:start}
+    ${hist.length?`<h4 style="margin:18px 0 6px">抽查紀錄</h4><ul class="spothist">${hist.map(h=>{const t=spotStats(h);return `<li><button class="spothh" data-spothist="${h.id}" aria-expanded="${spotOpenHist===h.id}"><b>${esc(h.id)}</b> ${esc(h.date)}　抽 ${t.total} 項：確認 ${t.ok}${t.fail?`・<span class="bad">找不到 ${t.fail}</span>`:""}${t.skip?`・略過 ${t.skip}`:""}${t.pending?`・未完成 ${t.pending}`:""}</button>
+      ${spotOpenHist===h.id?`<ul class="spotdet">${h.items.map(x=>{const nm=x.kind==="ctl"?(ANNEX_MAP[x.id]||{}).name:((riskById(x.id)||{}).title||"");return `<li><span class="mono">${x.id}</span> ${esc(nm||"")}　<span class="${x.result==="fail"?"bad":"muted"}">${x.result?SPOT_LABEL[x.kind][x.result]:"未完成"}</span>${x.act?` <button class="linkbtn" data-act="${x.act}">${x.act}</button>`:""}</li>`}).join("")}</ul>`:""}</li>`}).join("")}</ul>`:""}
+  </section>`;
+}
+function spotFail(p,s,x){
+  const a={...blankAction(nextActionId(p)),type:"obs",source:"模擬抽查 "+s.id,raised:todayStr(),status:"待處理"};
+  if(x.kind==="ctl"){const c=ANNEX_MAP[x.id];a.title=`抽查 ${x.id} ${c.name}：找不到證據或證據已過期`;a.refs=[x.id];a.owner=ctl(x.id).owner||""}
+  else{const r=riskById(x.id);a.title=`抽查 ${x.id} ${(r&&r.title)||""}：風險處理計畫未如期執行`;a.refs=r?(r.controls||[]).slice(0,20):[];a.owner=(r&&r.owner)||""}
+  p.actions=p.actions||[];p.actions.push(a);return a.id;
+}
+document.addEventListener("click",e=>{
+  const p=cur();if(!p||tab!=="audit")return;
+  if(e.target.closest("#spotGo")){const items=pickSpot(p,spotN,{risks:spotRisk});if(!items.length)return;
+    p.spots=p.spots||[];p.spots.push({id:nextSpotId(p),date:todayStr(),done:false,items});touchRisk();renderAudit();
+    const el=$("#spotPanel");if(el)el.scrollIntoView({block:"start"});return}
+  if(e.target.closest("#spotEnd")){const s=activeSpot(p);if(s){s.done=true;touchRisk();renderAudit();toast(`已完成抽查 ${s.id}，紀錄可在 Excel 的「抽查紀錄」查看`)}return}
+  const r=e.target.closest("[data-spotres]");if(r){const s=activeSpot(p),x=s&&s.items[+r.dataset.spotres];if(!x)return;
+    x.result=r.dataset.r;
+    if(x.kind==="ctl"&&x.result==="ok"){x.prev=ctl(x.id).checked||"";setField(x.id,"checked",todayStr(),{silent:true})}
+    if(x.result==="fail")x.act=spotFail(p,s,x);
+    touchRisk();renderAudit();if(x.act&&x.result==="fail")toast(`已建立觀察事項 ${x.act}，可到改善追蹤指定負責人與期限`);return}
+  const u=e.target.closest("[data-spotundo]");if(u){const s=activeSpot(p),x=s&&s.items[+u.dataset.spotundo];if(!x)return;
+    if(x.kind==="ctl"&&x.result==="ok")setField(x.id,"checked",x.prev||"",{silent:true});
+    if(x.act){const i=p.actions.findIndex(a=>a.id===x.act),a=p.actions[i];if(a&&a.status==="待處理"&&!a.action&&!a.cause)p.actions.splice(i,1);x.act=""}
+    x.result="";x.prev="";touchRisk();renderAudit();return}
+  const h=e.target.closest("[data-spothist]");if(h){spotOpenHist=spotOpenHist===h.dataset.spothist?null:h.dataset.spothist;renderAudit();return}
+});
+document.addEventListener("change",e=>{
+  if(e.target.id==="spotN"){spotN=+e.target.value;renderAudit()}
+  if(e.target.id==="spotRisk")spotRisk=e.target.checked});
 function renderOverview(){
   const c=counts(), p=cur();
   const pct=c.app?Math.round(c.impl/c.app*100):0;
