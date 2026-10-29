@@ -1345,8 +1345,12 @@ function markPicked(code){
   const view=document.getElementById("view-"+tab);if(!view)return;
   view.querySelectorAll(`[data-open="${CSS.escape(code)}"]`).forEach(el=>el.classList.add("picked"));
 }
-function openDrawer(code,fromList){
+/* 從詳細頁點到另一項（例如相關案例的「也對應到」）時記下來處，讓使用者可以返回；重新整理同一項時保留 */
+let drawerTrail=[],drawerCode=null;
+function openDrawer(code,fromList,trail){
   if(!fromList)lastList=null;
+  if(!trail&&(code!==drawerCode||!$("#drawerHost").innerHTML))drawerTrail=[];
+  drawerCode=code;
   const isA=!!ANNEX_MAP[code]; const c=isA?ANNEX_MAP[code]:CLAUSE_MAP[code]; if(!c)return;
   const v=isA?ctl(code):cls(code);
   const rel=[...CASES,...customCases()].filter(x=>x.r.includes(code));
@@ -1354,7 +1358,7 @@ function openDrawer(code,fromList){
   const host=$("#drawerHost");
   host.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${esc(c.name)}">
     <button class="btn x" data-close>關閉</button>
-    ${lastList?`<button class="btn" id="dBack" style="margin-bottom:10px">← 返回清單</button>`:""}
+    ${drawerTrail.length?(()=>{const p=drawerTrail[drawerTrail.length-1],pc=ANNEX_MAP[p.code]||CLAUSE_MAP[p.code];return `<button class="btn" id="dTrail" style="margin-bottom:10px">← 返回 ${esc(p.code)} ${esc(pc?pc.name:"")}</button>`})():lastList?`<button class="btn" id="dBack" style="margin-bottom:10px">← 返回清單</button>`:""}
     <div class="code">${isA?code:"第 "+code+" 條"}${isA&&c.isNew?' <span class="tag">2022 新增</span>':""}</div>
     <h2>${esc(c.name)}</h2>
     <p class="lede" style="margin-bottom:6px">${esc(c.desc)}</p>
@@ -1389,6 +1393,9 @@ function openDrawer(code,fromList){
     el.addEventListener(el.tagName==="SELECT"?"change":"input",fn)});
   host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>{lastList=null;closeDrawer()}));
   const back=$("#dBack");if(back)back.addEventListener("click",()=>{renderOverviewQuiet();openList(lastList)});
+  const tb=$("#dTrail");if(tb)tb.addEventListener("click",()=>{const p=drawerTrail.pop();openDrawer(p.code,!!lastList,true);
+    p.open.forEach(i=>{const b=host.querySelector(`[data-casetoggle="${i}"]`),body=$("#rc"+i);if(b&&body){body.hidden=false;b.setAttribute("aria-expanded","true")}});
+    const d=host.querySelector(".drawer");if(d)d.scrollTop=p.scroll});
   host.querySelectorAll("[data-casetoggle]").forEach(b=>b.addEventListener("click",()=>{const body=$("#rc"+b.dataset.casetoggle);const open=body.hidden;body.hidden=!open;b.setAttribute("aria-expanded",String(open))}));
   host.querySelectorAll("[data-casego]").forEach(b=>b.addEventListener("click",()=>{closeDrawer();searchQ=b.dataset.casego;tab="search";
     const si=$("#sInput"); if(si) si.value=searchQ; render(); if($("#sInput")) $("#sInput").value=searchQ;}));
@@ -1402,9 +1409,15 @@ function riskLinkHTML(code,v){
     ${v.app===""?`<button class="btn" data-apply="${code}" style="margin-top:8px">設為適用，理由填「${RISK_REASON}」</button>`:""}</div>`;
 }
 function renderOverviewQuiet(){if(tab==="overview")renderOverview()}
-function closeDrawer(){$("#drawerHost").innerHTML="";if(tab!=="search")render();else renderSearchResult()}
+function closeDrawer(){$("#drawerHost").innerHTML="";drawerTrail=[];drawerCode=null;if(tab!=="search")render();else renderSearchResult()}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#drawerHost").innerHTML)closeDrawer()});
-document.addEventListener("click",e=>{const o=e.target.closest("[data-open]");if(o){e.preventDefault();openDrawer(o.dataset.open)}});
+document.addEventListener("click",e=>{const o=e.target.closest("[data-open]");if(!o)return;e.preventDefault();
+  const d=o.closest(".drawer");
+  if(d&&drawerCode&&$("#dStatus")&&o.dataset.open!==drawerCode){
+    const open=[...d.querySelectorAll('[data-casetoggle][aria-expanded="true"]')].map(b=>b.dataset.casetoggle);
+    drawerTrail.push({code:drawerCode,open,scroll:d.scrollTop});if(drawerTrail.length>10)drawerTrail.shift();
+    openDrawer(o.dataset.open,!!lastList,true);
+  }else openDrawer(o.dataset.open)});
 
 /* ================= 風險評鑑與處理 ================= */
 const riskView={mode:"in",cell:null,stage:null};
