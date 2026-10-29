@@ -47,7 +47,7 @@ function nextSteps(p,now){
   if(!p)return [];
   const f=guideFacts(p,now),out=[];
   const add=(cond,o)=>{if(cond)out.push(o)};
-  add(f.actOverdue,{key:"actOverdue",sev:"err",title:`追蹤 ${f.actOverdue} 項逾期的改善事項`,desc:"超過預計完成日仍未完成，稽核時會被追問（10.2）",tab:"improve",cta:"開啟改善追蹤"});
+  add(f.actOverdue,{key:"actOverdue",sev:"err",title:`追蹤 ${f.actOverdue} 項逾期的改善事項`,desc:"超過預計完成日仍未完成，稽核時會被追問（10.2）",tab:"improve",actf:"late",cta:"查看逾期事項"});
   add(f.conflicts,{key:"conflicts",sev:"err",title:`處理 ${f.conflicts} 項風險與 SoA 的衝突`,desc:"例如被風險引用的控制措施卻判為不適用，或不可接受的風險直接接受",tab:"risks",cta:"前往風險評鑑"});
   add(f.reassess,{key:"reassess",sev:"warn",title:`重新評估 ${f.reassess} 項沿用去年分數的風險`,desc:"建立新年度時保留了去年的可能性與衝擊，請依今年情況確認（6.1.2）",tab:"risks",cta:"前往風險評鑑"});
   add(!f.criteria,{key:"criteria",sev:"warn",title:"確認風險評鑑準則",desc:"新專案先帶入預設的四級準則，請確認符合組織可接受的風險程度（6.1.2 a）",tab:"risks",open:"criteria",cta:"確認準則"});
@@ -62,7 +62,7 @@ function nextSteps(p,now){
   add(f.needApproval,{key:"needApproval",sev:"warn",title:`取得 ${f.needApproval} 項殘餘風險的擁有者核准`,desc:"處理後仍需核准的風險，要由風險擁有者核准接受（6.1.3 f）",tab:"risks",cta:"前往風險評鑑"});
   add(f.noEvidence,{key:"noEvidence",sev:"warn",title:`補上 ${f.noEvidence} 項已驗證控制措施的證據位置`,desc:"標為「已驗證」卻沒寫證據在哪裡，稽核時拿不出佐證",tab:"annex",filter:"noevid",cta:"前往補填"});
   add(f.actOnNA,{key:"actOnNA",sev:"warn",title:`確認 ${f.actOnNA} 項改善事項關聯的控制措施`,desc:"改善事項關聯的控制措施在 SoA 判為不適用，兩邊說法互相矛盾；請調整關聯或重新檢討適用性",tab:"improve",cta:"開啟改善追蹤"});
-  add(f.actVerify,{key:"actVerify",sev:"info",title:`確認 ${f.actVerify} 項已完成改善的有效性`,desc:"措施完成後確認有效才能結案（10.2 d）",tab:"improve",cta:"開啟改善追蹤"});
+  add(f.actVerify,{key:"actVerify",sev:"info",title:`確認 ${f.actVerify} 項已完成改善的有效性`,desc:"措施完成後確認有效才能結案（10.2 d）",tab:"improve",actf:"verify",cta:"查看待確認事項"});
   add(f.applicable&&f.notStarted,{key:"notStarted",sev:"info",title:`落實 ${f.notStarted} 項尚未實施的控制措施`,desc:`適用的 ${f.applicable} 項中已實施 ${f.implemented} 項${p.baseline?"；去年已驗證的項目重新收集證據後可改回已驗證":"，記得填寫證據位置"}`,tab:"annex",cta:"前往附錄 A"});
   add(f.applicable&&f.noOwner,{key:"noOwner",sev:"info",title:`指定 ${f.noOwner} 項控制措施的負責人`,desc:"每一項都要有人負責（5.3）",tab:"annex",cta:"前往附錄 A"});
   add(f.clausesDone<f.clausesTotal,{key:"clauses",sev:"info",title:`完成 ${f.clausesTotal-f.clausesDone} 項管理系統條款`,desc:"條款 4–10 是驗證稽核第一階段的重點，可搭配文件範本",tab:"clauses",cta:"前往條款 4–10"});
@@ -149,7 +149,7 @@ function roadmapItems(p,n,now){
     const acts=(p.actions||[]).filter(a=>a.status!==ACTION_CLOSED);
     acts.sort((a,b)=>actionOverdue(b,now)-actionOverdue(a,now));
     acts.forEach(a=>items.push({kind:"act",id:a.id,label:a.id+" "+(a.title||"（未填寫）"),note:actionOverdue(a,now)?"逾期":a.status,hot:actionOverdue(a,now)}));
-    more={tab:"improve"};
+    more={tab:"improve",actf:"open"};
   }
   return {items,more};
 }

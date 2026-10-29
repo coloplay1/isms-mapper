@@ -631,12 +631,13 @@ document.addEventListener("click",e=>{const g=e.target.closest("[data-goto]");if
   if(g.dataset.focusfilter){filt.status="focus";filt.theme="all";delete $("#view-annex").dataset.built}
   if(g.dataset.gofilter){filt.status=g.dataset.gofilter;filt.theme="all";filt.q="";delete $("#view-annex").dataset.built}
   if(g.dataset.openx==="ident")riskView.stage="ident";
+  if(g.dataset.actf)actFilter=g.dataset.actf;
   tab=g.dataset.goto;render();window.scrollTo(0,0);
   if(g.dataset.anchor){const a=document.getElementById(g.dataset.anchor);if(a)a.scrollIntoView({block:"start"})}
   if(g.dataset.openx==="criteria")openCriteriaDrawer()});
 /* ---------- 下一步建議（總覽上方）與導入路線圖 ---------- */
 let nextAll=false;
-function stepBtn(x,primary,label){return `<button class="btn ${primary?"primary":""}" data-goto="${x.tab}"${x.filter?` data-gofilter="${x.filter}"`:""}${x.open?` data-openx="${x.open}"`:""}${x.anchor?` data-anchor="${x.anchor}"`:""}>${esc(label||x.cta||"前往")}</button>`}
+function stepBtn(x,primary,label){return `<button class="btn ${primary?"primary":""}" data-goto="${x.tab}"${x.filter?` data-gofilter="${x.filter}"`:""}${x.open?` data-openx="${x.open}"`:""}${x.anchor?` data-anchor="${x.anchor}"`:""}${x.actf?` data-actf="${x.actf}"`:""}>${esc(label||x.cta||"前往")}</button>`}
 let roadSel=null;   // 步驟圖示中選取的步驟（null = 目前步驟）
 function nextCard(p){
   const list=nextSteps(p),road=roadmapSteps(p),done=road.filter(s=>s.done).length,curStep=road.find(s=>s.current);
@@ -644,7 +645,7 @@ function nextCard(p){
   const shown=nextAll?list:list.slice(0,3);
   const rel=sel.done?[]:list.filter(x=>sel.keys.includes(x.key));
   const it=sel.done?{items:[]}:roadmapItems(p,sel.n),items=it.items,more=it.more;
-  const go=more&&items.length?{...sel,tab:more.tab,filter:more.filter}:sel;
+  const go=more&&items.length?{...sel,tab:more.tab,filter:more.filter,actf:more.actf}:sel;
   const iattr=x=>x.kind==="risk"?`data-risk="${esc(x.id)}"`:x.kind==="act"?`data-act="${esc(x.id)}"`:`data-open="${esc(x.id)}"`;
   const state=st=>st.done?"已完成":st.current?"目前步驟":"未完成";
   return `<section class="nextcard" aria-label="導入進度與下一步建議">
@@ -659,7 +660,7 @@ function nextCard(p){
       <div>${stepBtn(go,!sel.done,(sel.done?"查看":sel.current?"繼續":"前往")+(sel.go?sel.go:""))}</div></div>
       ${items.length?`<div class="sitems"><div class="sihead"><b>還沒完成的項目（${items.length}）</b><span class="note">點項目直接開啟處理</span></div>
         <ul>${items.slice(0,5).map(x=>`<li><button type="button" ${iattr(x)}><span class="silab">${esc(x.label)}</span><span class="sinote${x.hot?" hot":""}">${esc(x.note)}</span></button></li>`).join("")}</ul>
-        ${items.length>5?`<button type="button" class="simore" data-goto="${more.tab}"${more.filter?` data-gofilter="${more.filter}"`:""}>查看全部 ${items.length} 項 →</button>`:""}</div>`:""}
+        ${items.length>5?`<button type="button" class="simore" data-goto="${more.tab}"${more.filter?` data-gofilter="${more.filter}"`:""}${more.actf?` data-actf="${more.actf}"`:""}>查看全部 ${items.length} 項 →</button>`:""}</div>`:""}
     </div>
     <div class="secthead" style="margin-top:18px"><h3>下一步建議</h3><span class="note">依專案目前的資料自動產生，處理完會換下一項</span></div>
     ${list.length?`<ol class="nextlist">${shown.map((x,k)=>`<li class="${x.sev}${k===0?" first":""}"><span class="nnum">${k+1}</span>
@@ -1835,7 +1836,7 @@ function openCriteriaDrawer(){
   draw();
 }
 /* ================= 改善追蹤 ================= */
-let actFilter="open",howtoOpen=true;
+let actFilter="open",howtoOpen=null;   /* null＝依專案決定：還沒有改善事項時展開說明，有事項後預設收合，讓清單直接出現在畫面上 */
 function actions(){const p=cur();if(!p)return [];if(!Array.isArray(p.actions))p.actions=[];return p.actions}
 function actionById(id){return actions().find(a=>a.id===id)}
 function actStatusBadge(a){
@@ -1866,7 +1867,7 @@ function renderImprove(){
   const issues=checks.filter(c=>c.sev!=="info");
   $("#view-improve").innerHTML=`<h2>改善追蹤</h2>
   <p class="lede">登錄內部稽核發現、管理審查決議、資安事件檢討與改善機會，追蹤到確認有效為止。這是 PDCA 的「Act」：讓問題不只被發現，也被解決，並留下持續改善（10.1）的證據。</p>
-  <details class="panel howto" id="aHow" ${howtoOpen?"open":""}><summary><b>這個分頁怎麼用</b><span class="note">從發現問題到結案的流程，以及和條款的對應</span></summary>
+  <details class="panel howto" id="aHow" ${(howtoOpen??!list.length)?"open":""}><summary><b>這個分頁怎麼用</b><span class="note">從發現問題到結案的流程，以及和條款的對應</span></summary>
     <ol class="flow">${IMPROVE_FLOW.map(([t,d],k)=>`<li><span class="fstep">${k+1}</span><b>${t}</b><span>${d}</span></li>`).join("")}</ol>
     <div class="table-wrap" style="margin-top:12px"><table class="cmptable"><thead><tr><th style="width:130px">類型</th><th style="width:80px">條款</th><th>什麼時候用</th><th style="width:150px">需要填</th></tr></thead><tbody>
       ${ACTION_TYPES.map(t=>`<tr><td>${t.label}</td><td class="code"><button class="ref mono" data-open="${t.clause}">${t.clause}</button></td><td>${esc(t.hint)}</td><td>${esc(t.need)}</td></tr>`).join("")}
@@ -1897,7 +1898,7 @@ function renderImprove(){
   const on=(id,fn)=>{const el=$("#"+id);if(el)el.addEventListener("click",fn)};
   on("aNew",()=>{const a=newAction();renderImprove();openActionDrawer(a.id)});
   on("aXls",()=>exportExcel());
-  $("#aHow").addEventListener("toggle",e=>{howtoOpen=e.target.open});
+  $("#aHow summary").addEventListener("click",()=>{howtoOpen=!$("#aHow").open});   /* 只記住使用者自己點的展開／收合 */
   $("#aSeg").addEventListener("click",e=>{const b=e.target.closest("[data-af]");if(!b)return;actFilter=b.dataset.af;renderImprove()});
 }
 document.addEventListener("click",e=>{const a=e.target.closest("[data-act]");if(a){e.preventDefault();openActionDrawer(a.dataset.act)}});

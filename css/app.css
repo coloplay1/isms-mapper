@@ -446,6 +446,11 @@ table.cmptable.sum th{white-space:nowrap}
 .howto{margin-bottom:18px}
 .howto summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
 .howto[open] summary{margin-bottom:12px}
+.howto summary{list-style:none}.howto summary::-webkit-details-marker{display:none}
+.howto summary::before{content:"▸";color:var(--accent);font-size:13px;transition:transform .15s;display:inline-block}
+.howto[open] summary::before{transform:rotate(90deg)}
+.howto summary::after{content:"展開";margin-left:auto;font-size:12.5px;color:var(--accent)}
+.howto[open] summary::after{content:"收合"}
 .flow{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:10px}
 .flow li{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;align-content:start;border:1px solid var(--line);border-radius:6px;padding:10px;background:var(--surface2);font-size:13px;line-height:1.6}
 .flow .fstep{grid-row:span 2;width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:12px;font-weight:600}
