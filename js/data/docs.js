@@ -11,9 +11,11 @@ const DOC_LAYERS=[
 ];
 const DOCS=[
   // 01 手冊與索引
-  {id:"M-01",layer:"01",name:"資訊安全管理手冊",fmt:"docx",file:"docs/M-01.docx",mandatory:true,
+  {id:"M-01",layer:"01",name:"資訊安全管理手冊",fmt:"docx",file:"docs/M-01.docx",mandatory:false,
+   opt:"標準沒有要求一定要有手冊，但多數公司會用手冊整合 ISMS 架構與權責；範圍、政策等必要內容可以寫在手冊裡，或各自成為獨立文件",
    clauses:["4.4","5.1","5.3","7.1","7.4","7.5","8.1"],controls:["A.5.2","A.5.4"],desc:"ISMS 的整體架構、組織與權責、各條款由哪份文件落實"},
-  {id:"M-02",layer:"01",name:"文件總清單",fmt:"xlsx",file:"docs/M-02.xlsx",mandatory:true,
+  {id:"M-02",layer:"01",name:"文件總清單",fmt:"xlsx",file:"docs/M-02.xlsx",mandatory:false,
+   opt:"標準要求文件要受管制（7.5.3），但沒有規定要有總清單；用清單管理編號、版次與存放位置是最常見、最省事的做法",
    clauses:["7.5"],controls:["A.5.37"],desc:"所有 ISMS 文件的編號、版次、負責單位與存放位置"},
   // 02 政策
   {id:"POL-01",layer:"02",name:"資訊安全政策",fmt:"docx",file:"docs/POL-01.docx",mandatory:true,
@@ -89,7 +91,7 @@ const DOC_REQUIREMENTS=[
   {code:"6.2",req:"資訊安全目標",docs:["REC-03"]},
   {code:"7.2",req:"人員適任性的證據",docs:["REC-04"]},
   {code:"7.5",req:"組織判定 ISMS 有效運作所需的文件化資訊",docs:["M-01","M-02","PRO-01"]},
-  {code:"8.1",req:"足以確信流程依計畫執行的資訊",docs:["M-01"]},
+  {code:"8.1",req:"足以確信流程依計畫執行的資訊（含變更與委外的管制）",docs:["PRO-09","FRM-07","PRO-08"]},
   {code:"8.2",req:"風險評鑑的結果",docs:["REC-02"]},
   {code:"8.3",req:"風險處理的結果",docs:["REC-02"]},
   {code:"9.1",req:"監督與量測的結果",docs:["REC-03"]},

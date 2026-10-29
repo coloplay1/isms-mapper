@@ -45,3 +45,15 @@ test('第二階段：已實施沒寫證據是觀察，已驗證沒寫證據與�
   assert.equal(k.plan.grade, 'nc');
   assert.equal(k.plan.go.riskf, 'late');
 });
+
+test('ISMS 範圍：只填專案的範圍欄位不算，要有範圍文件（條款 4.3）', () => {
+  const p = { ...A.blankProject('x', ''), scope: '台北總部' };
+  const k = () => byKey(A.auditReadiness(p, NOW)).scope;
+  assert.equal(k().grade, 'nc');
+  assert.ok(k().detail.some(d => d.includes('文件化資訊')));
+  assert.equal(k().go.tab, 'clauses');
+  p.clauses = { '4.3': { status: 2, owner: '甲', evidence: '' } };
+  assert.equal(k().grade, 'obs');
+  p.clauses['4.3'].evidence = 'POL-02 ISMS 適用範圍書 v1.0';
+  assert.equal(k().grade, 'ok');
+});

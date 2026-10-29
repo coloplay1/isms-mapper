@@ -65,3 +65,14 @@ test('文件範本的必要性依標準要求、SoA 判定與風險引用判斷'
   const fmOnly = A.DOCS.find(d => !d.mandatory && !d.controls.length);
   if (fmOnly) assert.equal(A.docNeed(base, fmOnly).level, 'opt');
 });
+
+test('手冊與文件總清單不是標準要求，標為選用並說明原因', () => {
+  for (const id of ['M-01', 'M-02']) {
+    const d = A.DOC_MAP[id];
+    assert.equal(d.mandatory, false, id);
+    const n = A.docNeed({ ...A.blankProject('x', '') }, d);
+    assert.equal(n.level, 'opt', id);
+    assert.ok(n.why.includes('標準') && n.why.length > 20, id);
+  }
+  assert.equal(A.docNeed({ ...A.blankProject('x', '') }, A.DOC_MAP['POL-02']).level, 'req');
+});

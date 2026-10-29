@@ -327,10 +327,10 @@ footer{font-size:12px;color:var(--muted);padding-block:0 30px}
 .rstate.ok{color:var(--s3)}
 .rstate.warn{color:var(--seal)}
 /* 風險處理計畫期限 */
-.dtag{display:block;width:max-content;margin-top:3px;font-size:12px;line-height:1.5;padding:0 6px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
-.dtag.late{color:var(--seal)}
-.dtag.soon{color:var(--amber)}
-.dtag.none{color:var(--muted);border-style:dashed}
+.duetag{display:block;width:max-content;margin-top:3px;font-size:12px;line-height:1.5;padding:0 6px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
+.duetag.late{color:var(--seal)}
+.duetag.soon{color:var(--amber)}
+.duetag.none{color:var(--muted);border-style:dashed}
 .duebar .count{color:var(--muted)}
 .dchip.late{color:var(--seal);border-color:var(--seal)}
 .dchip.soon{color:var(--amber);border-color:var(--amber)}

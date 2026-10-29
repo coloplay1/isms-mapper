@@ -1668,9 +1668,9 @@ function riskProgress(r){
 /* 處理計畫期限的小標籤：逾期紅色、即將到期黃色，其餘不顯示 */
 function dueTag(d){
   if(!d)return "";
-  if(d.state==="late")return `<span class="dtag late" data-tip="已超過預計完成日 ${-d.days} 天">逾期 ${-d.days} 天</span>`;
-  if(d.state==="soon")return `<span class="dtag soon" data-tip="${PLAN_SOON_DAYS} 天內到期">${d.days?`剩 ${d.days} 天`:"今天到期"}</span>`;
-  if(d.state==="nodue")return `<span class="dtag none">未設期限</span>`;
+  if(d.state==="late")return `<span class="duetag late" data-tip="已超過預計完成日 ${-d.days} 天">逾期 ${-d.days} 天</span>`;
+  if(d.state==="soon")return `<span class="duetag soon" data-tip="${PLAN_SOON_DAYS} 天內到期">${d.days?`剩 ${d.days} 天`:"今天到期"}</span>`;
+  if(d.state==="nodue")return `<span class="duetag none">未設期限</span>`;
   return "";
 }
 const DUE_FILTER={late:"處理計畫逾期",soon:`處理計畫 ${PLAN_SOON_DAYS} 天內到期`,nodue:"處理計畫未設期限"};

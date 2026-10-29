@@ -172,6 +172,7 @@ function docNeed(p,d){
   const risks=(p.risks||[]).filter(r=>(r.controls||[]).some(c=>d.controls.includes(c)));
   const rk=risks.map(r=>({id:r.id,title:r.title||"（未命名風險）"}));
   if(d.mandatory)return {level:"req",label:"標準要求",why:`條款 ${d.clauses.join("、")} 要求`,codes:[],risks:rk};
+  if(d.opt)return {level:"opt",label:"選用",why:d.opt,codes:[],risks:rk};   // 標準未要求、但實務上常見的文件（例如手冊）
   if(!d.controls.length)return {level:"opt",label:"選用",why:d.clauses.length?`支援條款 ${d.clauses.join("、")} 的作法，標準未要求一定要有這份`:"標準未要求一定要有這份",codes:[],risks:rk};
   const app=d.controls.filter(c=>ctl(c)==="Y"),und=d.controls.filter(c=>!ctl(c));
   if(app.length)return {level:"need",label:"本專案需要",why:app.length===d.controls.length?`對應的 ${d.controls.length} 項控制措施都判為適用`:`對應的 ${d.controls.length} 項控制措施中，${app.length} 項判為適用`,codes:app,risks:rk};
@@ -186,7 +187,7 @@ function docNeed(p,d){
    這是依常見稽核做法整理的參考判斷，實際結果依稽核員與驗證機構而定。 */
 /* 每一項「資料齊全」的判斷條件，顯示在畫面上，讓使用者知道工具看的是什麼、要補什麼 */
 const AUDIT_RULES={
-  scope:"專案有填寫驗證範圍",
+  scope:"專案有填寫驗證範圍，條款 4.3 標為「已實施」以上，並寫了範圍文件的位置（例如 POL-02 ISMS 適用範圍書，或手冊中的範圍章節）",
   criteria:"風險準則已按「確認」，並寫了可能性與衝擊各級的定義",
   riskAssess:"至少登錄一項風險、全部都已評分，並在風險識別按過「確認風險識別完成」",
   soa:"93 項控制措施都已判定適用性，判為不適用的都有排除理由",
@@ -216,11 +217,15 @@ function auditReadiness(p,now){
     const grade=hit.some(c=>c[0]==="nc")?"nc":hit.length?"obs":"ok";
     return {key,clause,title,ask,rule,grade,detail:hit.map(c=>c[2]),go:grade==="ok"?null:go};
   };
+  const cl43=(p.clauses||{})["4.3"]||{status:0,evidence:""};
   const noApp=!f.applicable&&"還沒有判為適用的控制措施，判定 SoA 後才查得到";
   const planNeed=(p.risks||[]).some(r=>r.treat&&r.treat!=="accept");
   const s1=[
-    it("scope","4.3","ISMS 範圍","範圍包含哪些部門、地點與系統？排除的部分理由是什麼？",
-      [["nc",!f.scope,"尚未填寫驗證範圍"]],{tab:"projects",cta:"前往專案管理"}),
+    it("scope","4.3","ISMS 範圍","請出示 ISMS 範圍文件：包含哪些部門、地點與系統？與外部的介面、排除的部分理由是什麼？",
+      [["nc",!f.scope,"尚未填寫驗證範圍"],
+       ["nc",f.scope&&cl43.status<2,"範圍要寫成文件化資訊並經核准（4.3）：條款 4.3 尚未標為已實施"],
+       ["obs",cl43.status>=2&&!String(cl43.evidence||"").trim(),"條款 4.3 沒有寫範圍文件放在哪裡"]],
+      f.scope?{tab:"clauses",cta:"前往條款 4–10"}:{tab:"projects",cta:"前往專案管理"}),
     it("criteria","6.1.2 a、b","風險評鑑準則","風險怎麼評分？多少分以上要處理？由誰核定？",
       [["nc",!f.criteria,"風險準則尚未確認"],["obs",f.criteria&&!f.scaleDefs,"可能性與衝擊沒有寫各級定義，不同人評分可能不一致"]],
       {tab:"risks",open:"criteria",cta:"開啟風險準則"}),
