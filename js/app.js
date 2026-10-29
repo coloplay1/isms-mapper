@@ -638,7 +638,9 @@ document.addEventListener("click",e=>{const g=e.target.closest("[data-goto]");if
   if(g.dataset.openx==="criteria")openCriteriaDrawer()});
 /* ---------- 下一步建議（總覽上方）與導入路線圖 ---------- */
 let nextAll=false;
-function stepBtn(x,primary,label){return `<button class="btn ${primary?"primary":""}" data-goto="${x.tab}"${x.filter?` data-gofilter="${x.filter}"`:""}${x.open?` data-openx="${x.open}"`:""}${x.anchor?` data-anchor="${x.anchor}"`:""}${x.actf?` data-actf="${x.actf}"`:""}>${esc(label||x.cta||"前往")}</button>`}
+function stepBtn(x,primary,label){return `<button class="btn ${primary?"primary":""}" data-goto="${x.tab}"${x.filter?` data-gofilter="${x.filter}"`:""}${x.open?` data-openx="${x.open}"`:""}${x.anchor?` data-anchor="${x.anchor}"`:""}${x.actf?` data-actf="${x.actf}"`:""}>${esc(label||(x.cta||"前往")+" →")}</button>`}
+/* 按鈕上顯示要前往的分頁，點之前就知道會離開總覽 */
+const TAB_LABEL={home:"首頁",overview:"總覽",search:"案例搜尋",risks:"風險評鑑",annex:"附錄 A",clauses:"條款 4–10",improve:"改善追蹤",docs:"文件範本",projects:"專案管理"};
 let roadSel=null;   // 步驟圖示中選取的步驟（null = 目前步驟）
 function nextCard(p){
   const list=nextSteps(p),road=roadmapSteps(p),done=road.filter(s=>s.done).length,curStep=road.find(s=>s.current);
@@ -658,7 +660,7 @@ function nextCard(p){
       <div class="sdhead"><b>步驟 ${sel.n}　${esc(sel.title)}</b><span class="mono rcl">${esc(sel.clause)}</span><span class="rstate ${sel.done?"ok":sel.current?"warn":""}">${state(sel)}</span></div>
       <span class="rdetail">${esc(sel.detail)}</span>
       ${rel.length&&!items.length?`<ul class="rnext">${rel.map(x=>`<li>${esc(x.title)}</li>`).join("")}</ul>`:""}
-      <div>${stepBtn(go,!sel.done,(sel.done?"查看":sel.current?"繼續":"前往")+(sel.go?sel.go:""))}</div></div>
+      <div>${stepBtn(go,!sel.done,(sel.done?"查看":"前往")+(sel.go||TAB_LABEL[go.tab]||"")+" →")}</div></div>
       ${items.length?`<div class="sitems"><div class="sihead"><b>還沒完成的項目（${items.length}）</b><span class="note">點項目直接開啟處理</span></div>
         <ul>${items.slice(0,5).map(x=>`<li><button type="button" ${iattr(x)}><span class="silab">${esc(x.label)}</span><span class="sinote${x.hot?" hot":""}">${esc(x.note)}</span></button></li>`).join("")}</ul>
         ${items.length>5?`<button type="button" class="simore" data-goto="${more.tab}"${more.filter?` data-gofilter="${more.filter}"`:""}${more.actf?` data-actf="${more.actf}"`:""}>查看全部 ${items.length} 項 →</button>`:""}</div>`:""}
