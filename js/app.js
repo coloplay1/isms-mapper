@@ -683,6 +683,25 @@ function nextCard(p){
 document.addEventListener("click",e=>{
   if(e.target.closest("#nextMore")){nextAll=!nextAll;render();return}
   const r=e.target.closest("[data-road]");if(r){roadSel=+r.dataset.road;renderOverview();const b=document.querySelector(`[data-road="${roadSel}"]`);if(b)b.focus()}});
+/* 稽核員會怎麼看：把同一份資料換成驗證稽核兩個階段的角度，預設收合，摘要列直接看到各階段的數量 */
+let audOpen=false;
+const AUD_GRADE={nc:"可能不符合",obs:"可能列為觀察",ok:"已備妥"};
+function auditPanel(p){
+  const st=auditReadiness(p);
+  const sum=s=>{const nc=s.items.filter(x=>x.grade==="nc").length,ob=s.items.filter(x=>x.grade==="obs").length;
+    return nc||ob?(nc?`<span class="ag nc">不符合 ${nc}</span>`:"")+(ob?`<span class="ag obs">觀察 ${ob}</span>`:""):`<span class="ag ok">已備妥</span>`};
+  return `<details class="panel audview" id="audView" ${audOpen?"open":""}><summary><b>稽核員會怎麼看</b>
+    <span class="audsum">${st.map(s=>`<span class="audst">${esc(s.name.split("：")[0])}${sum(s)}</span>`).join("")}</span><span class="note audhint">${audOpen?"收合":"展開"}</span></summary>
+    <p class="note" style="margin:8px 0 14px">同一份資料，換成驗證稽核的角度：第一階段看 ISMS 有沒有建立，第二階段抽樣看有沒有確實執行。標示為依常見稽核做法的參考判斷，實際結果依稽核員與驗證機構而定。</p>
+    <div class="audgrid">${st.map(s=>`<div class="audcol"><h4>${esc(s.name)}</h4><p class="note" style="margin:0 0 10px">${esc(s.desc)}</p>
+      <ul class="audlist">${s.items.map(x=>`<li class="${x.grade}">
+        <div class="audh"><span class="ag ${x.grade}">${x.grade==="ok"?"✓ ":""}${AUD_GRADE[x.grade]}</span><b>${esc(x.title)}</b><span class="mono rcl">${esc(x.clause)}</span></div>
+        <div class="audask">稽核員會問：${esc(x.ask)}</div>
+        ${x.detail.length?`<ul class="auddet">${x.detail.map(d=>`<li>${esc(d)}</li>`).join("")}</ul>`:""}
+        ${x.go?`<div class="audgo">${stepBtn(x.go,false)}</div>`:""}</li>`).join("")}</ul></div>`).join("")}</div>
+  </details>`;
+}
+document.addEventListener("click",e=>{const s=e.target.closest("#audView>summary");if(s){audOpen=!s.parentElement.open;const h=s.querySelector(".audhint");if(h)h.textContent=audOpen?"收合":"展開"}});
 function renderOverview(){
   const c=counts(), p=cur();
   const pct=c.app?Math.round(c.impl/c.app*100):0;
@@ -708,6 +727,7 @@ function renderOverview(){
     <h2>${esc(p.name)}</h2>
     <p class="lede">${p.scope?`驗證範圍：${esc(p.scope)}。`:""}附錄 A 共 93 項控制措施的適用與執行狀況。滑過圖表可看數字，點熱圖方格可查看說明並更新狀態。</p>
     ${nextCard(p)}
+    ${auditPanel(p)}
     <div class="stats">
       <div class="stat"><b>${c.app}</b><span>適用控制措施</span></div>
       <div class="stat"><b>${c.na}</b><span>不適用</span></div>
@@ -804,7 +824,7 @@ function renderAnnex(){
       <details class="panel lcwrap" ${lcOpen?"open":""} id="lcWrap"><summary><b>依產品／服務生命週期檢視</b><span class="note">從需求到退休，每個階段該注意哪些控制措施。階段依 ISO/IEC 24748 的生命週期概念整理，與控制措施的對應為本工具歸納，非標準規定；與附錄 A.8.25「安全開發生命週期」最直接相關。點階段可篩選下方清單</span></summary><div id="lcStrip"></div></details>
       <div class="filters">
         <div class="seg" id="themeSeg"><button data-th="all" aria-pressed="true">全部</button>${THEMES.map(t=>`<button data-th="${t.id}" aria-pressed="false">A.${t.id} ${t.name}</button>`).join("")}</div>
-        <select id="stFilter" aria-label="狀態篩選"><option value="all">所有狀態</option><option value="undec">未決定適用性</option><option value="notimpl">適用但未實施</option><option value="N">不適用</option>${STATUS.map(s=>`<option value="${s.v}">${s.label}</option>`).join("")}<option value="new">2022 新增</option><option value="noreason">不適用但未填理由</option><option value="noevid">已驗證但未填證據位置</option><option value="focus">產業建議重點</option><option value="nacand">可能不適用候選</option><option value="risk">有風險引用</option><option value="riskissue">風險連動待確認</option></select>
+        <select id="stFilter" aria-label="狀態篩選"><option value="all">所有狀態</option><option value="undec">未決定適用性</option><option value="notimpl">適用但未實施</option><option value="N">不適用</option>${STATUS.map(s=>`<option value="${s.v}">${s.label}</option>`).join("")}<option value="new">2022 新增</option><option value="noreason">不適用但未填理由</option><option value="noevid">已驗證但未填證據位置</option><option value="noevany">已實施但未填證據位置</option><option value="focus">產業建議重點</option><option value="nacand">可能不適用候選</option><option value="risk">有風險引用</option><option value="riskissue">風險連動待確認</option></select>
         <input id="qFilter" class="grow" type="search" placeholder="篩選編號、名稱或負責人">
         <button class="btn primary" id="xlsBtn" data-tip="正式文件格式，8 欄＋公式統計，可直接提供稽核">匯出稽核用 SoA</button><button class="btn" id="xlsFull" data-tip="含產業建議、關聯風險、風險登錄表、連動檢查等工作資訊">匯出工作底稿</button>
       </div>
@@ -860,6 +880,7 @@ function renderAnnexRows(){
     if(filt.status==="focus"&&!FM[c.code])return false;
     if(filt.status==="noreason"&&!missingReason(v))return false;
     if(filt.status==="noevid"&&!(v.app==="Y"&&v.status===3&&!String(v.evidence||"").trim()))return false;
+    if(filt.status==="noevany"&&!(v.app==="Y"&&v.status>=2&&!String(v.evidence||"").trim()))return false;
     if(filt.status==="nacand"&&!NAC[c.code])return false;
     if(filt.status==="risk"&&!RBC[c.code])return false;
     if(filt.status==="riskissue"&&!(RBC[c.code]&&v.app!=="Y"))return false;

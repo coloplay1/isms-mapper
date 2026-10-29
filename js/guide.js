@@ -179,6 +179,74 @@ function docNeed(p,d){
   return {level:"none",label:"可能不需要",why:`對應的 ${d.controls.length} 項控制措施都判為不適用，可考慮不建立`,codes:[],risks:rk};
 }
 
+/* ================= 稽核準備度：用稽核員的角度看同一份資料 =================
+   驗證稽核分兩個階段：第一階段審查 ISMS 是否建立（範圍、準則、風險評鑑、SoA、核准），
+   第二階段查核是否落實（證據、處理計畫執行、內部稽核、管理審查、矯正措施）。
+   grade：nc 可能開立不符合、obs 可能列為觀察或改善建議、ok 已備妥。
+   這是依常見稽核做法整理的參考判斷，實際結果依稽核員與驗證機構而定。 */
+function auditReadiness(p,now){
+  if(!p)return [];
+  const f=guideFacts(p,now);
+  const vs=ANNEX.map(c=>({c,v:(p.controls||{})[c.code]||{app:"",status:0,evidence:""}})).filter(x=>x.v.app==="Y");
+  const notStart=vs.filter(x=>x.v.status===0).length,partial=vs.filter(x=>x.v.status===1).length;
+  const implNoEv=vs.filter(x=>x.v.status===2&&!String(x.v.evidence||"").trim()).length;
+  const it=(key,clause,title,ask,checks,go)=>{
+    const hit=checks.filter(c=>c[1]);
+    const grade=hit.some(c=>c[0]==="nc")?"nc":hit.length?"obs":"ok";
+    return {key,clause,title,ask,grade,detail:hit.map(c=>c[2]),go:grade==="ok"?null:go};
+  };
+  const s1=[
+    it("scope","4.3","ISMS 範圍","範圍包含哪些部門、地點與系統？排除的部分理由是什麼？",
+      [["nc",!f.scope,"尚未填寫驗證範圍"]],{tab:"projects",cta:"前往專案管理"}),
+    it("criteria","6.1.2 a、b","風險評鑑準則","風險怎麼評分？多少分以上要處理？由誰核定？",
+      [["nc",!f.criteria,"風險準則尚未確認"],["obs",f.criteria&&!f.scaleDefs,"可能性與衝擊沒有寫各級定義，不同人評分可能不一致"]],
+      {tab:"risks",open:"criteria",cta:"開啟風險準則"}),
+    it("riskAssess","6.1.2","風險評鑑結果","請出示風險評鑑表，這些風險是怎麼識別出來的？",
+      [["nc",!f.risks,"還沒有登錄風險"],["nc",f.unscored,`${f.unscored} 項風險未評分`],["obs",f.risks&&!f.identOk,"尚未確認風險清單涵蓋整個範圍"]],
+      {tab:"risks",cta:"前往風險評鑑"}),
+    it("soa","6.1.3 d","適用性聲明（SoA）","93 項控制措施都判定了嗎？不適用的理由是什麼？",
+      [["nc",f.undecided,`${f.undecided} 項未判定適用性`],["nc",f.noReason,`${f.noReason} 項不適用但沒有理由`]],
+      {tab:"annex",filter:f.undecided?"undec":"noreason",cta:"前往附錄 A"}),
+    it("consistent","6.1.3 b、c","風險處理與 SoA 一致","風險處理選用的控制措施，在 SoA 中都是適用嗎？",
+      [["nc",f.conflicts,`${f.conflicts} 項風險與 SoA 衝突`],["obs",f.riskCtl,`${f.riskCtl} 項風險選定的控制措施在 SoA 尚未判定`]],
+      {tab:"risks",cta:"前往風險評鑑"}),
+    it("approve","6.1.3 e、f","SoA 與風險處理計畫的核准","SoA 與處理計畫由誰核准？殘餘風險有沒有經擁有者接受？",
+      [["nc",!f.docApproved,"文件狀態尚未改為「已核准」"],["nc",f.needApproval,`${f.needApproval} 項殘餘風險未經擁有者核准`],["obs",f.planNoDue,`${f.planNoDue} 項處理計畫沒有預計完成日`]],
+      f.docApproved?{tab:"risks",cta:"前往風險評鑑"}:{tab:"projects",anchor:"docctl",cta:"前往文件管制資訊"}),
+    it("clauses","4–10","管理系統條款","政策、目標、角色職責、文件管制這些管理系統要求都建立了嗎？",
+      [["nc",f.clausesDone<f.clausesTotal,`條款 4–10 還有 ${f.clausesTotal-f.clausesDone} 項未實施`]],
+      {tab:"clauses",cta:"前往條款 4–10"})
+  ];
+  const s2=[
+    it("impl","8.1、附錄 A","控制措施已實施","請說明這項控制措施現在怎麼執行？",
+      [["nc",notStart,`${notStart} 項適用但未開始`],["obs",partial,`${partial} 項部分實施`]],
+      {tab:"annex",filter:"notimpl",cta:"前往附錄 A"}),
+    it("evidence","7.5、附錄 A","執行證據","請出示最近一次執行的紀錄。",
+      [["nc",f.noEvidence,`${f.noEvidence} 項標為已驗證但沒有證據位置`],["obs",implNoEv,`${implNoEv} 項已實施但沒寫證據位置`]],
+      {tab:"annex",filter:"noevany",cta:"前往附錄 A"}),
+    it("owner","5.3","責任分工","這項控制措施由誰負責？他知道嗎？",
+      [["obs",f.applicable&&f.noOwner,`${f.noOwner} 項沒有負責人`]],
+      {tab:"annex",cta:"前往附錄 A"}),
+    it("plan","8.3","風險處理計畫的執行","處理計畫有沒有如期完成？延誤的原因與因應是什麼？",
+      [["nc",f.planLate,`${f.planLate} 項處理計畫逾期`],["obs",!f.planLate&&f.planSoon,`${f.planSoon} 項處理計畫 30 天內到期`]],
+      {tab:"risks",riskf:f.planLate?"late":"soon",cta:"前往風險評鑑"}),
+    it("reassess","8.2","定期風險評鑑","今年有重新評估風險嗎？有哪些變化？",
+      [["obs",f.reassess,`${f.reassess} 項風險沿用去年分數，尚未重新評估`]],
+      {tab:"risks",cta:"前往風險評鑑"}),
+    it("audit","9.2","內部稽核","請出示內部稽核計畫、報告與稽核員資格。",
+      [["nc",!f.auditDone,"條款 9.2 內部稽核尚未完成"]],
+      {tab:"clauses",cta:"前往條款 4–10"}),
+    it("review","9.3","管理審查","管理審查的輸入有哪些？做了哪些決議？",
+      [["nc",!f.reviewDone,"條款 9.3 管理審查尚未完成"]],
+      {tab:"clauses",cta:"前往條款 4–10"}),
+    it("correct","10.2","矯正措施","上次的不符合事項改善了嗎？怎麼確認有效？",
+      [["nc",f.actOverdue,`${f.actOverdue} 項改善事項逾期`],["obs",f.actVerify,`${f.actVerify} 項已完成但尚未確認有效`]],
+      {tab:"improve",actf:f.actOverdue?"late":"verify",cta:"前往改善追蹤"})
+  ];
+  return [{id:"s1",name:"第一階段：文件審查",desc:"確認 ISMS 已建立：範圍、風險評鑑、SoA 與核准",items:s1},
+          {id:"s2",name:"第二階段：實施查核",desc:"抽樣確認有在執行：證據、處理計畫、內部稽核與管理審查",items:s2}];
+}
+
 /* ================= 風險管理流程（ISO/IEC 27005、ISO 31000） =================
    把風險登錄表的資料對應到標準的風險管理流程圖：每一步顯示進度，pending 是卡在這一步的風險編號。 */
 function riskStages(p,now){
