@@ -615,6 +615,13 @@ table.cmptable.sum th{white-space:nowrap}
 .sdetail .rdetail{font-size:13px;color:var(--muted)}
 .sdetail .rnext{margin:2px 0;padding-left:18px;font-size:13px}
 .sdetail>div:last-child{margin-top:6px}
+/* 步驟明細：待辦依原因分組，放在摘要與按鈕之間 */
+.sigroups{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px 18px;margin:8px 0 2px;padding-top:10px;border-top:1px dashed var(--line)}
+.sigh{display:flex;align-items:baseline;gap:8px;margin-bottom:4px;font-size:13.5px}
+.sigrp.hot .sigh b{color:var(--seal)}
+.sigroups .tlink{font-size:13px}
+.sdfoot{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+.sigroups .simore{background:none;border:0;padding:2px 6px;font:inherit;font-size:13px;color:var(--accent);cursor:pointer}
 /* 首頁：建立新專案與其他入口並排 */
 .homegrid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:18px;align-items:start}
 .homegrid .starts{grid-template-columns:minmax(0,1fr)}
