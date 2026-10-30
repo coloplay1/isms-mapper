@@ -140,6 +140,9 @@ function buildSample(d){
     p.controls[c.code]={app:"Y",status:st<0?3:st,owner:st>=d.ownerFrom?ow:"",evidence:st>=2?c.ev.split("、")[0]:"",reason:REASONS_IN[0]};
   });
   CLAUSES.forEach((c,i)=>{const st=d.cl(i);p.clauses[c.code]={status:st,owner:st?"資安小組":"",evidence:st>=2?c.ev:""}});
+  // 範例的跨單位控制措施：主責之外填上協辦單位（0 資訊、1 人資、2 總務／行政、4 稽核／資安室）
+  {const CO={"A.5.18":[1],"A.5.11":[0,2],"A.6.5":[0,2],"A.6.1":[0],"A.5.24":[4],"A.5.26":[4],"A.7.2":[0],"A.5.29":[0],"A.5.19":[0],"A.8.1":[2]};
+    Object.entries(CO).forEach(([code,idx])=>{const v=p.controls[code];if(!v||v.app!=="Y"||!v.owner)return;const co=normCo(idx.map(i=>d.owners[i]).filter(Boolean),v.owner);if(co)v.co=co})}
   // 範例的已驗證項目由稽核或資安單位確認，避免負責人自己確認
   {const aud=d.owners[4]||d.owners[2]||d.owners[0]||"稽核室";
     [...Object.values(p.controls),...Object.values(p.clauses)].forEach(v=>{if(v.status===3){v.verifier=v.owner===aud?(d.owners[0]||"資安小組"):aud;v.verifiedAt="2026-09-15"}})}
@@ -751,7 +754,8 @@ const SPOT_LABEL={ctl:{ok:"證據已確認",fail:"找不到或已過期",skip:"�
 function activeSpot(p){const l=p.spots||[];const s=l[l.length-1];return s&&!s.done?s:null}
 /* 抽查提問帶入這項控制措施的常見證據，負責人一看就知道要交什麼 */
 function spotRequestText(x){const c=ANNEX_MAP[x.id],v=ctl(x.id);
-  return `【ISMS 稽核前抽查】請協助提供「${x.id} ${c.name}」最近一次執行的紀錄，例如${spotEvExample(c)}。目前登記的證據位置：${v.evidence||"（未填寫）"}。謝謝！`}
+  const co=coList(v);
+  return `【ISMS 稽核前抽查】${v.owner?v.owner+" 您好，":""}請協助提供「${x.id} ${c.name}」最近一次執行的紀錄，例如${spotEvExample(c)}。目前登記的證據位置：${v.evidence||"（未填寫）"}。${co.length?`紀錄若在協辦單位（${co.join("、")}），也請協助轉請提供。`:""}謝謝！`}
 function spotItemHTML(x,i){
   const p=cur(),done=!!x.result;
   let head,body;
@@ -759,7 +763,7 @@ function spotItemHTML(x,i){
     head=`<button class="ref" data-open="${x.id}"><span class="mono">${x.id}</span>${esc(c.name)}</button>`;
     body=`<div class="audask">稽核員會問：請出示最近一次執行的紀錄，例如${esc(spotEvExample(c))}。</div>
       <dl class="spotdl"><div><dt>你填的證據位置</dt><dd>${v.evidence?esc(v.evidence):`<span class="muted">（沒有填寫）</span>`}</dd></div>
-      <div><dt>負責人</dt><dd>${v.owner?esc(v.owner):`<span class="muted">未指定</span>`}</dd></div>
+      <div><dt>負責人</dt><dd>${v.owner?esc(v.owner):`<span class="muted">未指定</span>`}${coList(v).length?`<span class="saved">（協辦：${esc(coList(v).join("、"))}）</span>`:""}</dd></div>
       <div><dt>上次確認</dt><dd>${(x.result==="ok"?x.prev:v.checked)?esc(x.result==="ok"?x.prev:v.checked):`<span class="muted">從未</span>`}</dd></div></dl>`;
   }else{const r=riskById(x.id);
     head=r?`<button class="ref" data-risk="${x.id}"><span class="mono">${x.id}</span>${esc(r.title||"（未命名風險）")}</button>`:`<span class="mono">${x.id}</span>（風險已刪除）`;
@@ -828,11 +832,12 @@ function renderOverview(){
     return `<div class="brow"><div class="blab"><span>A.${t.id} ${t.name}</span><span class="mono">${tt.s2+tt.s3}/${apl}</span></div>${stackBar(tt,list.length,"theme:"+t.id)}</div>`}).join("");
   // owners
   const om={};
-  ANNEX.forEach(x=>{const v=ctl(x.code);if(v.app!=="Y")return;const o=v.owner.trim()||"未指派";(om[o]=om[o]||[]).push(x)});
+  const coN={};
+  ANNEX.forEach(x=>{const v=ctl(x.code);if(v.app!=="Y")return;const o=v.owner.trim()||"未指派";(om[o]=om[o]||[]).push(x);coList(v).forEach(n=>coN[n]=(coN[n]||0)+1)});
   const owners=Object.entries(om).sort((a,b)=>(a[0]==="未指派")-(b[0]==="未指派")||b[1].length-a[1].length).slice(0,7);
   const omax=Math.max(1,...owners.map(o=>o[1].length));
   const ownerBars=owners.map(([o,list])=>{const tt=tally(list);
-    return `<div class="brow"><div class="blab"><span>${esc(o)}</span><span class="mono">${list.length} 項</span></div><div style="width:${Math.max(8,list.length/omax*100)}%">${stackBar(tt,list.length,"owner:"+o)}</div></div>`}).join("");
+    return `<div class="brow"><div class="blab"><span>${esc(o)}</span><span class="mono">${list.length} 項${coN[o]?`<span class="saved">＋協辦 ${coN[o]}</span>`:""}</span></div><div style="width:${Math.max(8,list.length/omax*100)}%">${stackBar(tt,list.length,"owner:"+o)}</div></div>`}).join("");
   const rows=THEMES.map(t=>{
     const list=ANNEX.filter(x=>x.theme===t.id);
     return `<div class="heat-row"><div class="lab"><span>A.${t.id}　${t.name}（${list.length} 項）</span></div><div class="cells">${
@@ -1316,12 +1321,14 @@ function assignedTo(name){
 function renamePerson(oldN,newN){
   const p=cur();newN=String(newN||"").trim();if(!p||!newN||newN===oldN)return;
   assignedTo(oldN).forEach(code=>setField(code,"owner",newN,{silent:true}));
+  [...ANNEX.map(c=>c.code),...CLAUSES.map(c=>c.code)].forEach(code=>{const v=ANNEX_MAP[code]?ctl(code):cls(code),l=coList(v);if(l.includes(oldN))setField(code,"co",normCo(l.map(x=>x===oldN?newN:x),v.owner),{silent:true})});
   const ps=people(p);p.people=ps.includes(newN)?ps.filter(n=>n!==oldN):ps.map(n=>n===oldN?newN:n);
   save();refreshOwnerList();toast(`已將「${oldN}」改為「${newN}」`);
 }
 function removePerson(name){
   const p=cur();if(!p)return;
   const codes=assignedTo(name);codes.forEach(code=>setField(code,"owner","",{silent:true}));
+  [...ANNEX.map(c=>c.code),...CLAUSES.map(c=>c.code)].forEach(code=>{const v=ANNEX_MAP[code]?ctl(code):cls(code),l=coList(v);if(l.includes(name))setField(code,"co",normCo(l.filter(x=>x!==name),v.owner),{silent:true})});
   p.people=people(p).filter(n=>n!==name);save();refreshOwnerList();
   toast(codes.length?`已刪除「${name}」，${codes.length} 項改為未指派`:`已刪除「${name}」`);
 }
@@ -1545,6 +1552,7 @@ function openDrawer(code,fromList,trail){
       <div><dt>實施方式</dt><dd><textarea id="dImpl" rows="2" placeholder="如何落實，例如依哪份程序、由誰執行">${esc(v.impl||"")}</textarea></dd></div>`:""}
       <div><dt>執行狀態</dt><dd><select id="dStatus">${STATUS.map(s=>`<option value="${s.v}" ${s.v===v.status?"selected":""}>${s.label}</option>`).join("")}</select></dd></div>
       <div><dt>負責人</dt><dd><input id="dOwner" data-owner autocomplete="off" value="${esc(v.owner)}" placeholder="從名單選擇或輸入新名字"></dd></div>
+      <div><dt>協辦單位</dt><dd><input id="dCo" autocomplete="off" list="ownerList" value="${esc(v.co||"")}" placeholder="跨單位執行時填寫，多個用「、」分隔，例如：人資處、總務課"></dd></div>
       <div id="dVerRow" ${v.status===3?"":"hidden"}><dt>確認人／確認日期</dt><dd><div class="r2x"><input id="dVer" data-owner autocomplete="off" value="${esc(v.verifier||"")}" placeholder="確認證據的人，最好不是負責人" aria-label="確認人"><input id="dVerAt" value="${esc(v.verifiedAt||"")}" placeholder="例如 2026-10-30" aria-label="確認日期"></div><small id="dVerHint" class="saved"></small></dd></div>
       <div><dt>證據位置</dt><dd><input id="dEv" value="${esc(v.evidence)}" placeholder="例如：\\\\fileserver\\ISMS\\${esc(code)}"></dd></div>
     </dl>
@@ -1557,7 +1565,7 @@ function openDrawer(code,fromList,trail){
         ${b.others.length?`<div class="rec"><b>也對應到</b><div class="refs">${b.others.map(refChip).join("")}</div></div>`:""}
         <button class="linkbtn" data-casego="${esc(b.t)}">在案例搜尋中查看 →</button></div></div>`}).join("")||`<p class="note">目前沒有內建案例對應到這一項。</p>`}</div>
   </aside>`;
-  const FIELDS={dApp:"app",dReason:"reason",dImpl:"impl",dStatus:"status",dOwner:"owner",dEv:"evidence",dVer:"verifier",dVerAt:"verifiedAt"};
+  const FIELDS={dApp:"app",dReason:"reason",dImpl:"impl",dStatus:"status",dOwner:"owner",dEv:"evidence",dVer:"verifier",dVerAt:"verifiedAt",dCo:"co"};
   /* 已驗證時記錄確認人與日期；確認人和負責人相同時提醒，稽核會視為自我確認 */
   const syncVer=()=>{const row=$("#dVerRow");if(!row)return;row.hidden=v.status!==3;
     if(v.status===3&&!v.verifiedAt){v.verifiedAt=todayStr();const d=$("#dVerAt");if(d)d.value=v.verifiedAt;saveSoon()}
@@ -1565,8 +1573,9 @@ function openDrawer(code,fromList,trail){
   const refreshHist=()=>{const h=$("#dHist");if(h)h.innerHTML=historyHTML(((cur()&&cur().log)||[]).filter(e=>e.c===code).slice(-10).reverse(),false)};
   const syncWarn=()=>{const r=$("#dReason");if(!r)return;const miss=missingReason(v);r.classList.toggle("warn",miss);$("#dReasonHint").hidden=!miss};
   Object.entries(FIELDS).forEach(([id,f])=>{const el=$("#"+id);if(!el)return;
-    const fn=()=>{if(setField(code,f,f==="verifier"?el.value.trim():el.value)){syncWarn();syncVer();refreshHist();const t=$("#dTrace");if(t)t.innerHTML=traceHTML(traceChain(cur(),"ctl",code))}};
-    el.addEventListener(el.tagName==="SELECT"?"change":"input",fn)});
+    const fn=()=>{if(f==="co"){const n=normCo(el.value,v.owner);el.value=n;coList({co:n}).forEach(x=>addPerson(x,true))}
+      if(setField(code,f,f==="verifier"?el.value.trim():f==="co"?normCo(el.value,v.owner):el.value)){syncWarn();syncVer();refreshHist();const t=$("#dTrace");if(t)t.innerHTML=traceHTML(traceChain(cur(),"ctl",code))}};
+    el.addEventListener(el.tagName==="SELECT"||id==="dCo"?"change":"input",fn)});
   syncVer();
   host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>{lastList=null;closeDrawer()}));
   const back=$("#dBack");if(back)back.addEventListener("click",()=>{renderOverviewQuiet();openList(lastList)});

@@ -317,7 +317,8 @@ function traceChain(p,kind,id,now){
       nodes.push({k:"soa",label:"SoA 判定",clause:"6.1.3 d",state:und?"bad":"ok",text:und?"尚未判定適用或不適用":"適用"});
       if(und){["負責人","執行","證據"].forEach((l,i)=>nodes.push({k:["owner","impl","ev"][i],label:l,state:"idle",text:"判定適用後再確認"}))}
       else{
-        nodes.push({k:"owner",label:"負責人",clause:"5.3",state:owner?"ok":"warn",text:owner||"沒有指定負責人"});
+        const co=coList(v);
+        nodes.push({k:"owner",label:"負責人",clause:"5.3",state:owner?"ok":"warn",text:(owner||"沒有指定負責人")+(co.length?`；協辦：${co.join("、")}`:"")});
         const vr=String(v.verifier||"").trim();
         nodes.push({k:"impl",label:"執行",clause:"8.1",state:v.status===3&&(!vr||selfVerified(v))?"warn":v.status>=2?"ok":v.status===1?"warn":"bad",
           text:STATUS[v.status].label+(v.status===3?(vr?`（確認人：${vr}${v.verifiedAt?"，"+v.verifiedAt:""}${selfVerified(v)?"；與負責人相同，屬自我確認":""}）`:"（沒有記錄確認人）"):"")});
@@ -385,11 +386,12 @@ function reverseLookup(p,mode,q,now){
   const appCodes=ANNEX.map(c=>c.code);
   if(mode==="person"){
     const names={};const add=n=>{n=String(n||"").trim();if(n)names[n]=(names[n]||0)+1};
-    appCodes.forEach(c=>{const v=ctl(c);if(v.app==="Y")add(v.owner)});CLAUSES.forEach(c=>add(cls(c.code).owner));risks.forEach(r=>add(r.owner));acts.forEach(a=>add(a.owner));
+    appCodes.forEach(c=>{const v=ctl(c);if(v.app==="Y"){add(v.owner);coList(v).forEach(add)}});CLAUSES.forEach(c=>{add(cls(c.code).owner);coList(cls(c.code)).forEach(add)});risks.forEach(r=>add(r.owner));acts.forEach(a=>add(a.owner));
     out.suggest=Object.entries(names).sort((a,b)=>b[1]-a[1]).slice(0,16).map(([n,c])=>({q:n,label:`${n}（${c}）`}));
     if(!k)return out;
     grp("負責的控制措施",appCodes.filter(c=>ctl(c).app==="Y"&&has(ctl(c).owner)).map(c=>ctlItem(c)));
     grp("負責的條款",CLAUSES.filter(c=>has(cls(c.code).owner)).map(c=>ctlItem(c.code)));
+    grp("協辦的控制措施與條款",[...appCodes.filter(c=>ctl(c).app==="Y"),...CLAUSES.map(c=>c.code)].filter(c=>{const v=ANNEX_MAP[c]?ctl(c):cls(c);return !has(v.owner)&&coList(v).some(has)}).map(c=>ctlItem(c,"主責："+((ANNEX_MAP[c]?ctl(c):cls(c)).owner||"未指定"))));
     grp("擁有的風險",risks.filter(r=>has(r.owner)).map(riskItem));
     grp("負責的改善事項",acts.filter(a=>has(a.owner)).map(actItem));
     grp("確認過的項目（確認人）",[...appCodes,...CLAUSES.map(c=>c.code)].filter(c=>{const v=ANNEX_MAP[c]?ctl(c):cls(c);return v.status===3&&has(v.verifier)}).map(c=>ctlItem(c,"由此人確認")));

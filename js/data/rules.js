@@ -84,7 +84,7 @@ const STATUS = [
   {v:0,label:"未開始"},{v:1,label:"部分實施"},{v:2,label:"已實施"},{v:3,label:"已驗證"}
 ];
 const APP = [{v:"",label:"未決定"},{v:"Y",label:"適用"},{v:"N",label:"不適用"}];
-const FIELD_LABEL={app:"適用性",status:"執行狀態",reason:"理由",impl:"實施方式",owner:"負責人",evidence:"證據位置",focus:"重點標示",checked:"抽查確認",verifier:"確認人",verifiedAt:"確認日期"};
+const FIELD_LABEL={app:"適用性",status:"執行狀態",reason:"理由",impl:"實施方式",owner:"負責人",evidence:"證據位置",focus:"重點標示",checked:"抽查確認",verifier:"確認人",verifiedAt:"確認日期",co:"協辦單位"};
 /* 匯入其他格式時可辨識的狀態說法（例如「規劃中」「待驗證」） */
 const STATUS_ALIAS={"未開始":0,"規劃中":0,"未實施":0,"建置中":1,"部分實施":1,"實施中":1,"已實施":2,"待驗證":2,"已驗證":3,"已有證據":3};
 /* 納入理由代碼：RA 風險評鑑、LR 法規、CO 契約、BP 最佳實務 */
