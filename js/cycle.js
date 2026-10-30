@@ -288,6 +288,8 @@ function sanitizeSpot(raw){
 function sanitizeSpots(list){const seen=new Set();
   return Array.isArray(list)?list.slice(-50).map(sanitizeSpot).filter(s=>s&&!seen.has(s.id)&&seen.add(s.id)):[]}
 function nextSpotId(p){const n=Math.max(0,...((p&&p.spots)||[]).map(s=>Number(String(s.id).slice(2))||0));return "S-"+String(n+1).padStart(3,"0")}
+/* 抽查提問帶入這項控制措施的常見證據（最多兩項），負責人一看就知道要交什麼 */
+function spotEvExample(c){return String((c&&c.ev)||"").split("、").map(s=>s.trim()).filter(Boolean).slice(0,2).join("或")||"相關紀錄"}
 function spotStats(s){const it=(s&&s.items)||[],n=r=>it.filter(x=>x.result===r).length;
   return {total:it.length,ok:n("ok"),fail:n("fail"),skip:n("skip"),pending:n("")}}
 

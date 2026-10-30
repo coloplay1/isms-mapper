@@ -80,3 +80,9 @@ test('建立新年度：抽查紀錄留在去年，確認日期保留', () => {
   assert.deepEqual(project.spots, []);
   assert.equal(project.controls[A.ANNEX[0].code].checked, '2026-06-15');
 });
+
+test('抽查提問帶入常見證據，最多兩項', () => {
+  assert.equal(A.spotEvExample({ ev: '通報管道說明、通報紀錄、演練紀錄' }), '通報管道說明或通報紀錄');
+  assert.equal(A.spotEvExample({ ev: '' }), '相關紀錄');
+  assert.ok(A.ANNEX.every(c => A.spotEvExample(c).length > 1));
+});
