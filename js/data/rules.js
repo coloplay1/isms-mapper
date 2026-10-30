@@ -16,6 +16,7 @@ const FEATURES=[
   {id:"finance",label:"受金管會監理的金融業務",why:"主管機關對事故通報、營運持續與存取控制有額外要求",codes:["A.5.24","A.5.29","A.5.30","A.8.14","A.8.16","A.8.2"]},
   {id:"ot",label:"有生產線或工控（OT）設備",why:"OT 設備難以修補，一旦中毒常造成停產",codes:["A.8.22","A.8.8","A.8.19","A.7.10","A.5.30"]},
   {id:"listed",label:"上市、上櫃或準備掛牌",why:"證交所與櫃買中心要求依資通安全管控指引設置資安人力，重大資安事件須發布重大訊息，年報也要揭露資安管理",codes:["A.5.2","A.5.4","A.5.24","A.5.26","A.6.3","A.5.20","A.5.35"]},
+  {id:"lab",label:"實驗室檢測或分析數據",why:"檢測數據與報告的正確性、可追溯性與客戶保密是主管機關與認證單位查核的重點；儀器電腦常無法更新",codes:["A.8.15","A.5.33","A.8.13","A.8.3","A.8.19","A.8.8","A.5.12","A.7.10"]},
   {id:"onprem",label:"自建機房或伺服器室",why:"實體環境與支援設施由組織自行負責",codes:["A.7.1","A.7.2","A.7.5","A.7.11","A.8.14"]}
 ];
 const FEATURE_MAP=Object.assign(Object.create(null),Object.fromEntries(FEATURES.map(x=>[x.id,x])));   // 無原型：「__proto__」「toString」等鍵查不到
@@ -29,6 +30,7 @@ const INDUSTRIES=[
   {id:"mfg",label:"製造業",features:["ot","onprem","vendor","remote"]},
   {id:"gov",label:"政府委外／資訊服務廠商",features:["ci","dev","vendor","remote"]},
   {id:"edu",label:"教育／補教",features:["pii","cloud"]},
+  {id:"lab",label:"檢驗檢測實驗室",features:["lab","onprem","vendor","remote"]},
   {id:"general",label:"一般企業",features:["cloud","remote"]}
 ];
 const INDUSTRY_MAP=Object.assign(Object.create(null),Object.fromEntries(INDUSTRIES.map(x=>[x.id,x])));   // 無原型：「__proto__」「toString」等鍵查不到
@@ -62,6 +64,18 @@ const LAWS=[
    note:"支付卡產業資料安全標準，目前版本為 v4.0.1。只要儲存、處理或傳輸持卡人資料就適用，通常由收單銀行要求。改用金流業者代收可大幅縮小適用範圍。",
    todo:["確認系統是否接觸完整卡號","評估改由金流服務商代收以縮小範圍"],
    codes:["A.8.24","A.8.22","A.5.20"],link:"https://www.pcisecuritystandards.org/"},
+  {when:{f:"lab"},name:"環境檢驗測定機構管理辦法",kind:"法規命令",
+   note:"環境部主管，2025 年 10 月修正。檢測報告數據造假、未採樣或檢測即出具報告、無正當理由修改檢測結果，可廢止許可；檢測作業資料須依規定以網路申報。環境檢測以外的實驗室，請對照所屬主管機關的規定。",
+   todo:["確認檢測數據與報告的修改都有紀錄、可追溯","建立網路申報的帳號管理與資料核對流程","查核或許可取得的客戶資料依規定保密"],
+   codes:["A.5.31","A.8.15","A.5.33","A.5.34"],link:mojq("環境檢驗測定機構管理辦法")},
+  {when:{f:"lab"},name:"環境檢驗測定機構檢驗室品質系統基本規範",kind:"行政規則",
+   note:"環境部依前述管理辦法訂定。紀錄要管制識別、儲存、保護、備份與保存，一般紀錄至少保存 5 年（廢棄物、土壤、毒性及關注化學物質等至少 10 年）；技術紀錄的修改須可追溯到原始數據；資訊系統使用前要確認、變更須授權，並防止未經授權存取、竄改或遺失。",
+   todo:["依保存年限訂定紀錄與備份的保存規則","LIMS、試算表與儀器軟體在使用與變更前完成確認","客戶資訊依保密承諾管理"],
+   codes:["A.5.33","A.8.13","A.8.32","A.8.3","A.8.15","A.5.12"],link:"https://gazette.nat.gov.tw/EG_FileManager/eguploadpub/eg030047/ch07/type3/gov60/num20/images/Eg01.pdf"},
+  {when:{f:"lab"},name:"ISO/IEC 17025",kind:"參考標準",
+   note:"測試與校正實驗室能力的國際標準，台灣由財團法人全國認證基金會（TAF）辦理認證。7.11 要求管理數據與資訊系統：使用前確認、防止未經授權存取與竄改、記錄系統失效與矯正。",
+   todo:["對照 7.11 數據與資訊管理，確認 LIMS 與儀器軟體的權限與稽核軌跡","把 ISMS 與實驗室品質系統的文件與內稽整合，避免重複"],
+   codes:["A.8.15","A.8.3","A.8.32","A.5.33"],link:"https://www.taftw.org.tw/"},
   {when:{f:"ot"},name:"IEC 62443",kind:"參考標準",
    note:"工業自動化與控制系統的資安標準系列，適合作為 OT 網路分區與設備防護的參考。半導體業另可參考 SEMI E187。",
    todo:["盤點 OT 設備並劃分網路區域","規劃無法修補設備的補償措施"],

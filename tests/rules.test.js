@@ -85,3 +85,18 @@ test('A.8.26、8.27、8.31 只在自行開發與委外開發都沒勾時才列�
   assert.match(none['A.8.31'], /測試環境/);
   for (const c of Object.keys(A.DEV_OR_VENDOR)) assert.ok(A.ANNEX_MAP[c], c);
 });
+
+test('檢驗檢測實驗室：產業、業務特性、法規與情境案例都對得起來', () => {
+  const ind = A.INDUSTRY_MAP.lab;
+  assert.ok(ind && ind.features.includes('lab'));
+  for (const f of ind.features) assert.ok(A.FEATURE_MAP[f], f);
+  for (const c of A.FEATURE_MAP.lab.codes) assert.ok(A.ANNEX_MAP[c], c);
+  const laws = A.lawsFor(proj({ industry: 'lab', features: ['lab'] })).map(l => l.name);
+  assert.ok(laws.includes('環境檢驗測定機構管理辦法') && laws.includes('ISO/IEC 17025'));
+  for (const t of ['檢測數據遭誤改或刪除', '儀器電腦作業系統過舊無法更新', '檢測報告寄錯客戶', '現場採樣紀錄遺失或補登']) {
+    const c = A.CASES.find(x => x.t === t);
+    assert.ok(c, t);
+    for (const r of c.r) assert.ok(A.ANNEX_MAP[r], `${t} 的 ${r}`);
+  }
+  assert.equal(A.search('改數據').cases[0].c.t, '檢測數據遭誤改或刪除');
+});
