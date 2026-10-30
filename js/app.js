@@ -517,7 +517,7 @@ function renderHome(){
         <p class="note" style="margin:12px 0 0">還沒有自己的格式？可下載<a href="${TPL_BASE}isms-soa-risk-template.xlsx" download>空白範本</a>或<a href="${TPL_BASE}isms-soa-risk-example.xlsx" download>填寫範例</a>，填好後再匯入。</p>
       </div>
       </div>
-      <p class="guidehint" style="margin:10px 0 0"><span>不確定怎麼用？<a href="${GUIDE_URL}" target="_blank" rel="noopener">看使用指南（PDF，16 頁）</a></span><span class="ghsep" aria-hidden="true">｜</span><span>只需要文件？<a href="#" data-goto="docs">下載 ${nDocs} 份文件範本</a>直接編輯</span></p>
+      <p class="guidehint" style="margin:10px 0 0"><span>不確定怎麼用？<a href="${GUIDE_URL}" target="_blank" rel="noopener">看使用指南（PDF，17 頁）</a></span><span class="ghsep" aria-hidden="true">｜</span><span>只需要文件？<a href="#" data-goto="docs">下載 ${nDocs} 份文件範本</a>直接編輯</span></p>
     </section>
   </div>`;
   const v=$("#view-home");
@@ -707,16 +707,44 @@ function renderAudit(){
       ${x.detail.length&&g!=="ok"?`<ul class="auddet">${x.detail.map(d=>`<li>${esc(d)}</li>`).join("")}</ul>`:""}
       <div class="audrule"><b>資料齊全的條件</b>${esc(x.rule)}</div>
       ${x.go?`<div class="audgo">${stepBtn(x.go,false)}</div>`:""}</li>`};
+  const spotN0=activeSpot(p)?spotStats(activeSpot(p)).pending:0;
   $("#view-audit").innerHTML=`<h2>稽核準備</h2>
-  <p class="lede">用驗證稽核的角度看同一份資料：第一階段看 ISMS 有沒有建立，第二階段抽樣看有沒有確實執行。標示為依常見稽核做法的參考判斷，實際結果依稽核員與驗證機構而定。</p>
+  <div class="seg audseg" role="tablist" aria-label="稽核準備">${[["ready","準備度"],["trace","反向查詢"],["spot","模擬抽查"+(spotN0?`（進行中 ${spotN0}）`:"")]].map(([k,t])=>`<button role="tab" data-audv="${k}" aria-pressed="${auditView===k}">${t}</button>`).join("")}</div>
+  ${auditView==="trace"?reverseHTML(p):auditView==="spot"?spotHTML(p):`<p class="lede" style="margin-top:14px">用驗證稽核的角度看同一份資料：第一階段看 ISMS 有沒有建立，第二階段抽樣看有沒有確實執行。標示為依常見稽核做法的參考判斷，實際結果依稽核員與驗證機構而定。</p>
   <p class="audwarn">「資料齊全」只代表工具裡填的資料沒有缺口。工具看不到證據檔案本身，稽核前請抽查證據位置的檔案確實存在、而且是最新的。</p>
   <div class="audgrid">${st.map(s=>{const shown=s.items.filter(x=>x.grade!=="na"),nd=s.items.filter(x=>x.grade==="na");
     return `<section class="audcol"><div class="audch"><h3>${esc(s.name)}</h3><span class="audsum">${auditSum(s)}</span></div><p class="note" style="margin:0 0 10px">${esc(s.desc)}</p>
       <ul class="audlist">${shown.map(card).join("")}</ul>
       ${nd.length?`<div class="audnd"><b>尚無資料（${nd.length}）</b><span class="note">這些項目要先有資料才查得到</span><ul>${nd.map(x=>`<li><b>${esc(x.title)}</b>：${esc(x.detail[0]||"")}</li>`).join("")}</ul></div>`:""}
     </section>`}).join("")}</div>
-  ${spotHTML(p)}`;
+`}`;
+  if(auditView==="trace"){const i=$("#rvQ");if(i&&rvFocus){i.focus();i.setSelectionRange(i.value.length,i.value.length)}}
 }
+/* ---------- 反向查詢 ---------- */
+let auditView="ready",rvMode="person",rvQ="",rvFocus=false;
+const RV_MODES=[["person","人員","例如：資訊處 周處長","訪談前先看這個人負責哪些事、哪些還沒完成"],["asset","資產或系統","例如：ERP、AD 帳號","看到一套系統，回查風險評鑑有沒有涵蓋它"],["evidence","文件或證據","例如：帳號清查紀錄、POL-04","拿到一份紀錄或文件，看它能證明哪些要求"],["event","事件或改善事項","例如：I-002、釣魚","發生過的事件，回查風險評鑑有沒有更新"]];
+function reverseHTML(p){
+  const m=RV_MODES.find(x=>x[0]===rvMode);
+  return `<p class="lede" style="margin-top:14px">稽核員常從現場看到的東西往回追：一個人、一套系統、一份紀錄或一起事件，回頭查它對應到哪些要求、風險評鑑有沒有考慮到。最容易發現「文件寫一套、實際做一套」的落差。</p>
+  <div class="panel rv"><div class="rvmodes">${RV_MODES.map(([k,t])=>`<button class="chip" data-rvmode="${k}" aria-pressed="${rvMode===k}">${t}</button>`).join("")}</div>
+    <p class="note" style="margin:8px 0">${esc(m[3])}</p>
+    <input id="rvQ" type="search" placeholder="${esc(m[2])}" value="${esc(rvQ)}" autocomplete="off" aria-label="${esc(m[1])}">
+    <div id="rvRes">${reverseResHTML(p)}</div></div>`;
+}
+function reverseResHTML(p){
+  const r=reverseLookup(p,rvMode,rvQ);
+  const lk=x=>`<button class="tlink ${x.state||"na"}" ${x.kind==="risk"?`data-risk="${esc(x.id)}"`:x.kind==="act"?`data-act="${esc(x.id)}"`:`data-open="${esc(x.id)}"`}>${esc(x.label)}${x.note?`<span>${esc(x.note)}</span>`:""}</button>`;
+  if(!rvQ.trim())return r.suggest.length?`<div class="rvsug"><span class="note">從專案資料挑一個開始：</span>${r.suggest.map(x=>`<button class="chip" data-rvq="${esc(x.q)}">${esc(x.label)}</button>`).join("")}</div>`:`<p class="note">專案裡還沒有可以查的資料。</p>`;
+  return `${r.notes.map(n=>`<p class="rvnote">${esc(n)}</p>`).join("")}
+    ${r.groups.map(g=>`<div class="rvgrp"><h4>${esc(g.title)}<span class="note">（${g.items.length}）</span></h4><div class="tlinks">${g.items.map(lk).join("")}</div></div>`).join("")}`;
+}
+document.addEventListener("click",e=>{
+  if(tab!=="audit")return;
+  const v=e.target.closest("[data-audv]");if(v){auditView=v.dataset.audv;rvFocus=false;renderAudit();return}
+  const m=e.target.closest("[data-rvmode]");if(m){rvMode=m.dataset.rvmode;rvQ="";rvFocus=true;renderAudit();return}
+  const q=e.target.closest("[data-rvq]");if(q){rvQ=q.dataset.rvq;rvFocus=false;renderAudit();return}
+});
+document.addEventListener("input",e=>{if(e.target.id!=="rvQ")return;rvQ=e.target.value;const r=$("#rvRes");if(r)r.innerHTML=reverseResHTML(cur())});
 /* ---------- 模擬抽查 ---------- */
 let spotN=5,spotRisk=true,spotOpenHist=null;
 const SPOT_LABEL={ctl:{ok:"證據已確認",fail:"找不到或已過期",skip:"略過"},risk:{ok:"進度已確認",fail:"未如期執行",skip:"略過"}};

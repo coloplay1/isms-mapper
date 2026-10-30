@@ -788,3 +788,16 @@ footer{display:flex;flex-wrap:wrap;gap:2px 12px;line-height:1.7}footer a{color:v
 #dVerHint.warn{color:var(--seal)}
 .identok{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .identok input{width:auto;min-width:220px;flex:0 1 260px}
+
+/* 稽核準備的子分頁與反向查詢 */
+.audseg{margin-top:4px;display:inline-flex;width:auto}
+.audseg+.spot{margin-top:14px}
+.rv input[type=search]{width:100%;max-width:520px}
+.rvmodes{display:flex;flex-wrap:wrap;gap:6px}
+.rvmodes .chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.rvsug{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px}
+.rvnote{margin:12px 0 0;font-size:13.5px;padding:6px 10px;border-radius:6px;border-left:3px solid var(--amber);background:var(--surface2)}
+.rvgrp{margin-top:14px}
+.rvgrp h4{margin:0 0 6px;font-size:14px}
+.rvgrp h4 .note{font-weight:400;margin-left:2px}
+.tlink.na{border-left-color:var(--line)}
