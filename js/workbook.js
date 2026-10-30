@@ -75,9 +75,9 @@ function buildWorkbook(p,opts={}){
 
   const soa=ANNEX.map(c=>{const v=ctl(c.code);
     return [c.code,THEMES.find(t=>t.id===c.theme).name,c.name,c.isNew?"是":"",FM[c.code]?FM[c.code].map(f=>(FEATURE_MAP[f]||{label:"自行標示"}).label).join("、"):"",
-      v.app?APP.find(a=>a.v===v.app).label:"",reasonCodes(v.reason),v.reason,v.impl||"",v.app==="N"?"":(v.app?STATUS[v.status].label:""),v.owner,v.evidence,(rbc[c.code]||[]).join("、"),c.ev,v.status===3?(v.verifier||""):"",v.status===3?(v.verifiedAt||""):"",v.checked||""]});
+      v.app?APP.find(a=>a.v===v.app).label:"",reasonCodes(v.reason),v.reason,v.impl||"",v.app==="N"?"":(v.app?STATUS[v.status].label:""),v.owner,v.co||"",v.evidence,(rbc[c.code]||[]).join("、"),c.ev,v.status===3?(v.verifier||""):"",v.status===3?(v.verifiedAt||""):"",v.checked||""]});
   const soaData=[...top("適用性聲明（Statement of Applicability）"),
-    ...table(["控制措施編號","主題","控制措施","2022 新增","產業建議重點","適用性","理由代碼","納入或排除理由","實施方式","執行狀態","負責人","證據位置","關聯風險","常見證據參考","確認人","確認日期","最近抽查確認"],soa),
+    ...table(["控制措施編號","主題","控制措施","2022 新增","產業建議重點","適用性","理由代碼","納入或排除理由","實施方式","執行狀態","負責人","協辦單位","證據位置","關聯風險","常見證據參考","確認人","確認日期","最近抽查確認"],soa),
     [],[T("理由代碼：RA 風險評鑑結果、LR 法律或法規、CO 契約或客戶要求、BP 營運需求與業界最佳實務。控制措施名稱為工具自撰摘要，不含 ISO/IEC 27001 原文。")],[],
     ["編製","","審查","","核准",""].map((t,k)=>k%2?null:H(t)),["日期","","日期","","日期",""].map((t,k)=>k%2?null:H(t))];
 
@@ -118,7 +118,7 @@ function buildWorkbook(p,opts={}){
     return [new Date(e.t).toLocaleString("zh-TW",{hour12:false}),e.c,c?c.name:"",FIELD_LABEL[e.f]||e.f,fmtVal(e.f,e.from),fmtVal(e.f,e.to)]});
 
   return [
-    {sheet:"適用性聲明SoA",data:soaData,columns:W([12,10,24,8,18,8,9,30,28,10,14,24,14,28,12,11,11]),stickyRowsCount:5},
+    {sheet:"適用性聲明SoA",data:soaData,columns:W([12,10,24,8,18,8,9,30,28,10,14,16,24,14,28,12,11,11]),stickyRowsCount:5},
     {sheet:"風險登錄表",data:rkData,columns:W([9,26,16,24,24,18,12,14,7,7,11,8,28,26,11,7,7,11,9,9]),stickyRowsCount:5},
     {sheet:"風險評鑑準則",data:critData,columns:W([14,30,20,36,44])},
     {sheet:"連動檢查",data:[...top("風險評鑑與 SoA 連動檢查"),...table(["類型","風險","控制措施","說明"],ck)],columns:W([8,9,10,70])},
@@ -168,7 +168,7 @@ function buildAuditWorkbook(p){
 /* 欄位名稱的各種寫法（去除空白與括號內文字後比對） */
 const IMPORT_COLS={
   soa:{code:["控制措施編號","控制編號"],app:["適用性","是否適用"],codes:["理由代碼","選擇理由"],reason:["納入或排除理由","排除理由","納入理由"],
-    impl:["實施方式","實施方式/排除理由"],status:["執行狀態","實施狀態"],owner:["負責人"],evidence:["證據位置","對應文件","證據位置/對應文件"]},
+    impl:["實施方式","實施方式/排除理由"],status:["執行狀態","實施狀態"],owner:["負責人"],co:["協辦單位","協辦"],evidence:["證據位置","對應文件","證據位置/對應文件"]},
   risk:{id:["風險編號"],title:["風險描述","風險名稱"],asset:["相關資產","資產/範圍","資產"],threat:["威脅","威脅與弱點"],vuln:["脆弱性","弱點","脆弱性/待確認"],
     existing:["現有控制","現有控制待查證"],cia:["影響","CIA"],owner:["風險擁有者","擁有者","擁有者/期限"],l:["可能性","L"],i:["衝擊","I"],
     treat:["處理方式","擬採處理"],controls:["選定控制措施","選用控制","對應控制"],plan:["處理計畫"],due:["預計完成","預計完成日","處理期限"],
@@ -273,7 +273,7 @@ function importWorkbook(sheets,opts={}){
         const rs=splitReasons(g("reason"));
         (g("codes").match(/RA|LR|CO|BP/g)||[]).forEach(k=>{if(!rs.includes(REASON_CODES[k]))rs.push(REASON_CODES[k])});
         let impl=g("impl");if(app==="N"&&!g("reason")&&impl){rs.push(impl);impl=""}
-        raw.controls[code]={app,status:app==="N"?0:statusFrom(st),owner:g("owner"),evidence:g("evidence"),reason:rs.join("；"),impl};n++}
+        raw.controls[code]={app,status:app==="N"?0:statusFrom(st),owner:g("owner"),evidence:g("evidence"),reason:rs.join("；"),impl};if(g("co"))raw.controls[code].co=g("co");n++}
       report.controls+=n;if(n){report.sheets.push(sheet);report.columns.push(colReport(sheet,"soa",data[hs],m))}
       if(n&&n<93)warn(`「${sheet}」只有 ${n} 項控制措施，其餘項目為未決定`);
       continue}

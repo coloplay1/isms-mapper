@@ -116,7 +116,12 @@ function sanitizeProject(raw){
 }
 
 /* 已驗證的確認人與日期：確認證據的人最好不是負責人本人（稽核的獨立性） */
-function keepVerifier(dst,v){const by=str(v.verifier,60).trim();if(by)dst.verifier=by;if(/^\d{4}-\d{2}-\d{2}$/.test(v.verifiedAt||""))dst.verifiedAt=v.verifiedAt}
+function keepVerifier(dst,v){const by=str(v.verifier,60).trim();if(by)dst.verifier=by;if(/^\d{4}-\d{2}-\d{2}$/.test(v.verifiedAt||""))dst.verifiedAt=v.verifiedAt;
+  const co=normCo(v.co,dst.owner);if(co)dst.co=co}
+/* 協辦單位：一項控制措施可由多個單位共同執行。主責是「負責人」，協辦以「、」分隔存成文字；去掉重複與主責本人 */
+function coList(v){return String((v&&v.co)||"").split(/[、,，;；\/]/).map(s=>s.trim()).filter(Boolean)}
+function normCo(raw,owner){const o=String(owner||"").trim();
+  return [...new Set((Array.isArray(raw)?raw:String(raw||"").split(/[、,，;；\/]/)).map(s=>str(s,60).trim()).filter(s=>s&&s!==o))].slice(0,10).join("、")}
 function selfVerified(v){const a=String((v&&v.verifier)||"").trim(),b=String((v&&v.owner)||"").trim();return !!a&&a===b}
 function missingReason(v){return v.app==="N"&&!String(v.reason||"").trim()}
 
