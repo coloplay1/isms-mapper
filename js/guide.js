@@ -285,6 +285,26 @@ function auditReadiness(p,now){
           {id:"s2",name:"第二階段：實施查核",desc:"抽樣確認有在執行：證據、處理計畫、內部稽核與管理審查",items:s2}];
 }
 
+/* ================= 送審確認單：送驗證稽核前列印、簽名留存 =================
+   工具判斷得到的項目直接帶入準備度的結果（不讓人另外勾選，避免與系統判斷不一致）；
+   工具看不到的事項才留空白方框，由確認人親自勾選。 */
+const SIGNOFF_MANUAL=[
+  {id:"climate",clause:"4.1、4.2",text:"已判斷氣候變遷是否為相關議題，並留有紀錄（Amd 1:2024）"},
+  {id:"mgmt",clause:"5.1、6.1.2",text:"風險準則、ISMS 範圍與資訊安全政策已經管理階層核准"},
+  {id:"docs",clause:"7.5",text:"條款 4–10 要求的文件化資訊都已建立，且為最新核准版本"},
+  {id:"files",clause:"7.5",text:"已抽查證據位置的檔案，確認可以開啟、內容相符且是最新的"},
+  {id:"backup",clause:"—",text:"已匯出最新的專案檔、稽核用 SoA 與工作底稿備份"},
+  {id:"people",clause:"—",text:"稽核當天的受訪人員、會議室與證據提供方式已安排"}
+];
+function signoffSheet(p,now){
+  const st=auditReadiness(p,now);
+  const rows=st.flatMap(s=>s.items.map(x=>({stage:s.id,stageName:s.name,key:x.key,clause:x.clause,title:x.title,grade:x.grade,detail:x.detail})));
+  const count={ok:0,obs:0,nc:0,na:0};rows.forEach(r=>count[r.grade]++);
+  const sp=(p.spots||[]).filter(x=>x&&x.items&&x.items.length).slice(-1)[0];
+  const spot=sp?{id:sp.id,date:sp.date||"",done:sp.done,...spotStats(sp)}:null;
+  return {rows,count,manual:SIGNOFF_MANUAL,spot,ready:!count.nc};
+}
+
 /* ================= 追蹤鏈：稽核員從一個點往下追 =================
    控制措施：為什麼要做 → SoA 判定 → 負責人 → 執行 → 證據 → 改善紀錄
    風險：識別 → 評估 → 處理方式 → 控制措施 → 處理計畫 → 殘餘風險與核准 → 改善紀錄

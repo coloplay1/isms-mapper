@@ -827,3 +827,28 @@ footer{display:flex;flex-wrap:wrap;gap:2px 12px;line-height:1.7}footer a{color:v
 
 .osthh{grid-column:1/-1;margin-bottom:0}
 .cobtn{background:none;border:0;padding:0 0 0 4px;font:inherit;font-size:12px;color:var(--accent);cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+
+.cblib{display:inline-flex;gap:8px;margin-left:auto}
+
+/* 送審確認單 */
+.audsign{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:14px 0 10px;padding:12px 16px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.audsign span{color:var(--muted);font-size:13.5px;flex:1 1 320px}.audsign b{color:var(--ink);margin-right:8px}
+#printHost{display:none}
+@media print{
+  body.printing>*:not(#printHost){display:none!important}
+  body.printing{background:#fff!important}
+  body.printing #printHost{display:block}
+}
+.signoff{color:#111;background:#fff;font-size:10pt;line-height:1.4;box-sizing:border-box;padding:0 1px}
+.signoff .keep{break-inside:avoid}.signoff tr:last-child td{border-bottom:1px solid #999}.signoff h1{margin-top:0}
+.signoff h1{font-size:16pt;margin:0 0 8px;text-align:center;letter-spacing:.05em}
+.signoff h2{font-size:11pt;margin:12px 0 6px;border-bottom:1.5px solid #111;padding-bottom:2px}
+.signoff table{width:100%;min-width:0;border-collapse:collapse;font-size:inherit;table-layout:fixed}
+.signoff th,.signoff td{border:1px solid #999;padding:2px 6px;text-align:left;vertical-align:top;position:static;font-size:inherit;letter-spacing:0;color:#111}.signoff th{font-weight:600}
+.signoff .meta th{width:14%;background:#f1f1f1;font-weight:600}
+.signoff .res thead th{background:#f1f1f1}.signoff .res tr.st th{background:#e6eeee;font-weight:700}
+.signoff .res td.g{white-space:nowrap}.signoff th,.signoff td{word-break:break-word;color:inherit;background-clip:padding-box}.signoff .res tr.g-nc td.g{color:#b0442c;font-weight:700}.signoff .res tr.g-obs td.g{color:#8a5a00}.signoff .res tr.g-na td{color:#666}
+.signoff .cl{white-space:nowrap;font-size:9pt}.signoff .man td.box{width:8mm;text-align:center;font-size:12pt;line-height:1.2}.signoff .man td.cl{width:24mm}.signoff .warnl{margin:0 0 6px;color:#b0442c;font-weight:700}
+.signoff .sign th{width:22%;background:#f1f1f1;vertical-align:middle}.signoff .sign td{height:10mm}
+.signoff .sum{margin:0 0 6px}.signoff .fine{font-size:9pt;color:#444;margin:6px 0 0}
+.signoff tr{break-inside:avoid}
