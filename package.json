@@ -1,11 +1,12 @@
 {
   "name": "isms-mapper",
-  "version": "1.36.3",
+  "version": "1.36.4",
   "private": true,
   "description": "ISO/IEC 27001:2022 ISMS 導入輔助工具",
   "license": "MIT",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "test:ui": "node --test ui/smoke.ui.cjs"
   },
   "engines": {
     "node": ">=18"
