@@ -808,3 +808,17 @@ footer{display:flex;flex-wrap:wrap;gap:2px 12px;line-height:1.7}footer a{color:v
 .rvgrp h4{margin:0 0 6px;font-size:14px}
 .rvgrp h4 .note{font-weight:400;margin-left:2px}
 .tlink.na{border-left-color:var(--line)}
+
+.ovstrip{display:grid;grid-template-columns:minmax(150px,.55fr) minmax(0,1.3fr) minmax(0,1.3fr);gap:14px 28px;align-items:start;margin-bottom:18px;padding:14px 18px}
+.osk{display:grid;gap:2px}.osk b{font-family:var(--font-mono);font-size:30px;line-height:1.1}.osk span{font-size:13px}.osk small{font-size:12px;color:var(--muted)}.osk .warn{color:var(--seal)}
+.osbar .stack{height:16px}.oslg{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:8px;font-size:12.5px;color:var(--muted)}.oslg span{display:inline-flex;align-items:center;gap:5px;cursor:pointer}.oslg i{width:10px;height:10px;border-radius:2px;display:inline-block}.oslg b{color:var(--ink);font-family:var(--font-mono);font-weight:500}
+.osth{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px}.osth .brow{margin-bottom:6px}.osth .stack{height:8px}
+@media (max-width:980px){.ovstrip{grid-template-columns:1fr 1fr}.osth{grid-column:1/-1}}
+@media (max-width:560px){.ovstrip{grid-template-columns:1fr}.osth{grid-template-columns:1fr}}
+
+/* 條款 4–10 的 PDCA 循環 */
+.clpdca{display:grid;grid-template-columns:220px minmax(0,1fr);gap:8px 24px;align-items:center;margin-bottom:18px}
+.clring svg{width:100%;height:auto;max-width:220px}
+.clph{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.clph li{display:grid;grid-template-columns:70px 48px minmax(0,1fr);gap:8px;align-items:baseline;font-size:14px}
+@media (max-width:640px){.clpdca{grid-template-columns:1fr}.clring{max-width:240px;margin:0 auto}}

@@ -857,20 +857,14 @@ function renderOverview(){
   $("#view-overview").innerHTML=`
     <h2>${esc(p.name)}</h2>
     <p class="lede">${p.scope?`驗證範圍：${esc(p.scope)}。`:""}附錄 A 共 93 項控制措施的適用與執行狀況。滑過圖表可看數字，點熱圖方格可查看說明並更新狀態。</p>
+    <section class="panel ovstrip" aria-label="整體狀況">
+      <div class="osk"><b>${pct}%</b><span>適用項目已實施</span><small>${c.app} 項適用・${c.na} 項不適用${c.undec?`・<span class="warn">${c.undec} 項未決定</span>`:""}</small><small><button class="linkbtn" data-goto="clauses">條款 4–10：${Math.round(CLAUSES.filter(x=>cls(x.code).status>=2).length/CLAUSES.length*100)}% 完成 →</button></small></div>
+      <div class="osbar"><div class="blab"><span>整體狀態</span><span class="mono">點色塊可查看項目</span></div>${stackBar(tAll,93,"all")}
+        <div class="oslg">${SEGS.map(sg=>`<span data-lseg="${sg.k}" data-lscope="all" role="button" tabindex="0"><i class="${sg.k==="na"?"na":sg.k==="undec"?"undec":""}" style="${sg.k.startsWith("s")?`background:var(--${sg.k})`:""}"></i>${sg.label} <b>${tAll[sg.k]}</b></span>`).join("")}</div></div>
+      <div class="osth">${themeBars}</div>
+    </section>
     ${nextCard(p)}
     ${auditBar(p)}
-    <div class="stats">
-      <div class="stat"><b>${c.app}</b><span>適用控制措施</span></div>
-      <div class="stat"><b>${c.na}</b><span>不適用</span></div>
-      <div class="stat"><b>${c.undec}</b><span>尚未決定</span></div>
-      <div class="stat"><b>${pct}%</b><span>適用項目已實施</span></div>
-      <div class="stat"><b>${c.evid}</b><span>已驗證</span></div>
-    </div>
-    <div class="charts">
-      <div class="panel"><h3>整體狀態分布</h3><div class="donutwrap">${donut(tAll,93,pct+"%","適用項目已實施")}${legendHTML(tAll)}</div></div>
-      <div class="panel"><h3>各主題進度</h3><p class="note" style="margin:-4px 0 12px">右側數字為已實施／適用項目</p>${themeBars}</div>
-      <div class="panel"><h3>PDCA 循環</h3>${pdcaRing()}</div>
-    </div>
     <div class="grid2 ovgrid" style="margin-top:18px">
       <div class="panel">
         <h3>附錄 A 覆蓋熱圖</h3>
@@ -1034,9 +1028,15 @@ function onAnnexEdit(e){
   if(f==="app"||f==="status"){const nr=document.createElement("tbody");nr.innerHTML=annexRow(ANNEX_MAP[code]);const row=nr.firstElementChild;tr.replaceWith(row);const ta=row.querySelector("textarea[data-reason]");if(ta)fitReason(ta)}
   else if(f==="reason"){const miss=missingReason(ctl(code));el.classList.toggle("warn",miss);el.setAttribute("aria-invalid",miss);fitReason(el)}
 }
+/* 條款依 PDCA 分組的完成情形：圓環點各階段可列出該階段的條款 */
+function clPdcaHTML(){
+  const ph=[["P","規劃","4、5、6 章：範圍、領導、風險與目標"],["D","執行","7、8 章：資源、能力、文件與運作"],["C","檢查","9 章：監督量測、內部稽核、管理審查"],["A","改善","10 章：持續改善與矯正措施"]];
+  return `<div class="clring">${pdcaRing()}</div><div><h3 style="margin-top:0">PDCA 循環</h3><p class="note" style="margin:0 0 8px">管理系統條款依規劃、執行、檢查、改善分組。點圓環的階段可列出該階段的條款。</p>
+    <ul class="clph">${ph.map(([k,n,d])=>{const l=CLAUSES.filter(x=>x.phase===k),dn=l.filter(x=>cls(x.code).status>=2).length;return `<li><b>${k} ${n}</b><span class="mono">${dn}/${l.length}</span><span class="note">${d}</span></li>`}).join("")}</ul></div>`}
 function renderClauses(){
   const groups=[["4","組織前後環境"],["5","領導"],["6","規劃"],["7","支援"],["8","運作"],["9","績效評估"],["10","改善"]];
   $("#view-clauses").innerHTML=`<h2>管理系統條款 4–10</h2><p class="lede">本文條款不能排除，全部都要符合。逐條追蹤執行狀態與證據，驗證稽核時最先檢查的就是這些文件與紀錄。</p>
+  <div class="panel clpdca" id="clPdca">${clPdcaHTML()}</div>
   <div class="table-wrap"><table style="min-width:900px;table-layout:fixed"><thead><tr><th style="width:64px">條款</th><th>名稱與說明</th><th style="width:60px">PDCA</th><th style="width:118px">執行狀態</th><th style="width:140px">負責人</th><th style="width:240px">證據位置</th></tr></thead><tbody id="clBody">
   ${groups.map(([ch,n])=>`<tr><td colspan="6" style="background:var(--surface2);font-weight:700;font-size:13px">第 ${ch} 章　${n}</td></tr>`+
     CLAUSES.filter(c=>c.code.split(".")[0]===ch).map(c=>{const v=cls(c.code);return `<tr data-cl="${c.code}">
@@ -1049,7 +1049,7 @@ function renderClauses(){
   </tbody></table></div>`;
   const body=$("#clBody");
   const h=e=>{const el=e.target,tr=el.closest("tr[data-cl]");if(!tr||!el.dataset.f)return;
-    if(setField(tr.dataset.cl,el.dataset.f,el.value)&&el.dataset.f==="status")el.style.borderLeftColor=lvlColor(cls(tr.dataset.cl).status)};
+    if(setField(tr.dataset.cl,el.dataset.f,el.value)&&el.dataset.f==="status"){el.style.borderLeftColor=lvlColor(cls(tr.dataset.cl).status);const pd=$("#clPdca");if(pd)pd.innerHTML=clPdcaHTML()}};
   body.addEventListener("change",h);body.addEventListener("input",e=>{if(e.target.matches("input,textarea"))h(e);if(e.target.matches(".evta")){fitEv(e.target,true);e.target.title=e.target.value||e.target.placeholder}});
   /* 證據位置：平常只顯示一行，點進去展開成多行顯示完整內容，離開後收回 */
   body.addEventListener("focusin",e=>{if(e.target.matches(".evta"))fitEv(e.target,true)});
@@ -1504,7 +1504,7 @@ function openList(spec){
   host.querySelector(".x").focus();
 }
 function chartHit(e){
-  const el=e.target.closest&&e.target.closest("[data-lseg],[data-lphase]");if(!el||!el.closest("#view-overview"))return false;
+  const el=e.target.closest&&e.target.closest("[data-lseg],[data-lphase]");if(!el||!el.closest("#view-overview,#view-clauses"))return false;
   if(el.dataset.lphase)openList({phase:el.dataset.lphase});else openList({scope:el.dataset.lscope||"all",seg:el.dataset.lseg});
   return true;
 }
