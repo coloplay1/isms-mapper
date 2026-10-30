@@ -749,15 +749,17 @@ document.addEventListener("input",e=>{if(e.target.id!=="rvQ")return;rvQ=e.target
 let spotN=5,spotRisk=true,spotOpenHist=null;
 const SPOT_LABEL={ctl:{ok:"證據已確認",fail:"找不到或已過期",skip:"略過"},risk:{ok:"進度已確認",fail:"未如期執行",skip:"略過"}};
 function activeSpot(p){const l=p.spots||[];const s=l[l.length-1];return s&&!s.done?s:null}
+/* 抽查提問帶入這項控制措施的常見證據，負責人一看就知道要交什麼 */
+function spotRequestText(x){const c=ANNEX_MAP[x.id],v=ctl(x.id);
+  return `【ISMS 稽核前抽查】請協助提供「${x.id} ${c.name}」最近一次執行的紀錄，例如${spotEvExample(c)}。目前登記的證據位置：${v.evidence||"（未填寫）"}。謝謝！`}
 function spotItemHTML(x,i){
   const p=cur(),done=!!x.result;
   let head,body;
   if(x.kind==="ctl"){const c=ANNEX_MAP[x.id],v=ctl(x.id);
     head=`<button class="ref" data-open="${x.id}"><span class="mono">${x.id}</span>${esc(c.name)}</button>`;
-    body=`<div class="audask">稽核員會問：請出示最近一次執行的紀錄。</div>
+    body=`<div class="audask">稽核員會問：請出示最近一次執行的紀錄，例如${esc(spotEvExample(c))}。</div>
       <dl class="spotdl"><div><dt>你填的證據位置</dt><dd>${v.evidence?esc(v.evidence):`<span class="muted">（沒有填寫）</span>`}</dd></div>
       <div><dt>負責人</dt><dd>${v.owner?esc(v.owner):`<span class="muted">未指定</span>`}</dd></div>
-      <div><dt>常見證據</dt><dd>${esc(c.ev)}</dd></div>
       <div><dt>上次確認</dt><dd>${(x.result==="ok"?x.prev:v.checked)?esc(x.result==="ok"?x.prev:v.checked):`<span class="muted">從未</span>`}</dd></div></dl>`;
   }else{const r=riskById(x.id);
     head=r?`<button class="ref" data-risk="${x.id}"><span class="mono">${x.id}</span>${esc(r.title||"（未命名風險）")}</button>`:`<span class="mono">${x.id}</span>（風險已刪除）`;
@@ -771,7 +773,7 @@ function spotItemHTML(x,i){
   return `<li class="spotitem ${x.result||"todo"}"><div class="spoth"><span class="spotn">${i+1}</span>${head}${(x.why||[]).map(w=>`<span class="spotwhy">${esc(w)}</span>`).join("")}</div>
     ${body}
     ${done?`<div class="spotres"><span class="ag ${x.result==="ok"?"ok":x.result==="fail"?"nc":"nd"}">${L[x.result]}</span>${x.act?`<button class="linkbtn" data-act="${x.act}">已建立改善事項 ${x.act} →</button>`:""}<button class="linkbtn" data-spotundo="${i}">改回未確認</button></div>`
-      :`<div class="spotbtns"><button class="btn primary" data-spotres="${i}" data-r="ok">✓ ${L.ok}</button><button class="btn" data-spotres="${i}" data-r="fail">✕ ${L.fail}</button><button class="btn" data-spotres="${i}" data-r="skip">${L.skip}</button></div>
+      :`<div class="spotbtns"><button class="btn primary" data-spotres="${i}" data-r="ok">✓ ${L.ok}</button><button class="btn" data-spotres="${i}" data-r="fail">✕ ${L.fail}</button><button class="btn" data-spotres="${i}" data-r="skip">${L.skip}</button>${x.kind==="ctl"?`<button class="linkbtn" data-spotcopy="${i}" title="複製一段請負責人提供紀錄的文字">複製請求給負責人</button>`:""}</div>
       <p class="note" style="margin:6px 0 0">${x.kind==="ctl"?"打開證據位置，確認檔案存在、是最新的，而且真的能證明有在執行。":"對照實際進度與紀錄，確認是否照計畫執行。"}${x.kind==="ctl"?"「找不到或已過期」會自動建立一筆觀察事項。":"「未如期執行」會自動建立一筆觀察事項。"}</p>`}
   </li>`;
 }
@@ -810,6 +812,9 @@ document.addEventListener("click",e=>{
     if(x.kind==="ctl"&&x.result==="ok")setField(x.id,"checked",x.prev||"",{silent:true});
     if(x.act){const i=p.actions.findIndex(a=>a.id===x.act),a=p.actions[i];if(a&&a.status==="待處理"&&!a.action&&!a.cause)p.actions.splice(i,1);x.act=""}
     x.result="";x.prev="";touchRisk();renderAudit();return}
+  const cp=e.target.closest("[data-spotcopy]");if(cp){const s=activeSpot(p),x=s&&s.items[+cp.dataset.spotcopy];if(!x)return;const t=spotRequestText(x);
+    const done=()=>toast("已複製，可以貼到 Email 或 Teams 給負責人");
+    if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(t).then(done,()=>prompt("複製下面的文字",t));else prompt("複製下面的文字",t);return}
   const h=e.target.closest("[data-spothist]");if(h){spotOpenHist=spotOpenHist===h.dataset.spothist?null:h.dataset.spothist;renderAudit();return}
 });
 document.addEventListener("change",e=>{

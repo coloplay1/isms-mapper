@@ -774,7 +774,7 @@ footer{display:flex;flex-wrap:wrap;gap:2px 12px;line-height:1.7}footer a{color:v
 .spotdl>div{display:contents}
 .spotdl dt{color:var(--muted);font-size:12.5px;letter-spacing:0}
 .spotdl dd{margin:0;overflow-wrap:anywhere}
-.spotbtns{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.spotbtns{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}
 .spotbtns .btn{font-size:13px;padding:5px 10px}
 .spotres{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin-top:10px}
 .spothist{list-style:none;margin:0;padding:0;display:grid;gap:4px}
