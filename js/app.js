@@ -1880,10 +1880,12 @@ function renderRisks(){
     <td><div class="rcodes">${(r.controls||[]).slice(0,3).map(c=>{const a=ctl(c).app;return `<button class="rc ${a==="N"?"bad":a===""?"undec":""}" data-open="${c}" data-tip="${c} ${esc(ANNEX_MAP[c].name)}｜SoA：${APP.find(x=>x.v===a).label}">${c}</button>`}).join("")}${(r.controls||[]).length>3?`<span class="saved" data-tip="${esc(r.controls.slice(3).join("、"))}">+${r.controls.length-3}</span>`:""}</div></td>
     <td>${lvlBadge(residualScore(r))}</td>
     <td>${riskProgress(r)}</td>
-    <td>${riskState(r,checks)}</td></tr>`).join("")||`<tr><td colspan="9"><div class="empty">${list.length?(riskView.due?"沒有符合的風險。":"這一格沒有風險。"):"還沒有風險。可以按「新增風險」，或到案例搜尋把情境加入風險登錄表。"}</div></td></tr>`}
+    <td>${riskState(r,checks)}</td></tr>`).join("")||`<tr><td colspan="9"><div class="empty tblempty">${list.length?(riskView.due?"沒有符合的風險。":"這一格沒有風險。"):`<p style="margin:0 0 12px">還沒有風險。可以從案例挑一個情境建立，或先到案例搜尋看看有哪些常見風險。</p><div class="emptyacts"><button class="btn primary" id="rNew2">＋ 新增風險</button><button class="btn" id="rToSearch">前往案例搜尋 →</button></div>`}</div></td></tr>`}
   </tbody></table></div>`;
   const on=(id,fn)=>{const el=$("#"+id);if(el)el.addEventListener("click",fn)};
   on("rNew",openRiskPicker);
+  on("rNew2",openRiskPicker);
+  on("rToSearch",()=>{tab="search";render();window.scrollTo(0,0);const si=$("#sInput");if(si)si.focus()});
   on("rXls",()=>exportExcel());
   on("ckMore",()=>{showAllChecks=!showAllChecks;renderRisks()});
   on("ckApplyAll",applyAllRiskToSoA);
