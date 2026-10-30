@@ -196,7 +196,7 @@ const AUDIT_RULES={
   approve:"文件管制狀態為「已核准」、需核准的殘餘風險都已勾選擁有者核准、處理計畫都有預計完成日",
   clauses:"條款 4–10 都標為「已實施」或「已驗證」",
   impl:"判為適用的控制措施都標為「已實施」或「已驗證」",
-  evidence:"已實施與已驗證的控制措施都有填寫證據位置，抽查確認過的不超過一年；建議用下方的模擬抽查實際打開證據確認",
+  evidence:"已實施與已驗證的控制措施都有填寫證據位置，抽查確認過的不超過一年；建議用「模擬抽查」實際打開證據確認",
   owner:"判為適用的控制措施都有負責人",
   plan:"降低、移轉或避免的處理計畫都沒有逾期，也沒有 30 天內到期",
   reassess:"建立過新年度，沿用去年分數的風險都已重新評估",
@@ -361,6 +361,78 @@ function traceChain(p,kind,id,now){
   }else return null;
   const b=nodes.findIndex(n=>n.state==="bad");
   return {kind,id,nodes,broken:b<0?null:nodes[b].label,warn:nodes.filter(n=>n.state==="warn").length};
+}
+
+/* ================= 反向查詢：從現場看到的東西往回追 =================
+   稽核員常從一個人、一套系統、一份紀錄或一起事件往回查：它對應到哪些要求、風險評鑑有沒有考慮到。
+   mode：person 人員、asset 資產或系統、evidence 文件或證據、event 事件或改善事項。
+   回傳 {groups:[{title,items:[{kind,id,label,note,state}]}], notes:[發現]}；q 空白時回傳 suggest 供點選。 */
+const nz=s=>norm(s||"").replace(/\s/g,"");
+function reverseLookup(p,mode,q,now){
+  const out={groups:[],notes:[],suggest:[]};if(!p)return out;
+  const ctl=code=>(p.controls||{})[code]||{app:"",status:0,owner:"",evidence:"",reason:""};
+  const cls=code=>(p.clauses||{})[code]||{status:0,owner:"",evidence:""};
+  const risks=p.risks||[],acts=p.actions||[],k=nz(q);
+  const has=t=>k&&nz(t).includes(k);
+  const ctlItem=(code,extra)=>{const c=ANNEX_MAP[code]||CLAUSE_MAP[code],v=ANNEX_MAP[code]?ctl(code):cls(code),isA=!!ANNEX_MAP[code];
+    const st=isA&&v.app==="N"?"不適用":isA&&!v.app?"未判定":STATUS[v.status].label;
+    return {kind:"ctl",id:code,label:code+" "+(c?c.name:""),note:st+(extra?"・"+extra:""),state:(isA&&v.app!=="Y")?"":v.status>=2?"ok":v.status===1?"warn":"bad"}};
+  const riskItem=r=>{const s=inherentScore(r),d=planDue(r,now);
+    return {kind:"risk",id:r.id,label:r.id+" "+(r.title||"（未命名風險）"),note:[s?`${s} 分`:"未評分",r.treat?({accept:"接受",mitigate:"降低",transfer:"移轉",avoid:"避免"})[r.treat]:"未決定處理",d&&d.state==="late"?`計畫逾期 ${-d.days} 天`:""].filter(Boolean).join("・"),
+      state:!s||!r.treat?"bad":d&&d.state==="late"?"bad":"ok"}};
+  const actItem=a=>{const late=actionOverdue(a,now);return {kind:"act",id:a.id,label:a.id+" "+(a.title||"（未填寫）"),note:(ACTION_TYPE_MAP[a.type]||{}).label+"・"+(late?"逾期":a.status),state:late?"bad":a.status===ACTION_CLOSED?"ok":"warn"}};
+  const grp=(title,items)=>{if(items.length)out.groups.push({title,items})};
+  const appCodes=ANNEX.map(c=>c.code);
+  if(mode==="person"){
+    const names={};const add=n=>{n=String(n||"").trim();if(n)names[n]=(names[n]||0)+1};
+    appCodes.forEach(c=>{const v=ctl(c);if(v.app==="Y")add(v.owner)});CLAUSES.forEach(c=>add(cls(c.code).owner));risks.forEach(r=>add(r.owner));acts.forEach(a=>add(a.owner));
+    out.suggest=Object.entries(names).sort((a,b)=>b[1]-a[1]).slice(0,16).map(([n,c])=>({q:n,label:`${n}（${c}）`}));
+    if(!k)return out;
+    grp("負責的控制措施",appCodes.filter(c=>ctl(c).app==="Y"&&has(ctl(c).owner)).map(c=>ctlItem(c)));
+    grp("負責的條款",CLAUSES.filter(c=>has(cls(c.code).owner)).map(c=>ctlItem(c.code)));
+    grp("擁有的風險",risks.filter(r=>has(r.owner)).map(riskItem));
+    grp("負責的改善事項",acts.filter(a=>has(a.owner)).map(actItem));
+    grp("確認過的項目（確認人）",[...appCodes,...CLAUSES.map(c=>c.code)].filter(c=>{const v=ANNEX_MAP[c]?ctl(c):cls(c);return v.status===3&&has(v.verifier)}).map(c=>ctlItem(c,"由此人確認")));
+    const g=t=>(out.groups.find(x=>x.title===t)||{items:[]}).items;
+    const bad=[...g("負責的控制措施"),...g("擁有的風險"),...g("負責的改善事項")].filter(x=>x.state==="bad").length;
+    if(bad)out.notes.push(`有 ${bad} 項未開始、未評分或逾期，訪談時很可能被問到`);
+    const self=g("負責的控制措施").filter(x=>{const v=ctl(x.id);return v.status===3&&selfVerified(v)}).length;
+    if(self)out.notes.push(`${self} 項由此人負責、也由此人確認（自我確認）`);
+  }else if(mode==="asset"){
+    const seen={};risks.forEach(r=>String(r.asset||"").split(/[、,，;；\/]/).map(x=>x.trim()).filter(Boolean).forEach(a=>seen[a]=(seen[a]||0)+1));
+    out.suggest=Object.entries(seen).sort((a,b)=>b[1]-a[1]).slice(0,16).map(([n,c])=>({q:n,label:`${n}（${c}）`}));
+    if(!k)return out;
+    const rs=risks.filter(r=>has(r.asset)||has(r.title)||has(r.threat));
+    grp("提到它的風險",rs.map(riskItem));
+    const cs=[...new Set(rs.flatMap(r=>r.controls||[]))];
+    grp("這些風險用來處理的控制措施",cs.map(c=>ctlItem(c)));
+    grp("證據或實施方式提到它的控制措施",appCodes.filter(c=>!cs.includes(c)&&(has(ctl(c).evidence)||has(ctl(c).impl))).map(c=>ctlItem(c)));
+    if(!rs.length)out.notes.push(`沒有風險提到「${q.trim()}」。如果它在驗證範圍內，風險識別可能有缺口`);
+    else if(rs.some(r=>!inherentScore(r)||!r.treat))out.notes.push("有相關風險尚未評分或尚未決定處理方式");
+  }else if(mode==="evidence"){
+    const ev={};[...appCodes.map(ctl),...CLAUSES.map(c=>cls(c.code))].forEach(v=>{const e=String(v.evidence||"").trim();if(e)ev[e]=(ev[e]||0)+1});
+    out.suggest=[...DOCS.filter(d=>d.mandatory).map(d=>({q:d.id,label:`${d.id} ${d.name}`})),...Object.entries(ev).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([n])=>({q:n,label:n}))].slice(0,16);
+    if(!k)return out;
+    const docs=DOCS.filter(d=>has(d.id)||has(d.name));
+    grp("引用它當證據的控制措施",appCodes.filter(c=>has(ctl(c).evidence)||has(ctl(c).impl)).map(c=>ctlItem(c)));
+    grp("引用它當證據的條款",CLAUSES.filter(c=>has(cls(c.code).evidence)).map(c=>ctlItem(c.code)));
+    docs.forEach(d=>grp(`文件範本 ${d.id} ${d.name} 對應的要求`,[...d.clauses.filter(c=>CLAUSE_MAP[c]),...d.controls].map(c=>ctlItem(c))));
+    if(!out.groups.length)out.notes.push(`沒有控制措施或條款引用「${q.trim()}」當證據`);
+    else if(docs.length&&!out.groups.some(g=>g.title.startsWith("引用")))out.notes.push("這份文件對應的要求，證據位置都沒有寫到它；確認證據位置是否寫的是其他名稱");
+  }else if(mode==="event"){
+    out.suggest=acts.filter(a=>["inc","nc"].includes(a.type)||actionOverdue(a,now)).slice(0,16).map(a=>({q:a.id,label:`${a.id} ${a.title||""}`}));
+    if(!k)return out;
+    const as=acts.filter(a=>has(a.id)||has(a.title)||has(a.source));
+    grp("符合的改善事項",as.map(actItem));
+    const refs=[...new Set(as.flatMap(a=>a.refs||[]))];
+    grp("關聯的控制措施與條款",refs.map(c=>ctlItem(c)));
+    const rs=risks.filter(r=>(r.controls||[]).some(c=>refs.includes(c)));
+    grp("用到這些控制措施的風險",rs.map(r=>{const it=riskItem(r);if(r.l&&r.l<=2&&as.some(a=>a.type==="inc")){it.state="warn";it.note+=`・可能性 ${r.l}，可能沒反映這次事件`}return it}));
+    if(as.length&&refs.length&&!rs.length)out.notes.push("沒有風險用到這些控制措施：這起事件的情境可能還沒登錄成風險");
+    if(as.some(a=>!(a.refs||[]).length))out.notes.push("有改善事項沒有關聯控制措施或條款，無法往回追");
+    if(!as.length)out.notes.push(`沒有改善事項符合「${q.trim()}」`);
+  }
+  return out;
 }
 
 /* ================= 風險管理流程（ISO/IEC 27005、ISO 31000） =================
