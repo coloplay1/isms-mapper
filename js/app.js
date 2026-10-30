@@ -848,7 +848,7 @@ function renderOverview(){
   const owners=Object.entries(om).sort((a,b)=>(a[0]==="未指派")-(b[0]==="未指派")||b[1].length-a[1].length).slice(0,7);
   const omax=Math.max(1,...owners.map(o=>o[1].length));
   const ownerBars=owners.map(([o,list])=>{const tt=tally(list);
-    return `<div class="brow"><div class="blab"><span>${esc(o)}</span><span class="mono">${list.length} 項${coN[o]?`<span class="saved">＋協辦 ${coN[o]}</span>`:""}</span></div><div style="width:${Math.max(8,list.length/omax*100)}%">${stackBar(tt,list.length,"owner:"+o)}</div></div>`}).join("");
+    return `<div class="brow"><div class="blab"><span>${esc(o)}</span><span class="mono">${list.length} 項${coN[o]?`<button class="cobtn" data-colist="${esc(o)}" data-tip="列出協辦的控制措施">＋協辦 ${coN[o]}</button>`:""}</span></div><div style="width:${Math.max(8,list.length/omax*100)}%">${stackBar(tt,list.length,"owner:"+o)}</div></div>`}).join("");
   const rows=THEMES.map(t=>{
     const list=ANNEX.filter(x=>x.theme===t.id);
     return `<div class="heat-row"><div class="lab"><span>A.${t.id}　${t.name}（${list.length} 項）</span></div><div class="cells">${
@@ -861,7 +861,7 @@ function renderOverview(){
       <div class="osk"><b>${pct}%</b><span>適用項目已實施</span><small>${c.app} 項適用・${c.na} 項不適用${c.undec?`・<span class="warn">${c.undec} 項未決定</span>`:""}</small><small><button class="linkbtn" data-goto="clauses">條款 4–10：${Math.round(CLAUSES.filter(x=>cls(x.code).status>=2).length/CLAUSES.length*100)}% 完成 →</button></small></div>
       <div class="osbar"><div class="blab"><span>整體狀態</span><span class="mono">點色塊可查看項目</span></div>${stackBar(tAll,93,"all")}
         <div class="oslg">${SEGS.map(sg=>`<span data-lseg="${sg.k}" data-lscope="all" role="button" tabindex="0"><i class="${sg.k==="na"?"na":sg.k==="undec"?"undec":""}" style="${sg.k.startsWith("s")?`background:var(--${sg.k})`:""}"></i>${sg.label} <b>${tAll[sg.k]}</b></span>`).join("")}</div></div>
-      <div class="osth">${themeBars}</div>
+      <div class="osth"><div class="blab osthh"><span>各主題進度</span><span class="mono">已實施／適用</span></div>${themeBars}</div>
     </section>
     ${nextCard(p)}
     ${auditBar(p)}
@@ -1477,21 +1477,22 @@ function listItems(scope,seg){
 }
 function openList(spec){
   lastList=spec;
-  let items,title,filter,seg=spec.seg,isClause=false;
-  if(spec.phase){const names={P:"規劃 Plan",D:"執行 Do",C:"檢查 Check",A:"改善 Act"};
+  let items,title,filter,seg=spec.seg,isClause=false;const isCo=!!spec.co;
+  if(isCo){items=ANNEX.filter(c=>{const v=ctl(c.code);return v.app==="Y"&&coList(v).includes(spec.co)});title=spec.co+"・協辦的控制措施";filter=null}
+  else if(spec.phase){const names={P:"規劃 Plan",D:"執行 Do",C:"檢查 Check",A:"改善 Act"};
     items=CLAUSES.filter(c=>c.phase===spec.phase);title="PDCA・"+names[spec.phase];filter=null;isClause=true}
   else ({items,title,filter}=listItems(spec.scope,seg));
   const row=c=>{const v=isClause?cls(c.code):ctl(c.code);const b=isClause?"s"+v.status:bucket(v);
     const lab=isClause?STATUS[v.status].label:(SEG_LABEL[b]);
     return `<button class="lrow" data-lopen="${c.code}"><span class="dot ${b==="na"?"na":b==="undec"?"undec":""}" style="${b.startsWith("s")?`background:var(--${b})`:""}"></span>
       <span class="mono">${isClause?"第 "+c.code+" 條":c.code}</span><span class="ln ${FM[c.code]?"fname":""}">${esc(c.name)}</span>
-      <span class="lmeta">${esc(v.owner||"")}${v.owner?"・":""}${lab}</span></button>`};
+      <span class="lmeta">${isCo?"主責："+esc(v.owner||"未指定"):esc(v.owner||"")}${v.owner||isCo?"・":""}${lab}</span></button>`};
   const host=$("#drawerHost");
   host.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${esc(title)}">
     <button class="btn x" data-close>關閉</button>
     <div class="code">${isClause?"管理系統條款":"附錄 A"}・${items.length} 項</div>
     <h2>${esc(title)}</h2>
-    ${isClause?"":`<p class="note">點任一項可查看詳情並更新狀態。</p>`}
+    ${isClause?"":`<p class="note">${isCo?"這個單位協助執行、但不是主責的控制措施。":""}點任一項可查看詳情並更新狀態。</p>`}
     ${items.length?`<div class="llist">${items.map(row).join("")}</div>`:`<div class="empty">沒有符合的項目。</div>`}
     <div class="form" style="margin-top:16px">
       ${filter?`<button class="btn primary" id="lGo">在附錄 A 中篩選這些項目</button>`:""}
@@ -1503,6 +1504,7 @@ function openList(spec){
   const gc=$("#lGoCl");if(gc)gc.addEventListener("click",()=>{lastList=null;$("#drawerHost").innerHTML="";tab="clauses";render();window.scrollTo(0,0)});
   host.querySelector(".x").focus();
 }
+document.addEventListener("click",e=>{const b=e.target.closest("[data-colist]");if(b){e.preventDefault();e.stopPropagation();openList({co:b.dataset.colist})}},true);
 function chartHit(e){
   const el=e.target.closest&&e.target.closest("[data-lseg],[data-lphase]");if(!el||!el.closest("#view-overview,#view-clauses"))return false;
   if(el.dataset.lphase)openList({phase:el.dataset.lphase});else openList({scope:el.dataset.lscope||"all",seg:el.dataset.lseg});
