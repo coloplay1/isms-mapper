@@ -189,7 +189,8 @@ function docNeed(p,d){
 const AUDIT_RULES={
   scope:"專案有填寫驗證範圍，條款 4.3 標為「已實施」以上，並寫了範圍文件的位置（例如 POL-02 ISMS 適用範圍書，或手冊中的範圍章節）",
   criteria:"風險準則已按「確認」，並寫了可能性與衝擊各級的定義",
-  riskAssess:"至少登錄一項風險、全部都已評分，並在風險識別按過「確認風險識別完成」",
+  riskAssess:"至少登錄一項風險、全部都已評分，並在風險識別按過「確認風險識別完成」；沒有明顯的矛盾，例如發生過相關事件卻把可能性評得很低、沒寫威脅或脆弱性、所有風險分數都一樣",
+  verify:"標為已驗證的控制措施與條款都記錄了確認人，且確認人不是負責人本人；風險識別完成也記錄了確認人",
   soa:"93 項控制措施都已判定適用性，判為不適用的都有排除理由",
   consistent:"已有風險，且風險選定的控制措施在 SoA 都判為適用、沒有衝突",
   approve:"文件管制狀態為「已核准」、需核准的殘餘風險都已勾選擁有者核准、處理計畫都有預計完成日",
@@ -210,6 +211,9 @@ function auditReadiness(p,now){
   const notStart=vs.filter(x=>x.v.status===0).length,partial=vs.filter(x=>x.v.status===1).length;
   const implNoEv=vs.filter(x=>x.v.status===2&&!String(x.v.evidence||"").trim()).length;
   const stale=vs.filter(x=>x.v.status>=2&&(evidenceAge(x.v,now)||0)>SPOT_STALE_DAYS).length;
+  const verified=[...vs.map(x=>x.v),...CLAUSES.map(c=>(p.clauses||{})[c.code]).filter(Boolean)].filter(v=>v.status===3);
+  const noVer=verified.filter(v=>!String(v.verifier||"").trim()).length,selfVer=verified.filter(selfVerified).length;
+  const sanity=riskSanity(p);
   const it=(key,clause,title,ask,checks,go,na)=>{
     const rule=AUDIT_RULES[key]||"";
     if(na)return {key,clause,title,ask,rule,grade:"na",detail:[na],go};
@@ -230,7 +234,8 @@ function auditReadiness(p,now){
       [["nc",!f.criteria,"風險準則尚未確認"],["obs",f.criteria&&!f.scaleDefs,"可能性與衝擊沒有寫各級定義，不同人評分可能不一致"]],
       {tab:"risks",open:"criteria",cta:"開啟風險準則"}),
     it("riskAssess","6.1.2","風險評鑑結果","請出示風險評鑑表，這些風險是怎麼識別出來的？",
-      [["nc",!f.risks,"還沒有登錄風險"],["nc",f.unscored,`${f.unscored} 項風險未評分`],["obs",f.risks&&!f.identOk,"尚未確認風險清單涵蓋整個範圍"]],
+      [["nc",!f.risks,"還沒有登錄風險"],["nc",f.unscored,`${f.unscored} 項風險未評分`],["obs",f.risks&&!f.identOk,"尚未確認風險清單涵蓋整個範圍"],
+       ...sanity.slice(0,4).map(x=>["obs",true,(x.rid?x.rid+"：":"")+x.msg]),["obs",sanity.length>4,`另有 ${sanity.length-4} 項評分依據可能被追問`]],
       {tab:"risks",cta:"前往風險評鑑"}),
     it("soa","6.1.3 d","適用性聲明（SoA）","93 項控制措施都判定了嗎？不適用的理由是什麼？",
       [["nc",f.undecided,`${f.undecided} 項未判定適用性`],["nc",f.noReason,`${f.noReason} 項不適用但沒有理由`]],
@@ -262,6 +267,9 @@ function auditReadiness(p,now){
     it("reassess","8.2","定期風險評鑑","今年有重新評估風險嗎？有哪些變化？",
       [["obs",f.reassess,`${f.reassess} 項風險沿用去年分數，尚未重新評估`]],
       {tab:"risks",cta:"前往風險評鑑"},!p.baseline&&"第一年導入；建立新年度後檢查是否重新評估"),
+    it("verify","9.2、5.3","確認的獨立性","已驗證的項目是誰確認的？確認的人和負責執行的人是同一個嗎？",
+      [["obs",noVer,`${noVer} 項標為已驗證，但沒有記錄確認人`],["obs",selfVer,`${selfVer} 項由負責人自己確認`],["obs",p.identOk&&!String(p.identBy||"").trim(),"風險識別完成沒有記錄確認人"]],
+      {tab:"annex",filter:"verissue",cta:"前往附錄 A"},!verified.length&&!p.identOk&&"還沒有標為已驗證的項目"),
     it("audit","9.2","內部稽核","請出示內部稽核計畫、報告與稽核員資格。",
       [["nc",!f.auditDone,"條款 9.2 內部稽核尚未完成"]],
       {tab:"clauses",cta:"前往條款 4–10"}),
@@ -310,7 +318,9 @@ function traceChain(p,kind,id,now){
       if(und){["負責人","執行","證據"].forEach((l,i)=>nodes.push({k:["owner","impl","ev"][i],label:l,state:"idle",text:"判定適用後再確認"}))}
       else{
         nodes.push({k:"owner",label:"負責人",clause:"5.3",state:owner?"ok":"warn",text:owner||"沒有指定負責人"});
-        nodes.push({k:"impl",label:"執行",clause:"8.1",state:v.status>=2?"ok":v.status===1?"warn":"bad",text:STATUS[v.status].label});
+        const vr=String(v.verifier||"").trim();
+        nodes.push({k:"impl",label:"執行",clause:"8.1",state:v.status===3&&(!vr||selfVerified(v))?"warn":v.status>=2?"ok":v.status===1?"warn":"bad",
+          text:STATUS[v.status].label+(v.status===3?(vr?`（確認人：${vr}${v.verifiedAt?"，"+v.verifiedAt:""}${selfVerified(v)?"；與負責人相同，屬自我確認":""}）`:"（沒有記錄確認人）"):"")});
         const age=evidenceAge(v,now);
         nodes.push({k:"ev",label:"證據",clause:"7.5",state:ev?(age!==null&&age>SPOT_STALE_DAYS?"warn":"ok"):v.status===3?"bad":v.status===2?"warn":"idle",
           text:ev?ev+(age===null?"（尚未抽查確認）":age>SPOT_STALE_DAYS?`（${v.checked} 抽查確認，已超過一年）`:`（${v.checked} 抽查確認）`):v.status===3?"標為已驗證，卻沒寫證據在哪裡":v.status===2?"已實施，但沒寫證據位置":"實施後補上證據位置"});
@@ -321,7 +331,8 @@ function traceChain(p,kind,id,now){
     const r=risks.find(x=>x.id===id);if(!r)return null;
     const s=inherentScore(r),lv=riskLevel(s,p),owner=String(r.owner||"").trim();
     nodes.push({k:"ident",label:"識別",clause:"6.1.2 c",state:owner?"ok":"warn",text:owner?`風險擁有者：${owner}`:"沒有指定風險擁有者"});
-    nodes.push({k:"assess",label:"評估",clause:"6.1.2 d、e",state:s?"ok":"bad",text:s?`${s} 分・${lv?lv.label:""}`:"尚未評估可能性與衝擊"});
+    const sn=riskSanity(p).filter(x=>x.rid===r.id);
+    nodes.push({k:"assess",label:"評估",clause:"6.1.2 d、e",state:!s?"bad":sn.length?"warn":"ok",text:s?`${s} 分・${lv?lv.label:""}`+(sn.length?"；"+sn.map(x=>x.msg).join("；"):""):"尚未評估可能性與衝擊"});
     const T={accept:"接受",mitigate:"降低",transfer:"移轉",avoid:"避免"};
     if(!s){nodes.push({k:"treat",label:"處理方式",state:"idle",text:"評估後再決定"})}
     else if(!r.treat){nodes.push({k:"treat",label:"處理方式",clause:"6.1.3 a",state:"bad",text:"尚未決定處理方式"})}

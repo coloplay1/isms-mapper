@@ -20,11 +20,11 @@ test('新專案：第一階段的範圍、風險評鑑、SoA 都可能不符合'
 });
 
 test('準備好的專案：全部資料齊全，沒有前往按鈕', () => {
-  const controls = Object.fromEntries(A.ANNEX.map(c => [c.code, { app: 'Y', status: 3, owner: '甲', evidence: '紀錄', reason: '依風險評鑑結果' }]));
-  const clauses = Object.fromEntries(A.CLAUSES.map(c => [c.code, { status: 3, owner: '甲', evidence: '紀錄' }]));
-  const risk = { id: 'R-001', title: 'x', owner: '甲', l: 2, i: 2, treat: 'accept', accepted: true, controls: [] };
-  const risk2 = { id: 'R-002', title: 'y', owner: '甲', l: 4, i: 4, treat: 'mitigate', controls: ['A.8.13'], plan: '異地備份', due: '2026-03', status: '已完成', rl: 1, ri: 2 };
-  const p = { ...A.blankProject('好', ''), scope: '總部', identOk: true, criteria: A.presetCriteria('four'), criteriaOk: true,
+  const controls = Object.fromEntries(A.ANNEX.map(c => [c.code, { app: 'Y', status: 3, owner: '甲', evidence: '紀錄', reason: '依風險評鑑結果', verifier: '稽核室', verifiedAt: '2026-05-01' }]));
+  const clauses = Object.fromEntries(A.CLAUSES.map(c => [c.code, { status: 3, owner: '甲', evidence: '紀錄', verifier: '稽核室' }]));
+  const risk = { id: 'R-001', title: 'x', owner: '甲', l: 2, i: 2, treat: 'accept', accepted: true, controls: [], threat: '人為疏失' };
+  const risk2 = { id: 'R-002', title: 'y', owner: '甲', l: 4, i: 4, threat: '勒索軟體', treat: 'mitigate', controls: ['A.8.13'], plan: '異地備份', due: '2026-03', status: '已完成', rl: 1, ri: 2 };
+  const p = { ...A.blankProject('好', ''), scope: '總部', identOk: true, identBy: '稽核室', criteria: A.presetCriteria('four'), criteriaOk: true,
     scale: { l: [...A.SCALE_REF.l], i: [...A.SCALE_REF.i] }, controls, clauses, risks: [risk, risk2], doc: { status: '已核准' }, baseline: { label: '2025 年度' } };
   const items = A.auditReadiness(p, NOW).flatMap(s => s.items);
   assert.deepEqual(items.filter(x => x.grade !== 'ok').map(x => x.key + ':' + x.detail.join('/')), []);
@@ -56,4 +56,19 @@ test('ISMS 範圍：只填專案的範圍欄位不算，要有範圍文件（條
   assert.equal(k().grade, 'obs');
   p.clauses['4.3'].evidence = 'POL-02 ISMS 適用範圍書 v1.0';
   assert.equal(k().grade, 'ok');
+});
+
+test('確認的獨立性：已驗證沒記錄確認人、或由負責人自己確認，列為觀察', () => {
+  const p = { ...A.blankProject('x', ''), controls: { 'A.5.15': { app: 'Y', status: 3, owner: '資訊 王', reason: 'r', evidence: 'e' }, 'A.5.16': { app: 'Y', status: 3, owner: '資訊 王', reason: 'r', evidence: 'e', verifier: '資訊 王' } } };
+  let k = byKey(A.auditReadiness(p, NOW)).verify;
+  assert.equal(k.grade, 'obs');
+  assert.deepEqual(k.detail, ['1 項標為已驗證，但沒有記錄確認人', '1 項由負責人自己確認']);
+  assert.equal(k.go.filter, 'verissue');
+  p.controls['A.5.15'].verifier = '稽核室 何'; p.controls['A.5.16'].verifier = '稽核室 何';
+  assert.equal(byKey(A.auditReadiness(p, NOW)).verify.grade, 'ok');
+  const ev = A.traceChain(p, 'ctl', 'A.5.16', NOW).nodes.find(n => n.k === 'impl');
+  assert.match(ev.text, /確認人：稽核室 何/);
+  p.controls['A.5.16'].verifier = '資訊 王';
+  assert.equal(A.traceChain(p, 'ctl', 'A.5.16', NOW).nodes.find(n => n.k === 'impl').state, 'warn');
+  assert.equal(byKey(A.auditReadiness({ ...A.blankProject('y', '') }, NOW)).verify.grade, 'na');
 });
