@@ -858,7 +858,7 @@ function renderOverview(){
     <h2>${esc(p.name)}</h2>
     <p class="lede">${p.scope?`驗證範圍：${esc(p.scope)}。`:""}附錄 A 共 93 項控制措施的適用與執行狀況。滑過圖表可看數字，點熱圖方格可查看說明並更新狀態。</p>
     <section class="panel ovstrip" aria-label="整體狀況">
-      <div class="osk"><b>${pct}%</b><span>適用項目已實施</span><small>${c.app} 項適用・${c.na} 項不適用${c.undec?`・<span class="warn">${c.undec} 項未決定</span>`:""}</small><small><button class="linkbtn" data-goto="clauses">條款 4–10：${Math.round(CLAUSES.filter(x=>cls(x.code).status>=2).length/CLAUSES.length*100)}% 完成 →</button></small></div>
+      <div class="osk"><b>${pct}%</b><span>適用項目已實施</span><small>${c.app} 項適用・${c.na} 項不適用</small>${c.undec?`<small class="warn">${c.undec} 項未決定適用性</small>`:""}<small><button class="linkbtn" data-goto="clauses">條款 4–10：${Math.round(CLAUSES.filter(x=>cls(x.code).status>=2).length/CLAUSES.length*100)}% 完成 →</button></small></div>
       <div class="osbar"><div class="blab"><span>整體狀態</span><span class="mono">點色塊可查看項目</span></div>${stackBar(tAll,93,"all")}
         <div class="oslg">${SEGS.map(sg=>`<span data-lseg="${sg.k}" data-lscope="all" role="button" tabindex="0"><i class="${sg.k==="na"?"na":sg.k==="undec"?"undec":""}" style="${sg.k.startsWith("s")?`background:var(--${sg.k})`:""}"></i>${sg.label} <b>${tAll[sg.k]}</b></span>`).join("")}</div></div>
       <div class="osth"><div class="blab osthh"><span>各主題進度</span><span class="mono">已實施／適用</span></div>${themeBars}</div>
