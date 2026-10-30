@@ -52,11 +52,11 @@ function rolloverProject(prev,opts={}){
   const p=sanitizeProject(src);
   const sum={downgraded:0,clauses:0,reassess:0,approvals:0,carried:0};
   p.id=uid();p.name=str(opts.name,120)||p.name;p.period=str(opts.period,20);
-  p.created=p.updated=now;p.log=[];p.identOk=false;p.archived=false;
+  p.created=p.updated=now;p.log=[];p.identOk=false;delete p.identBy;delete p.identAt;p.archived=false;
   delete p.lastBackupAt;p.changesSinceBackup=0;
   // 已驗證代表「去年」查過證據，今年要重新收集，所以降為已實施
-  for(const v of Object.values(p.controls))if(v.status===3){v.status=2;sum.downgraded++}
-  for(const v of Object.values(p.clauses))if(v.status===3){v.status=2;sum.clauses++}
+  for(const v of Object.values(p.controls))if(v.status===3){v.status=2;sum.downgraded++;delete v.verifier;delete v.verifiedAt}
+  for(const v of Object.values(p.clauses))if(v.status===3){v.status=2;sum.clauses++;delete v.verifier;delete v.verifiedAt}
   // 風險保留去年的分數作為起點，標示待重新評估；擁有者核准每年重新取得
   for(const r of p.risks){if(inherentScore(r)){r.reassess=true;sum.reassess++}if(r.accepted){r.accepted=false;sum.approvals++}}
   // 未結案的改善事項帶入新年度；已確認有效的留在去年快照
@@ -290,3 +290,23 @@ function sanitizeSpots(list){const seen=new Set();
 function nextSpotId(p){const n=Math.max(0,...((p&&p.spots)||[]).map(s=>Number(String(s.id).slice(2))||0));return "S-"+String(n+1).padStart(3,"0")}
 function spotStats(s){const it=(s&&s.items)||[],n=r=>it.filter(x=>x.result===r).length;
   return {total:it.length,ok:n("ok"),fail:n("fail"),skip:n("skip"),pending:n("")}}
+
+/* ================= 風險評鑑的合理性檢查 =================
+   工具無法判斷分數對不對，但可以找出稽核員會追問的矛盾：發生過相關事件卻評很低、沒有評分依據、
+   所有風險分數都一樣、所有風險都由同一人擁有。只提出疑點，不代表一定錯。 */
+function riskSanity(p){
+  const out=[];if(!p)return out;
+  const risks=(p.risks||[]).filter(r=>inherentScore(r));
+  const incs=(p.actions||[]).filter(a=>a.type==="inc");
+  risks.forEach(r=>{
+    const rel=incs.filter(a=>(a.refs||[]).some(c=>(r.controls||[]).includes(c)));
+    if(rel.length&&r.l<=2)out.push({kind:"incLow",rid:r.id,msg:`曾發生相關的資安事件（${rel.map(a=>a.id).join("、")}），可能性卻評為 ${r.l}「${LIKELIHOOD[r.l]}」`});
+    if(!String(r.threat||"").trim()&&!String(r.vuln||"").trim())out.push({kind:"noBasis",rid:r.id,msg:"沒有寫威脅或脆弱性，難以說明評分的依據"});
+  });
+  if(risks.length>=4&&new Set(risks.map(r=>r.l+"-"+r.i)).size===1)
+    out.push({kind:"uniform",msg:`${risks.length} 項風險的可能性與衝擊都相同，可能沒有依準則逐項判斷`});
+  const owners=risks.map(r=>String(r.owner||"").trim());
+  if(risks.length>=5&&owners.every(Boolean)&&new Set(owners).size===1)
+    out.push({kind:"oneOwner",msg:`${risks.length} 項風險的擁有者都是「${owners[0]}」；風險擁有者應是對該風險有權責、能核准處理方式的人`});
+  return out;
+}

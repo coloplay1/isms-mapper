@@ -75,9 +75,9 @@ function buildWorkbook(p,opts={}){
 
   const soa=ANNEX.map(c=>{const v=ctl(c.code);
     return [c.code,THEMES.find(t=>t.id===c.theme).name,c.name,c.isNew?"是":"",FM[c.code]?FM[c.code].map(f=>(FEATURE_MAP[f]||{label:"自行標示"}).label).join("、"):"",
-      v.app?APP.find(a=>a.v===v.app).label:"",reasonCodes(v.reason),v.reason,v.impl||"",v.app==="N"?"":(v.app?STATUS[v.status].label:""),v.owner,v.evidence,(rbc[c.code]||[]).join("、"),c.ev]});
+      v.app?APP.find(a=>a.v===v.app).label:"",reasonCodes(v.reason),v.reason,v.impl||"",v.app==="N"?"":(v.app?STATUS[v.status].label:""),v.owner,v.evidence,(rbc[c.code]||[]).join("、"),c.ev,v.status===3?(v.verifier||""):"",v.status===3?(v.verifiedAt||""):"",v.checked||""]});
   const soaData=[...top("適用性聲明（Statement of Applicability）"),
-    ...table(["控制措施編號","主題","控制措施","2022 新增","產業建議重點","適用性","理由代碼","納入或排除理由","實施方式","執行狀態","負責人","證據位置","關聯風險","常見證據參考"],soa),
+    ...table(["控制措施編號","主題","控制措施","2022 新增","產業建議重點","適用性","理由代碼","納入或排除理由","實施方式","執行狀態","負責人","證據位置","關聯風險","常見證據參考","確認人","確認日期","最近抽查確認"],soa),
     [],[T("理由代碼：RA 風險評鑑結果、LR 法律或法規、CO 契約或客戶要求、BP 營運需求與業界最佳實務。控制措施名稱為工具自撰摘要，不含 ISO/IEC 27001 原文。")],[],
     ["編製","","審查","","核准",""].map((t,k)=>k%2?null:H(t)),["日期","","日期","","日期",""].map((t,k)=>k%2?null:H(t))];
 
@@ -118,7 +118,7 @@ function buildWorkbook(p,opts={}){
     return [new Date(e.t).toLocaleString("zh-TW",{hour12:false}),e.c,c?c.name:"",FIELD_LABEL[e.f]||e.f,fmtVal(e.f,e.from),fmtVal(e.f,e.to)]});
 
   return [
-    {sheet:"適用性聲明SoA",data:soaData,columns:W([12,10,24,8,18,8,9,30,28,10,14,24,14,28]),stickyRowsCount:5},
+    {sheet:"適用性聲明SoA",data:soaData,columns:W([12,10,24,8,18,8,9,30,28,10,14,24,14,28,12,11,11]),stickyRowsCount:5},
     {sheet:"風險登錄表",data:rkData,columns:W([9,26,16,24,24,18,12,14,7,7,11,8,28,26,11,7,7,11,9,9]),stickyRowsCount:5},
     {sheet:"風險評鑑準則",data:critData,columns:W([14,30,20,36,44])},
     {sheet:"連動檢查",data:[...top("風險評鑑與 SoA 連動檢查"),...table(["類型","風險","控制措施","說明"],ck)],columns:W([8,9,10,70])},

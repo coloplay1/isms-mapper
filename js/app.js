@@ -140,7 +140,10 @@ function buildSample(d){
     p.controls[c.code]={app:"Y",status:st<0?3:st,owner:st>=d.ownerFrom?ow:"",evidence:st>=2?c.ev.split("、")[0]:"",reason:REASONS_IN[0]};
   });
   CLAUSES.forEach((c,i)=>{const st=d.cl(i);p.clauses[c.code]={status:st,owner:st?"資安小組":"",evidence:st>=2?c.ev:""}});
-  p.criteria=presetCriteria(d.criteria||"four");p.criteriaOk=true;p.identOk=true;p.doc=sanitizeDoc(d.doc);
+  // 範例的已驗證項目由稽核或資安單位確認，避免負責人自己確認
+  {const aud=d.owners[4]||d.owners[2]||d.owners[0]||"稽核室";
+    [...Object.values(p.controls),...Object.values(p.clauses)].forEach(v=>{if(v.status===3){v.verifier=v.owner===aud?(d.owners[0]||"資安小組"):aud;v.verifiedAt="2026-09-15"}})}
+  p.criteria=presetCriteria(d.criteria||"four");p.criteriaOk=true;p.identOk=true;p.identBy=d.owners[4]||d.owners[0]||"資安小組";p.identAt="2026-08-01";p.doc=sanitizeDoc(d.doc);
   p.risks=(d.risks||[]).map(([ci,asset,cia,ow,l,i,treat,rl,ri,accepted,plan],k)=>{const c=CASES[ci];
     return {...blankRisk("R-"+String(k+1).padStart(3,"0")),title:c.t,threat:c.s,asset,cia,owner:ow>=0?d.owners[ow]:"",l,i,treat,rl,ri,accepted,plan,
       controls:treat==="mitigate"?c.r.filter(x=>ANNEX_MAP[x]&&!na.has(x)):[]}});
@@ -902,7 +905,7 @@ function renderAnnex(){
       <details class="panel lcwrap" ${lcOpen?"open":""} id="lcWrap"><summary><b>依產品／服務生命週期檢視</b><span class="note">從需求到退休，每個階段該注意哪些控制措施。階段依 ISO/IEC 24748 的生命週期概念整理，與控制措施的對應為本工具歸納，非標準規定；與附錄 A.8.25「安全開發生命週期」最直接相關。點階段可篩選下方清單</span></summary><div id="lcStrip"></div></details>
       <div class="filters">
         <div class="seg" id="themeSeg"><button data-th="all" aria-pressed="true">全部</button>${THEMES.map(t=>`<button data-th="${t.id}" aria-pressed="false">A.${t.id} ${t.name}</button>`).join("")}</div>
-        <select id="stFilter" aria-label="狀態篩選"><option value="all">所有狀態</option><option value="undec">未決定適用性</option><option value="notimpl">適用但未實施</option><option value="N">不適用</option>${STATUS.map(s=>`<option value="${s.v}">${s.label}</option>`).join("")}<option value="new">2022 新增</option><option value="noreason">不適用但未填理由</option><option value="noevid">已驗證但未填證據位置</option><option value="noevany">已實施但未填證據位置</option><option value="focus">產業建議重點</option><option value="nacand">可能不適用候選</option><option value="risk">有風險引用</option><option value="riskissue">風險連動待確認</option></select>
+        <select id="stFilter" aria-label="狀態篩選"><option value="all">所有狀態</option><option value="undec">未決定適用性</option><option value="notimpl">適用但未實施</option><option value="N">不適用</option>${STATUS.map(s=>`<option value="${s.v}">${s.label}</option>`).join("")}<option value="new">2022 新增</option><option value="noreason">不適用但未填理由</option><option value="noevid">已驗證但未填證據位置</option><option value="noevany">已實施但未填證據位置</option><option value="verissue">已驗證但未記錄確認人或自我確認</option><option value="focus">產業建議重點</option><option value="nacand">可能不適用候選</option><option value="risk">有風險引用</option><option value="riskissue">風險連動待確認</option></select>
         <input id="qFilter" class="grow" type="search" placeholder="篩選編號、名稱或負責人">
         <button class="btn primary" id="xlsBtn" data-tip="正式文件格式，8 欄＋公式統計，可直接提供稽核">匯出稽核用 SoA</button><button class="btn" id="xlsFull" data-tip="含產業建議、關聯風險、風險登錄表、連動檢查等工作資訊">匯出工作底稿</button>
       </div>
@@ -958,6 +961,7 @@ function renderAnnexRows(){
     if(filt.status==="focus"&&!FM[c.code])return false;
     if(filt.status==="noreason"&&!missingReason(v))return false;
     if(filt.status==="noevid"&&!(v.app==="Y"&&v.status===3&&!String(v.evidence||"").trim()))return false;
+    if(filt.status==="verissue"&&!(v.app==="Y"&&v.status===3&&(!String(v.verifier||"").trim()||selfVerified(v))))return false;
     if(filt.status==="noevany"&&!(v.app==="Y"&&v.status>=2&&!String(v.evidence||"").trim()))return false;
     if(filt.status==="nacand"&&!NAC[c.code])return false;
     if(filt.status==="risk"&&!RBC[c.code])return false;
@@ -1508,6 +1512,7 @@ function openDrawer(code,fromList,trail){
       <div><dt>實施方式</dt><dd><textarea id="dImpl" rows="2" placeholder="如何落實，例如依哪份程序、由誰執行">${esc(v.impl||"")}</textarea></dd></div>`:""}
       <div><dt>執行狀態</dt><dd><select id="dStatus">${STATUS.map(s=>`<option value="${s.v}" ${s.v===v.status?"selected":""}>${s.label}</option>`).join("")}</select></dd></div>
       <div><dt>負責人</dt><dd><input id="dOwner" data-owner autocomplete="off" value="${esc(v.owner)}" placeholder="從名單選擇或輸入新名字"></dd></div>
+      <div id="dVerRow" ${v.status===3?"":"hidden"}><dt>確認人／確認日期</dt><dd><div class="r2x"><input id="dVer" data-owner autocomplete="off" value="${esc(v.verifier||"")}" placeholder="確認證據的人，最好不是負責人" aria-label="確認人"><input id="dVerAt" value="${esc(v.verifiedAt||"")}" placeholder="例如 2026-10-30" aria-label="確認日期"></div><small id="dVerHint" class="saved"></small></dd></div>
       <div><dt>證據位置</dt><dd><input id="dEv" value="${esc(v.evidence)}" placeholder="例如：\\\\fileserver\\ISMS\\${esc(code)}"></dd></div>
     </dl>
     ${relatedDocsHTML(code)}
@@ -1519,12 +1524,17 @@ function openDrawer(code,fromList,trail){
         ${b.others.length?`<div class="rec"><b>也對應到</b><div class="refs">${b.others.map(refChip).join("")}</div></div>`:""}
         <button class="linkbtn" data-casego="${esc(b.t)}">在案例搜尋中查看 →</button></div></div>`}).join("")||`<p class="note">目前沒有內建案例對應到這一項。</p>`}</div>
   </aside>`;
-  const FIELDS={dApp:"app",dReason:"reason",dImpl:"impl",dStatus:"status",dOwner:"owner",dEv:"evidence"};
+  const FIELDS={dApp:"app",dReason:"reason",dImpl:"impl",dStatus:"status",dOwner:"owner",dEv:"evidence",dVer:"verifier",dVerAt:"verifiedAt"};
+  /* 已驗證時記錄確認人與日期；確認人和負責人相同時提醒，稽核會視為自我確認 */
+  const syncVer=()=>{const row=$("#dVerRow");if(!row)return;row.hidden=v.status!==3;
+    if(v.status===3&&!v.verifiedAt){v.verifiedAt=todayStr();const d=$("#dVerAt");if(d)d.value=v.verifiedAt;saveSoon()}
+    const h=$("#dVerHint");if(h){const self=selfVerified(v);h.textContent=!String(v.verifier||"").trim()?"沒有記錄確認人時，稽核準備會列為觀察":self?"確認人與負責人相同，稽核會視為自我確認，建議由其他人確認":"";h.classList.toggle("warn",self)}};
   const refreshHist=()=>{const h=$("#dHist");if(h)h.innerHTML=historyHTML(((cur()&&cur().log)||[]).filter(e=>e.c===code).slice(-10).reverse(),false)};
   const syncWarn=()=>{const r=$("#dReason");if(!r)return;const miss=missingReason(v);r.classList.toggle("warn",miss);$("#dReasonHint").hidden=!miss};
   Object.entries(FIELDS).forEach(([id,f])=>{const el=$("#"+id);if(!el)return;
-    const fn=()=>{if(setField(code,f,el.value)){syncWarn();refreshHist();const t=$("#dTrace");if(t)t.innerHTML=traceHTML(traceChain(cur(),"ctl",code))}};
+    const fn=()=>{if(setField(code,f,f==="verifier"?el.value.trim():el.value)){syncWarn();syncVer();refreshHist();const t=$("#dTrace");if(t)t.innerHTML=traceHTML(traceChain(cur(),"ctl",code))}};
     el.addEventListener(el.tagName==="SELECT"?"change":"input",fn)});
+  syncVer();
   host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>{lastList=null;closeDrawer()}));
   const back=$("#dBack");if(back)back.addEventListener("click",()=>{renderOverviewQuiet();openList(lastList)});
   host.querySelectorAll("[data-casetoggle]").forEach(b=>b.addEventListener("click",()=>{const body=$("#rc"+b.dataset.casetoggle);const open=body.hidden;body.hidden=!open;b.setAttribute("aria-expanded",String(open))}));
@@ -1621,7 +1631,7 @@ function identCoverageHTML(p){
       ${sug.map((s,i)=>`<button class="chip" data-rfadd="${i}" data-tip="${esc("對應："+s.why)}">＋ ${esc(s.title)}</button>`).join("")}
       ${sug.length>1?`<button class="btn" data-rfadd="all">全部加入（${sug.length}）</button>`:""}</div>`:""}
     <p class="note">稽核會確認風險清單涵蓋驗證範圍內的主要資產與流程，實務上通常有數十項，只有幾項很難說明已完整識別。確認範圍內的人員、資訊、系統、實體環境與委外廠商都檢視過後再按確認。</p>
-    <div><button class="btn ${p.identOk?"":"primary"}" data-rfact="identok">${p.identOk?"取消確認":"確認風險識別完成"}</button>${p.identOk?` <span class="rstate ok">已確認涵蓋範圍</span>`:""}</div>
+    <div class="identok">${p.identOk?"":`<input id="rfIdentBy" data-owner autocomplete="off" placeholder="確認人，例如資安小組召集人" aria-label="確認人" value="${esc(p.identBy||"")}">`}<button class="btn ${p.identOk?"":"primary"}" data-rfact="identok">${p.identOk?"取消確認":"確認風險識別完成"}</button>${p.identOk?` <span class="rstate ok">已確認涵蓋範圍${p.identBy?`（${esc(p.identBy)}${p.identAt?"，"+esc(p.identAt):""}）`:"（沒有記錄確認人）"}</span>`:""}</div>
   </div>`;
 }
 function rfInfoHTML(x){
@@ -1834,7 +1844,9 @@ function renderRisks(){
     const y=window.scrollY;renderRisks();window.scrollTo(0,y);
     toast(added.length>1?`已加入 ${added.length} 項風險（${added[0].id}–${added[added.length-1].id}），請指定擁有者並評分`:`已加入 ${added[0].id}「${added[0].title}」，請指定擁有者並評分`)}));
   $("#view-risks").querySelectorAll("[data-rfact]").forEach(b=>b.addEventListener("click",()=>{const a=b.dataset.rfact;if(a==="scopeedit"){ctxScopeEdit=true;const y=window.scrollY;renderRisks();window.scrollTo(0,y);const i=$("#rfScope");if(i){i.focus({preventScroll:true});i.select()}return}
-    if(a==="scope"){const p=cur(),v=$("#rfScope").value.trim();p.scope=v;ctxScopeEdit=false;touchRisk();const y=window.scrollY;renderRisks();window.scrollTo(0,y);toast(v?"已更新驗證範圍":"已清除驗證範圍");return}if(a==="identok"){const p=cur();p.identOk=!p.identOk;touchRisk();const y=window.scrollY;renderRisks();window.scrollTo(0,y);toast(p.identOk?"已確認風險識別完成":"已取消確認");return}if(a==="new")openRiskPicker();else if(a==="xls")exportExcel();else openCriteriaDrawer()}));
+    if(a==="scope"){const p=cur(),v=$("#rfScope").value.trim();p.scope=v;ctxScopeEdit=false;touchRisk();const y=window.scrollY;renderRisks();window.scrollTo(0,y);toast(v?"已更新驗證範圍":"已清除驗證範圍");return}if(a==="identok"){const p=cur();p.identOk=!p.identOk;
+      if(p.identOk){const by=(($("#rfIdentBy")||{}).value||"").trim();if(by)p.identBy=by;else delete p.identBy;p.identAt=todayStr()}else{delete p.identBy;delete p.identAt}
+      touchRisk();const y=window.scrollY;renderRisks();window.scrollTo(0,y);toast(p.identOk?"已確認風險識別完成":"已取消確認");return}if(a==="new")openRiskPicker();else if(a==="xls")exportExcel();else openCriteriaDrawer()}));
   $("#view-risks").querySelectorAll("[data-rstage]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.rstage,y=window.scrollY;riskView.stage=riskView.stage===id?null:id;riskView.cell=null;riskView.due=null;renderRisks();
     // 不捲動頁面：說明框就在流程圖下方，清單的篩選結果往下看即可
     window.scrollTo(0,y);const nb=document.querySelector(`[data-rstage="${id}"]`);if(nb)nb.focus({preventScroll:true})}));

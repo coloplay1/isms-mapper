@@ -88,9 +88,10 @@ function sanitizeProject(raw){
   for(const [code,v] of Object.entries(raw.controls)){ if(!ANNEX_MAP[code]||!isObj(v))continue;
     p.controls[code]={app:["","Y","N"].includes(v.app)?v.app:"",status:st(v.status),owner:str(v.owner,60),evidence:str(v.evidence,300),reason:str(v.reason,500)};
     if(v.impl)p.controls[code].impl=str(v.impl,500);
-    if(/^\d{4}-\d{2}-\d{2}$/.test(v.checked||""))p.controls[code].checked=v.checked }   // 最近一次抽查確認證據的日期
+    if(/^\d{4}-\d{2}-\d{2}$/.test(v.checked||""))p.controls[code].checked=v.checked;
+    keepVerifier(p.controls[code],v) }   // 最近一次抽查確認證據的日期
   if(isObj(raw.clauses))for(const [code,v] of Object.entries(raw.clauses)){ if(!CLAUSE_MAP[code]||!isObj(v))continue;
-    p.clauses[code]={status:st(v.status),owner:str(v.owner,60),evidence:str(v.evidence,300)} }
+    p.clauses[code]={status:st(v.status),owner:str(v.owner,60),evidence:str(v.evidence,300)};keepVerifier(p.clauses[code],v) }
   p.log=Array.isArray(raw.log)?raw.log.filter(e=>isObj(e)&&CODE_OK.has(e.c)&&FIELD_LABEL[e.f]).slice(-3000)
     .map(e=>({t:Number(e.t)||0,c:e.c,f:e.f,from:typeof e.from==="number"||typeof e.from==="boolean"?e.from:str(e.from,500),to:typeof e.to==="number"||typeof e.to==="boolean"?e.to:str(e.to,500)})):[];
   const seen=new Set();
@@ -101,6 +102,7 @@ function sanitizeProject(raw){
   const sc=sanitizeScale(raw.scale);if(sc)p.scale=sc;
   // 準則是否經使用者確認（新專案帶入的預設值不算）；舊版專案與 Excel 匯入有準則或風險時視為已確認
   p.identOk=raw.identOk===true;
+  if(p.identOk){const by=str(raw.identBy,60).trim();if(by)p.identBy=by;if(/^\d{4}-\d{2}-\d{2}$/.test(raw.identAt||""))p.identAt=raw.identAt}   // 誰在什麼時候確認風險識別完成
   p.archived=raw.archived===true;   // 封存（唯讀）：保留當年度的完整狀態   /* 風險識別完整性由使用者確認，工具無法判斷清單是否涵蓋整個範圍 */
   p.criteriaOk=typeof raw.criteriaOk==="boolean"?raw.criteriaOk:!!(sanitizeCriteria(raw.criteria)||(Array.isArray(raw.risks)&&raw.risks.length));
   p.doc=sanitizeDoc(raw.doc);
@@ -113,6 +115,9 @@ function sanitizeProject(raw){
   return p;
 }
 
+/* 已驗證的確認人與日期：確認證據的人最好不是負責人本人（稽核的獨立性） */
+function keepVerifier(dst,v){const by=str(v.verifier,60).trim();if(by)dst.verifier=by;if(/^\d{4}-\d{2}-\d{2}$/.test(v.verifiedAt||""))dst.verifiedAt=v.verifiedAt}
+function selfVerified(v){const a=String((v&&v.verifier)||"").trim(),b=String((v&&v.owner)||"").trim();return !!a&&a===b}
 function missingReason(v){return v.app==="N"&&!String(v.reason||"").trim()}
 
 const splitReasons=v=>String(v||"").split(/[；;]/).map(x=>x.trim()).filter(Boolean);
