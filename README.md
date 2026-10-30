@@ -78,7 +78,7 @@
 
 - **我負責**：需求定義（從導入 ISMS 時遇到的實際問題出發）、ISMS 內容與條款對應、功能設計與取捨（例如建議只標示不自動判定、風險與 SoA 連動規則）、實際操作測試並提出修正
 - **AI 負責**：撰寫程式碼、單元測試與文件範本初稿
-- **驗證方式**：121 項單元測試，由 GitHub Actions 自動執行
+- **驗證方式**：159 項單元測試與畫面冒煙測試，由 GitHub Actions 自動執行
 
 ## 檔案結構
 
@@ -98,6 +98,7 @@ vendor/               第三方元件（write-excel-file、read-excel-file）
 templates/            Excel 範本（空白版、填寫範例、權限表單）
 templates/docs/       ISMS 文件範本（手冊、政策、程序的 Word 檔與表單、紀錄的 Excel 檔）
 tests/                單元測試
+ui/                   畫面冒煙測試（Playwright）
 ```
 
 要新增案例、同義詞、產業或法規，只需要改 `js/data/` 內的資料，不必動程式。改完執行測試，可以檢查有沒有引用到不存在的控制措施編號。
@@ -134,6 +135,14 @@ npm test
 | `tests/guide.test.js` | 下一步建議的條件與排序、導入進度各步驟的完成判斷、建議與步驟的對應 |
 | `tests/version.test.js` | `index.html` 載入檔案的版本號、CHANGELOG 最新版與 `package.json` 一致，CHANGELOG 格式正確 |
 | `tests/backup.test.js` | 備份提醒的觸發條件與「明天再提醒」 |
+
+畫面冒煙測試（`ui/smoke.ui.cjs`）用 Chromium 實際開啟工具：建立新專案並切過每個分頁，逐一開啟所有範例公司的每個分頁、稽核準備子分頁與詳細頁，並在手機寬度檢查沒有左右捲動；出現任何 JavaScript 錯誤或 CSP 違規就失敗。需要另外安裝 Playwright：
+
+```bash
+npm install --no-save playwright
+npx playwright install chromium
+npm run test:ui
+```
 
 每次推送到 GitHub 都會由 GitHub Actions 自動執行測試，結果顯示在本頁最上方的徽章。
 
