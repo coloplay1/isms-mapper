@@ -1547,7 +1547,7 @@ function openList(spec){
   else ({items,title,filter}=listItems(spec.scope,seg));
   const row=c=>{const v=isClause?cls(c.code):ctl(c.code);const b=isClause?"s"+v.status:bucket(v);
     const lab=isClause?STATUS[v.status].label:(SEG_LABEL[b]);
-    return `<button class="lrow" data-lopen="${c.code}"><span class="dot ${b==="na"?"na":b==="undec"?"undec":""}" style="${b.startsWith("s")?`background:var(--${b})`:""}"></span>
+    return `<button class="lrow ${(spec.seen||[]).includes(c.code)?"seen":""}" data-lopen="${c.code}"><span class="dot ${b==="na"?"na":b==="undec"?"undec":""}" style="${b.startsWith("s")?`background:var(--${b})`:""}"></span>
       <span class="mono">${isClause?"第 "+c.code+" 條":c.code}</span><span class="ln ${FM[c.code]?"fname":""}">${esc(c.name)}</span>
       <span class="lmeta">${isCo?"主責："+esc(v.owner||"未指定"):esc(v.owner||"")}${v.owner||isCo?"・":""}${lab}</span></button>`};
   const host=$("#drawerHost");
@@ -1556,6 +1556,7 @@ function openList(spec){
     <div class="code">${isClause?"管理系統條款":"附錄 A"}・${items.length} 項</div>
     <h2>${esc(title)}</h2>
     ${isClause?"":`<p class="note">${isCo?"這個單位協助執行、但不是主責的控制措施。":""}點任一項可查看詳情並更新狀態。</p>`}
+    ${spec.from&&!items.some(c=>c.code===spec.from)?`<p class="lgone" hidden>剛才查看的 <span class="mono">${esc(spec.from)}</span> 狀態已更新，不在這個清單了。</p>`:""}
     ${items.length?`<div class="llist">${items.map(row).join("")}</div>`:`<div class="empty">${emptyListMsg(seg)}</div>`}
     <div class="form" style="margin-top:16px">
       ${filter&&items.length?`<button class="btn primary" id="lGo">在附錄 A 中篩選這些項目</button>`:""}
@@ -1563,11 +1564,18 @@ function openList(spec){
       ${isClause?`<button class="btn primary" id="lGoCl">前往條款 4–10</button>`:""}
     </div></aside>`;
   host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>{lastList=null;closeDrawer()}));
-  host.querySelectorAll("[data-lopen]").forEach(b=>b.addEventListener("click",()=>openDrawer(b.dataset.lopen,true)));
+  host.querySelectorAll("[data-lopen]").forEach(b=>b.addEventListener("click",()=>{const a=host.querySelector("aside.drawer");
+    spec.from=b.dataset.lopen;spec.scroll=a?a.scrollTop:0;spec.seen=[...new Set([...(spec.seen||[]),b.dataset.lopen])];openDrawer(b.dataset.lopen,true)}));
+
   const go=$("#lGo");if(go)go.addEventListener("click",()=>{Object.assign(filt,filter);lastList=null;$("#drawerHost").innerHTML="";delete $("#view-annex").dataset.built;tab="annex";render();window.scrollTo(0,0)});
   const gu=$("#lGoUndec");if(gu)gu.addEventListener("click",()=>{Object.assign(filt,{theme:"all",status:"undec",q:""});lastList=null;$("#drawerHost").innerHTML="";delete $("#view-annex").dataset.built;tab="annex";render();window.scrollTo(0,0)});
   const gc=$("#lGoCl");if(gc)gc.addEventListener("click",()=>{lastList=null;$("#drawerHost").innerHTML="";tab="clauses";render();window.scrollTo(0,0)});
-  host.querySelector(".x").focus();
+  host.querySelector(".x").focus({preventScroll:true});
+  // 從詳細頁返回：回到原本的捲動位置，標出剛才看的那一項
+  if(spec.from){const a=host.querySelector("aside.drawer"),r=host.querySelector(`[data-lopen="${CSS.escape(spec.from)}"]`);
+    if(a)a.scrollTop=spec.scroll||0;
+    if(r){r.classList.add("lcur");if(a){const ar=a.getBoundingClientRect(),rr=r.getBoundingClientRect();if(rr.top<ar.top+60||rr.bottom>ar.bottom-20)r.scrollIntoView({block:"center"})}flashPanel(r)}
+    else{const gone=host.querySelector(".lgone");if(gone)gone.hidden=false}}
 }
 document.addEventListener("click",e=>{const b=e.target.closest("[data-colist]");if(b){e.preventDefault();e.stopPropagation();openList({co:b.dataset.colist})}},true);
 function chartHit(e){
