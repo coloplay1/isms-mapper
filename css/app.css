@@ -233,6 +233,8 @@ tr.focus td.code{box-shadow:inset 4px 0 0 var(--focus)}
 .rank li{display:flex;align-items:center;gap:8px}
 .rank .w{margin-left:auto;font-family:var(--font-mono);font-size:12px;color:var(--muted)}
 .empty{color:var(--muted);padding:24px;text-align:center;border:1px dashed var(--line);border-radius:var(--r)}
+.emptyacts{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+@media (max-width:760px){.tblempty{position:sticky;left:12px;width:calc(100vw - 72px);box-sizing:border-box}}
 /* checklist */
 .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
 .filters .grow{flex:1 1 180px}
