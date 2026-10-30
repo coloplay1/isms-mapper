@@ -125,6 +125,23 @@ test("送審確認單與自訂案例庫", async () => {
   await ctx.close();
 });
 
+test("清單點進項目再返回：回到原本位置並標出剛才查看的項目", async () => {
+  const { pg, ctx, errors } = await open();
+  await pg.click('[data-hpick="create"]');
+  await pg.fill("#hName", "返回測試");
+  await pg.click("#homeForm button.primary");
+  await pg.click('.oslg [data-lseg="undec"]');
+  const row = pg.locator('[data-lopen="A.5.20"]');
+  await row.scrollIntoViewIfNeeded();
+  const before = await pg.evaluate(() => document.querySelector("aside.drawer").scrollTop);
+  await row.click();
+  await pg.click("#dBack");
+  assert.equal(await pg.evaluate(() => document.querySelector("aside.drawer").scrollTop), before, "捲動位置不變");
+  assert.equal(await pg.locator(".lrow.lcur").getAttribute("data-lopen"), "A.5.20");
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
 test("手機寬度、深色模式：每個分頁都沒有左右捲動", async () => {
   const { pg, ctx, errors } = await open({ viewport: { width: 390, height: 844 }, colorScheme: "dark", isMobile: true, hasTouch: true });
   const wide = await pg.evaluate(TABS => {

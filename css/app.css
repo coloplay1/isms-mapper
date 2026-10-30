@@ -853,3 +853,7 @@ footer{display:flex;flex-wrap:wrap;gap:2px 12px;line-height:1.7}footer a{color:v
 .signoff .sum{margin:0 0 6px}.signoff .fine{font-size:9pt;color:#444;margin:6px 0 0}
 .signoff tr{break-inside:avoid}
 .oslg .zero,.lg li.zero{cursor:default;opacity:.55}
+.lrow.lcur{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent);background:var(--surface)}
+.lrow.seen .lmeta::after{content:"・已查看";color:var(--accent)}
+.lrow.flash{animation:flashring 2.4s ease-out}
+.lgone{margin:0 0 10px;font-size:13px;padding:8px 12px;border-radius:6px;background:var(--surface2);border-left:3px solid var(--accent)}
