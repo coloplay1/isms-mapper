@@ -13,10 +13,10 @@ const NAMES = ['THEMES', 'ANNEX', 'ANNEX_MAP', 'CLAUSES', 'CLAUSE_MAP', 'CASES',
   'nextRiskId', 'risksByControl', 'riskChecks', 'sanitizeRisk', 'POLICIES', 'CRITERIA_PRESETS', 'presetCriteria', 'sanitizeCriteria',
   'riskCriteria', 'policyOf', 'criteriaText', 'STATUS_ALIAS', 'REASON_CODES', 'sanitizeDoc', 'docLine', 'parseDocLine', 'reasonCodes',
   'parseControlCodes', 'buildWorkbook', 'buildAuditWorkbook', 'importWorkbook', 'parseCriteria', 'normHead', 'mapColumns', 'IMPORT_COLS',
-  'DOCS', 'DOC_LAYERS', 'DOC_REQUIREMENTS', 'DOC_MAP', 'sanitizeCase', 'nextCaseId', 'parseRefCodes', 'splitKeywords',
+  'DOCS', 'DOC_LAYERS', 'DOC_REQUIREMENTS', 'DOC_MAP', 'sanitizeCase', 'nextCaseId', 'exportCaseLib', 'mergeCaseLib', 'CASE_LIB_MAX', 'parseRefCodes', 'splitKeywords',
   'snapshotProject', 'sanitizeBaseline', 'bumpVersion', 'nextPeriod', 'rolloverProject', 'compareProjects', 'buildComparisonWorkbook',
   'ACTION_TYPES', 'ACTION_STATUS', 'blankAction', 'sanitizeAction', 'nextActionId', 'actionOverdue', 'actionChecks', 'actionStats',
-  'nextSteps', 'guideFacts', 'roadmapSteps', 'roadmapItems', 'docNeed', 'sanitizeScale', 'SCALE_REF', 'LIFECYCLE', 'LIFECYCLE_MAP', 'riskStages', 'caseBrief', 'planDue', 'PLAN_SOON_DAYS', 'auditReadiness', 'traceChain', 'AUDIT_RULES', 'SPOT_STALE_DAYS', 'evidenceAge', 'spotCandidates', 'pickSpot', 'sanitizeSpots', 'nextSpotId', 'spotStats', 'selfVerified', 'riskSanity', 'reverseLookup', 'spotEvExample', 'coList', 'normCo'];
+  'nextSteps', 'guideFacts', 'roadmapSteps', 'roadmapItems', 'docNeed', 'sanitizeScale', 'SCALE_REF', 'LIFECYCLE', 'LIFECYCLE_MAP', 'riskStages', 'caseBrief', 'planDue', 'PLAN_SOON_DAYS', 'auditReadiness', 'signoffSheet', 'SIGNOFF_MANUAL', 'traceChain', 'AUDIT_RULES', 'SPOT_STALE_DAYS', 'evidenceAge', 'spotCandidates', 'pickSpot', 'sanitizeSpots', 'nextSpotId', 'spotStats', 'selfVerified', 'riskSanity', 'reverseLookup', 'spotEvExample', 'coList', 'normCo'];
 
 function load() {
   const src = FILES.map(f => `// ---- ${f}\n` + fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');

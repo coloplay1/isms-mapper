@@ -72,3 +72,24 @@ test('確認的獨立性：已驗證沒記錄確認人、或由負責人自己�
   assert.equal(A.traceChain(p, 'ctl', 'A.5.16', NOW).nodes.find(n => n.k === 'impl').state, 'warn');
   assert.equal(byKey(A.auditReadiness({ ...A.blankProject('y', '') }, NOW)).verify.grade, 'na');
 });
+
+test('送審確認單：系統判斷直接沿用準備度，人工確認只列工具看不到的事項', () => {
+  const p = { ...A.blankProject('新', ''), criteria: A.presetCriteria('four'), criteriaOk: false };
+  const sh = A.signoffSheet(p, NOW);
+  const items = A.auditReadiness(p, NOW).flatMap(s => s.items);
+  assert.deepEqual(sh.rows.map(r => r.key + ':' + r.grade), items.map(x => x.key + ':' + x.grade), '每一項與準備度一致');
+  assert.equal(sh.count.ok + sh.count.obs + sh.count.nc + sh.count.na, items.length);
+  assert.equal(sh.ready, false, '有可能不符合的項目時不算準備好');
+  assert.equal(sh.spot, null);
+  const auto = new Set(Object.keys(A.AUDIT_RULES));
+  assert.ok(A.SIGNOFF_MANUAL.length >= 4 && A.SIGNOFF_MANUAL.every(m => m.text && m.clause && !auto.has(m.id)), '人工項目不重複系統判斷的項目');
+});
+
+test('送審確認單：帶出最近一次模擬抽查的結果', () => {
+  const p = { ...A.blankProject('新', ''), spots: [
+    { id: 'S-001', date: '2026-05-01', items: [{ result: 'ok' }] },
+    { id: 'S-002', date: '2026-06-01', items: [{ result: 'ok' }, { result: 'fail' }, { result: '' }] }] };
+  const sp = A.signoffSheet(p, NOW).spot;
+  assert.equal(sp.id, 'S-002');
+  assert.deepEqual([sp.total, sp.ok, sp.fail, sp.pending], [3, 1, 1, 1]);
+});

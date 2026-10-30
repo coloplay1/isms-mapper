@@ -269,6 +269,33 @@ function sanitizeCase(raw){
   const r=(Array.isArray(raw.r)?raw.r:parseRefCodes(raw.r)).filter(c=>ANNEX_MAP[c]||CLAUSE_MAP[c]).slice(0,12);
   return {id:raw.id,t,s:str(raw.s,300),k:[...new Set(k)],r:[...new Set(r)],w:str(raw.w,300),e:str(raw.e,300),custom:true};
 }
+/* 自訂案例庫：匯出成獨立檔案，帶到其他專案重複使用（不含編號，匯入時重新編號） */
+const CASE_LIB_KIND="case-library",CASE_LIB_MAX=300;
+function exportCaseLib(cases,now){
+  return {app:"isms-mapper",kind:CASE_LIB_KIND,v:1,exported:new Date(now||Date.now()).toISOString().slice(0,10),
+    cases:(cases||[]).map(c=>({t:c.t,s:c.s||"",k:[...(c.k||[])],r:[...(c.r||[])],w:c.w||"",e:c.e||""}))};
+}
+/* 讀進案例庫或專案檔裡的自訂案例，加到專案：標題相同的視為重複而略過；回傳新增、重複、無效的數量 */
+function mergeCaseLib(p,raw){
+  if(!isObj(raw))throw new Error("格式不正確");
+  if(raw.app&&raw.app!=="isms-mapper")throw new Error("不是本工具的檔案");
+  const src=Array.isArray(raw.cases)?raw.cases:isObj(raw.project)&&Array.isArray(raw.project.cases)?raw.project.cases:null;
+  if(!src)throw new Error("檔案裡沒有自訂案例");
+  if(!Array.isArray(p.cases))p.cases=[];
+  const key=t=>String(t||"").replace(/\s+/g,"").toLowerCase();
+  const seen=new Set(p.cases.map(c=>key(c.t)));
+  const out={added:0,dup:0,bad:0,full:0};
+  for(const x of src.slice(0,CASE_LIB_MAX*2)){
+    if(!isObj(x)){out.bad++;continue}
+    const c=sanitizeCase({...x,id:nextCaseId(p)});
+    if(!c||!c.r.length){out.bad++;continue}
+    if(seen.has(key(c.t))){out.dup++;continue}
+    if(p.cases.length>=CASE_LIB_MAX){out.full++;continue}
+    if(!c.k.length)c.k=[c.t];
+    p.cases.push(c);seen.add(key(c.t));out.added++;
+  }
+  return out;
+}
 function nextCaseId(p){
   const n=Math.max(0,...((p&&p.cases)||[]).map(c=>Number(String(c.id).replace(/^C-/,""))||0));
   return "C-"+String(n+1).padStart(3,"0");

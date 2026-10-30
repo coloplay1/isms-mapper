@@ -725,6 +725,7 @@ function renderAudit(){
   $("#view-audit").innerHTML=`<h2>稽核準備</h2>
   <div class="seg audseg" role="tablist" aria-label="稽核準備">${[["ready","準備度"],["trace","反向查詢"],["spot","模擬抽查"+(spotN0?`（進行中 ${spotN0}）`:"")]].map(([k,t])=>`<button role="tab" data-audv="${k}" aria-pressed="${auditView===k}">${t}</button>`).join("")}</div>
   ${auditView==="trace"?reverseHTML(p):auditView==="spot"?spotHTML(p):`<p class="lede" style="margin-top:14px">用驗證稽核的角度看同一份資料：第一階段看 ISMS 有沒有建立，第二階段抽樣看有沒有確實執行。標示為依常見稽核做法的參考判斷，實際結果依稽核員與驗證機構而定。</p>
+  <div class="audsign"><span><b>送審確認單</b>把下面的判斷結果整理成一頁，加上工具看不到的確認事項與簽名欄，列印後由資安窗口與管理代表簽名留存。</span><button class="btn" id="audPrint">列印送審確認單</button></div>
   <p class="audwarn">「資料齊全」只代表工具裡填的資料沒有缺口。工具看不到證據檔案本身，稽核前請抽查證據位置的檔案確實存在、而且是最新的。</p>
   <div class="audgrid">${st.map(s=>{const shown=s.items.filter(x=>x.grade!=="na"),nd=s.items.filter(x=>x.grade==="na");
     return `<section class="audcol"><div class="audch"><h3>${esc(s.name)}</h3><span class="audsum">${auditSum(s)}</span></div><p class="note" style="margin:0 0 10px">${esc(s.desc)}</p>
@@ -733,6 +734,41 @@ function renderAudit(){
     </section>`}).join("")}</div>
 `}`;
   if(auditView==="trace"){const i=$("#rvQ");if(i&&rvFocus){i.focus();i.setSelectionRange(i.value.length,i.value.length)}}
+  const pb=$("#audPrint");if(pb)pb.addEventListener("click",printSignoff);
+}
+/* ---------- 送審確認單（列印） ---------- */
+function appVersion(){const m=(document.querySelector('script[src*="js/app.js"]')||{}).src?.match(/[?&]v=([\d.]+)/);return m?m[1]:""}
+function signoffHTML(p,now){
+  const sh=signoffSheet(p,now),d=new Date(now||Date.now()),ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  const mark={ok:"✓ 資料齊全",obs:"△ 可能列為觀察",nc:"✕ 可能不符合",na:"－ 尚無資料"};
+  const row=r=>`<tr class="g-${r.grade}"><td>${esc(r.title)}</td><td class="cl">${esc(r.clause)}</td><td class="g">${mark[r.grade]}</td><td>${r.grade==="ok"?"":esc(r.detail.join("；"))}</td></tr>`;
+  const stage=(id,name)=>`<tr class="st"><th colspan="4">${esc(name)}</th></tr>${sh.rows.filter(r=>r.stage===id).map(row).join("")}`;
+  const names=[...new Set(sh.rows.map(r=>r.stage))].map(id=>[id,sh.rows.find(r=>r.stage===id).stageName]);
+  const c=sh.count,sp=sh.spot;
+  return `<article class="signoff">
+    <header><h1>ISMS 驗證稽核送審確認單</h1>
+      <table class="meta"><tr><th>組織</th><td>${esc(p.org||"")}</td><th>產生日期</th><td>${ds}</td></tr>
+      <tr><th>專案</th><td>${esc(p.name||"")}</td><th>工具版本</th><td>ISMS 條款對照台 ${esc(appVersion())}</td></tr>
+      <tr><th>驗證範圍</th><td colspan="3">${esc(p.scope||"（未填寫）")}</td></tr></table></header>
+    <h2>一、系統判斷（依工具內資料自動產生）</h2>
+    <p class="sum">資料齊全 ${c.ok} 項・可能列為觀察 ${c.obs} 項・可能不符合 ${c.nc} 項・尚無資料 ${c.na} 項</p>${c.nc?`<p class="warnl">建議先處理「可能不符合」的 ${c.nc} 項再送審。</p>`:""}
+    <table class="res"><thead><tr><th style="width:25%">項目</th><th style="width:15%">條款</th><th style="width:17%">判斷</th><th>待處理</th></tr></thead>
+      <tbody>${names.map(([id,n])=>stage(id,n)).join("")}</tbody></table>
+    <p class="fine">模擬抽查：${sp?`最近一次 ${esc(sp.id)}（${esc(sp.date)}）抽查 ${sp.total} 項，確認 ${sp.ok} 項、找不到 ${sp.fail} 項${sp.pending?`、尚未查 ${sp.pending} 項`:""}`:"尚未進行"}</p>
+    <h2>二、人工確認（工具無法判斷，請確認後勾選）</h2>
+    <table class="man">${sh.manual.map(m=>`<tr><td class="box">☐</td><td>${esc(m.text)}</td><td class="cl">${esc(m.clause)}</td></tr>`).join("")}</table>
+    <section class="keep"><h2>三、簽核</h2>
+    <table class="sign"><tr><th>確認人（資安窗口）</th><td></td><th>日期</th><td></td></tr><tr><th>核准（管理代表）</th><td></td><th>日期</th><td></td></tr></table>
+    <p class="fine">「系統判斷」依常見稽核做法整理，僅代表工具內填寫的資料沒有缺口，不代表驗證結果；實際判定依稽核員與驗證機構而定。</p></section>
+  </article>`;
+}
+function printSignoff(){
+  const p=cur();if(!p)return;
+  let host=$("#printHost");if(!host){host=document.createElement("div");host.id="printHost";document.body.appendChild(host)}
+  host.innerHTML=signoffHTML(p);document.body.classList.add("printing");
+  const done=()=>{document.body.classList.remove("printing");host.innerHTML="";window.removeEventListener("afterprint",done)};
+  window.addEventListener("afterprint",done);
+  try{window.print()}catch(e){done();toast("這個檢視無法列印，請在瀏覽器中開啟")}
 }
 /* ---------- 反向查詢 ---------- */
 let auditView="ready",rvMode="person",rvQ="",rvFocus=false;
@@ -908,7 +944,8 @@ function renderSearch(){
     $("#sInput").addEventListener("input",e=>{searchQ=e.target.value;renderSearchResult()});
     v.addEventListener("click",e=>{const h=e.target.closest("[data-hint]");if(h){$("#sInput").value=h.dataset.hint;searchQ=h.dataset.hint;renderSearchResult()}
       const n=e.target.closest("[data-newcase]");if(n){openCaseDrawer(null)}
-      const ed=e.target.closest("[data-editcase]");if(ed){openCaseDrawer(ed.dataset.editcase)}});
+      const ed=e.target.closest("[data-editcase]");if(ed){openCaseDrawer(ed.dataset.editcase)}
+      const lb=e.target.closest("[data-caselib]");if(lb){lb.dataset.caselib==="out"?exportCases():importCases()}});
     if(!searchQ){searchQ="員工離職";$("#sInput").value=searchQ}
   }
   renderSearchResult();
@@ -919,7 +956,26 @@ function renderCustomBar(){
   el.innerHTML=`<div class="cbar">${p?`<button class="btn" data-newcase>＋ 新增自訂案例</button>
     ${list.length?`<span class="saved">本專案的自訂案例（${list.length}）：</span>${list.slice(0,12).map(c=>`<button class="chip custom" data-hint="${esc(c.t)}">${esc(c.t)}</button>`).join("")}${list.length>12?`<span class="saved">…</span>`:""}`
       :`<span class="saved">自訂案例是組織自己的情境範本（例如公司特有的系統或流程），搜尋時會一起比對，新增風險時也能挑選；實際的風險評估仍記在風險評鑑。</span>`}`
-    :`<span class="saved">開啟或建立專案後，可以新增組織自己的情境案例。</span>`}</div>`;
+    :`<span class="saved">開啟或建立專案後，可以新增組織自己的情境案例。</span>`}
+    ${p?`<span class="cblib">${list.length?`<button class="btn" data-caselib="out" data-tip="存成案例庫檔案，可匯入其他專案重複使用">匯出案例庫</button>`:""}${p.archived||p.sample?"":`<button class="btn" data-caselib="in" data-tip="從案例庫檔案或其他專案的專案檔加入自訂案例，標題相同的會略過">匯入案例庫</button>`}</span>`:""}</div>`;
+}
+function exportCases(){
+  const p=cur(),list=customCases();if(!p||!list.length)return;
+  const name=(p.org||p.name||"專案").replace(/[\\/:*?"<>|]+/g,"_").slice(0,40);
+  saveFile(`自訂案例庫_${name}_${list.length}個.json`,JSON.stringify(exportCaseLib(list),null,2),"application/json");
+}
+function importCases(){
+  const p=cur();if(!p||p.archived||p.sample)return;
+  const inp=document.createElement("input");inp.type="file";inp.accept=".json,application/json";
+  inp.addEventListener("change",()=>{const f=inp.files[0];if(!f)return;
+    if(f.size>MAX_IMPORT_BYTES){toast("檔案超過 5 MB");return}
+    const rd=new FileReader();
+    rd.onload=()=>{let r;
+      try{r=mergeCaseLib(p,JSON.parse(rd.result))}catch(err){toast("無法匯入："+(err&&err.message&&/[\u4e00-\u9fff]/.test(err.message)?err.message:"請選擇案例庫或本工具的專案檔"));return}
+      if(r.added)touchRisk();renderSearchResult();
+      toast(`已加入 ${r.added} 個案例`+(r.dup?`，${r.dup} 個標題重複略過`:"")+(r.bad?`，${r.bad} 個格式不符略過`:"")+(r.full?`，${r.full} 個超過上限 ${CASE_LIB_MAX} 個`:""))};
+    rd.readAsText(f)});
+  inp.click();
 }
 function renderSearchResult(){
   renderCustomBar();

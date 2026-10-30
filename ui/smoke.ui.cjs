@@ -111,6 +111,20 @@ test("每家範例公司：每個分頁、稽核準備子分頁與詳細頁都�
   await ctx.close();
 });
 
+test("送審確認單與自訂案例庫", async () => {
+  const { pg, ctx, errors } = await open();
+  await pg.evaluate(() => { openProject("sample:audit", "audit"); window.print = () => { window.__printed = true; }; });
+  await pg.click("#audPrint");
+  assert.equal(await pg.evaluate(() => window.__printed), true, "呼叫列印");
+  const sheet = await pg.evaluate(() => $("#printHost").innerText);
+  assert.match(sheet, /送審確認單/);
+  assert.match(sheet, /簽核/);
+  await pg.evaluate(() => { tab = "search"; render(); });
+  assert.equal(await pg.locator('[data-caselib="in"]').count(), 0, "範例不能匯入案例庫");
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
 test("手機寬度、深色模式：每個分頁都沒有左右捲動", async () => {
   const { pg, ctx, errors } = await open({ viewport: { width: 390, height: 844 }, colorScheme: "dark", isMobile: true, hasTouch: true });
   const wide = await pg.evaluate(TABS => {
