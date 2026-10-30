@@ -852,3 +852,4 @@ footer{display:flex;flex-wrap:wrap;gap:2px 12px;line-height:1.7}footer a{color:v
 .signoff .sign th{width:22%;background:#f1f1f1;vertical-align:middle}.signoff .sign td{height:10mm}
 .signoff .sum{margin:0 0 6px}.signoff .fine{font-size:9pt;color:#444;margin:6px 0 0}
 .signoff tr{break-inside:avoid}
+.oslg .zero,.lg li.zero{cursor:default;opacity:.55}

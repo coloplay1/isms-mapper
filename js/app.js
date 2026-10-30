@@ -595,7 +595,7 @@ function stackBar(t,total,scope){
   return `<div class="stack ${scope?"live":""}">${SEGS.filter(s=>t[s.k]>0).map(s=>`<span class="${s.k==="na"?"na":s.k==="undec"?"undec":""}" style="flex:${t[s.k]};${s.k.startsWith("s")?`background:var(--${s.k})`:""}" data-tip="${s.label}：${t[s.k]} 項${scope?"・點擊查看":""}"${scope?` data-lseg="${s.k}"`:""}${sc}></span>`).join("")}</div>`;
 }
 function legendHTML(t){
-  return `<ul class="lg">${SEGS.map(s=>`<li data-lseg="${s.k}" data-lscope="all" tabindex="0" role="button" data-tip="點擊查看「${s.label}」的項目"><i class="${s.k==="na"?"na":s.k==="undec"?"undec":""}" style="${s.k.startsWith("s")?`background:var(--${s.k})`:""}"></i>${s.label}<b>${t?t[s.k]:""}</b></li>`).join("")}</ul>`;
+  return `<ul class="lg">${SEGS.map(s=>`<li ${t&&!t[s.k]?`class="zero"`:`data-lseg="${s.k}" data-lscope="all" tabindex="0" role="button" data-tip="點擊查看「${s.label}」的項目"`}><i class="${s.k==="na"?"na":s.k==="undec"?"undec":""}" style="${s.k.startsWith("s")?`background:var(--${s.k})`:""}"></i>${s.label}<b>${t?t[s.k]:""}</b></li>`).join("")}</ul>`;
 }
 function pdcaRing(){
   const ph=[["P","規劃"],["D","執行"],["C","檢查"],["A","改善"]];
@@ -876,7 +876,7 @@ function renderOverview(){
   const pct=c.app?Math.round(c.impl/c.app*100):0;
   const tAll=tally(ANNEX);
   const themeBars=THEMES.map(t=>{const list=ANNEX.filter(x=>x.theme===t.id);const tt=tally(list);const apl=list.length-tt.na-tt.undec;
-    return `<div class="brow"><div class="blab"><span>A.${t.id} ${t.name}</span><span class="mono">${tt.s2+tt.s3}/${apl}</span></div>${stackBar(tt,list.length,"theme:"+t.id)}</div>`}).join("");
+    return `<div class="brow"><div class="blab"><span>A.${t.id} ${t.name}</span><span class="mono">${apl?`${tt.s2+tt.s3}/${apl}`:tt.undec?`未決定 ${tt.undec}`:`${tt.s2+tt.s3}/${apl}`}</span></div>${stackBar(tt,list.length,"theme:"+t.id)}</div>`}).join("");
   // owners
   const om={};
   const coN={};
@@ -896,7 +896,7 @@ function renderOverview(){
     <section class="panel ovstrip" aria-label="整體狀況">
       <div class="osk"><b>${pct}%</b><span>適用項目已實施</span><small>${c.app} 項適用・${c.na} 項不適用</small>${c.undec?`<small class="warn">${c.undec} 項未決定適用性</small>`:""}<small><button class="linkbtn" data-goto="clauses">條款 4–10：${Math.round(CLAUSES.filter(x=>cls(x.code).status>=2).length/CLAUSES.length*100)}% 完成 →</button></small></div>
       <div class="osbar"><div class="blab"><span>整體狀態</span><span class="mono">點色塊可查看項目</span></div>${stackBar(tAll,93,"all")}
-        <div class="oslg">${SEGS.map(sg=>`<span data-lseg="${sg.k}" data-lscope="all" role="button" tabindex="0"><i class="${sg.k==="na"?"na":sg.k==="undec"?"undec":""}" style="${sg.k.startsWith("s")?`background:var(--${sg.k})`:""}"></i>${sg.label} <b>${tAll[sg.k]}</b></span>`).join("")}</div></div>
+        <div class="oslg">${SEGS.map(sg=>`<span ${tAll[sg.k]?`data-lseg="${sg.k}" data-lscope="all" role="button" tabindex="0"`:`class="zero"`}><i class="${sg.k==="na"?"na":sg.k==="undec"?"undec":""}" style="${sg.k.startsWith("s")?`background:var(--${sg.k})`:""}"></i>${sg.label} <b>${tAll[sg.k]}</b></span>`).join("")}</div></div>
       <div class="osth"><div class="blab osthh"><span>各主題進度</span><span class="mono">已實施／適用</span></div>${themeBars}</div>
     </section>
     ${nextCard(p)}
@@ -1069,7 +1069,9 @@ function renderAnnexRows(){
     if(q&&!norm(c.code+" "+c.name+" "+c.desc+" "+v.owner).includes(q))return false;
     return true});
   requestAnimationFrame(()=>document.querySelectorAll("#annexBody textarea[data-reason]").forEach(fitReason));
-  $("#annexBody").innerHTML=list.map(annexRow).join("")||`<tr><td colspan="7"><div class="empty">沒有符合篩選條件的控制措施。</div></td></tr>`;
+  const filtered=filt.theme!=="all"||filt.status!=="all"||filt.q||filt.lc;
+  $("#annexBody").innerHTML=list.map(annexRow).join("")||`<tr><td colspan="7"><div class="empty tblempty"><p style="margin:0 0 12px">沒有符合篩選條件的控制措施。${filtered&&undecN()&&filt.status!=="undec"?`還有 ${undecN()} 項未決定適用性，可以先判定適用性。`:""}</p>${filtered?`<div class="emptyacts"><button class="btn primary" id="annexClear">清除篩選，顯示全部 93 項</button></div>`:""}</div></td></tr>`;
+  const ac=$("#annexClear");if(ac)ac.addEventListener("click",()=>{Object.assign(filt,{theme:"all",status:"all",q:"",lc:""});delete $("#view-annex").dataset.built;render()});
   $("#annexCount").textContent=`顯示 ${list.length} / 93 項`;
 }
 /* 理由欄自動換行並依內容調整高度，長理由不會被截斷 */
@@ -1531,6 +1533,11 @@ function listItems(scope,seg){
   const items=seg?base.filter(c=>bucket(ctl(c.code))===seg):base;
   return {items,title:title+(seg?`・${SEG_LABEL[seg]}`:""),filter:f};
 }
+const undecN=()=>ANNEX.filter(c=>!ctl(c.code).app).length;
+function emptyListMsg(seg){
+  const n=undecN(),lab=seg?`「${SEG_LABEL[seg]}」的`:"";
+  return `目前沒有${lab}控制措施。`+(n&&seg!=="undec"?`<br>還有 ${n} 項未決定適用性，判定為適用並更新執行狀態後，這裡就會列出。`:"");
+}
 function openList(spec){
   lastList=spec;
   let items,title,filter,seg=spec.seg,isClause=false;const isCo=!!spec.co;
@@ -1549,14 +1556,16 @@ function openList(spec){
     <div class="code">${isClause?"管理系統條款":"附錄 A"}・${items.length} 項</div>
     <h2>${esc(title)}</h2>
     ${isClause?"":`<p class="note">${isCo?"這個單位協助執行、但不是主責的控制措施。":""}點任一項可查看詳情並更新狀態。</p>`}
-    ${items.length?`<div class="llist">${items.map(row).join("")}</div>`:`<div class="empty">沒有符合的項目。</div>`}
+    ${items.length?`<div class="llist">${items.map(row).join("")}</div>`:`<div class="empty">${emptyListMsg(seg)}</div>`}
     <div class="form" style="margin-top:16px">
-      ${filter?`<button class="btn primary" id="lGo">在附錄 A 中篩選這些項目</button>`:""}
+      ${filter&&items.length?`<button class="btn primary" id="lGo">在附錄 A 中篩選這些項目</button>`:""}
+      ${!items.length&&!isClause&&undecN()?`<button class="btn primary" id="lGoUndec">前往附錄 A 判定適用性 →</button>`:""}
       ${isClause?`<button class="btn primary" id="lGoCl">前往條款 4–10</button>`:""}
     </div></aside>`;
   host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>{lastList=null;closeDrawer()}));
   host.querySelectorAll("[data-lopen]").forEach(b=>b.addEventListener("click",()=>openDrawer(b.dataset.lopen,true)));
   const go=$("#lGo");if(go)go.addEventListener("click",()=>{Object.assign(filt,filter);lastList=null;$("#drawerHost").innerHTML="";delete $("#view-annex").dataset.built;tab="annex";render();window.scrollTo(0,0)});
+  const gu=$("#lGoUndec");if(gu)gu.addEventListener("click",()=>{Object.assign(filt,{theme:"all",status:"undec",q:""});lastList=null;$("#drawerHost").innerHTML="";delete $("#view-annex").dataset.built;tab="annex";render();window.scrollTo(0,0)});
   const gc=$("#lGoCl");if(gc)gc.addEventListener("click",()=>{lastList=null;$("#drawerHost").innerHTML="";tab="clauses";render();window.scrollTo(0,0)});
   host.querySelector(".x").focus();
 }
