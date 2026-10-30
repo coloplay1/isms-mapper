@@ -618,14 +618,14 @@ function pdcaRing(){
 
 function focusPanel(p){
   const fs=projFeatures(p), ind=INDUSTRY_MAP[p.industry||""];
-  if(!fs.length&&!p.industry&&!Object.keys(FM).length) return `<div class="panel fpanel"><h3>產業建議重點</h3><p class="note" style="margin:0 0 10px">選擇產業與業務特性後，會在附錄 A 用紫色底線標出建議優先關注的控制措施，並列出相關法規提示。也可以在附錄 A 點 ☆ 自行標示重點。只做標示，不會改變你的判定。</p><button class="btn" data-goto="projects">設定產業與業務特性</button></div>`;
+  if(!fs.length&&!p.industry&&!Object.keys(FM).length) return `<div class="panel fpanel"><h3>產業建議重點</h3><p class="note" style="margin:0 0 10px">選擇產業與業務特性後，會在附錄 A 用紫色底線標出建議優先關注的控制措施，並列出相關法規提示。也可以在附錄 A 點 ☆ 自行標示重點。只做標示，不會改變你的判定。</p><button class="btn" data-goto="projects" data-anchor="indBox">設定產業與業務特性</button></div>`;
   const nOn=(p.focusOn||[]).filter(c=>FM[c]).length,nOff=(p.focusOff||[]).length;
   const codes=Object.keys(FM).sort((a,b)=>ANNEX.findIndex(x=>x.code===a)-ANNEX.findIndex(x=>x.code===b));
   const list=codes.map(c=>ANNEX_MAP[c]);const tt=tally(list);
   const pending=list.filter(c=>{const v=ctl(c.code);return v.app===""||(v.app==="Y"&&v.status<2)});
   const laws=lawsFor(p);
   return `<div class="panel fpanel">
-    <div class="secthead"><h3>產業建議重點</h3><span class="note">${ind&&ind.id?esc(ind.label)+"・":""}${fs.map(f=>esc(FEATURE_MAP[f].label)).join("、")}</span><button class="btn" data-goto="projects" style="margin-left:auto">調整</button></div>
+    <div class="secthead"><h3>產業建議重點</h3><span class="note">${ind&&ind.id?esc(ind.label)+"・":""}${fs.map(f=>esc(FEATURE_MAP[f].label)).join("、")}</span><button class="btn" data-goto="projects" data-anchor="indBox" style="margin-left:auto">調整產業與特性 →</button></div>
     <div class="fgrid">
       <div>
         ${nOn||nOff?`<div class="note" style="margin:0 0 10px;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center">已自行調整：加入 ${nOn} 項、取消 ${nOff} 項<button class="chip" data-freset>恢復預設建議</button></div>`:""}
@@ -865,7 +865,6 @@ function renderOverview(){
       <div class="panel"><h3>各主題進度</h3><p class="note" style="margin:-4px 0 12px">右側數字為已實施／適用項目</p>${themeBars}</div>
       <div class="panel"><h3>PDCA 循環</h3>${pdcaRing()}</div>
     </div>
-    ${focusPanel(p)}
     <div class="grid2 ovgrid" style="margin-top:18px">
       <div class="panel">
         <h3>附錄 A 覆蓋熱圖</h3>
@@ -880,7 +879,8 @@ function renderOverview(){
       <div style="display:grid;gap:18px;align-content:start">
         <div class="panel"><div class="secthead"><h3>負責人工作量</h3><button class="chip" data-goto="projects" data-anchor="pplPanel" style="margin-left:auto">管理名單</button></div>${ownerBars||`<p class="note">尚未指派負責人。</p>`}</div>
       </div>
-    </div>`;
+    </div>
+    ${focusPanel(p)}`;
 }
 /* tooltip */
 (function(){
@@ -1055,7 +1055,7 @@ let pendingDelete=null;
 function renderProjects(){
   const list=Object.values(S.projects).sort((a,b)=>b.updated-a.updated);
   const p=cur();
-  const ind=p?`<div class="panel" id="indBox"><h3>產業與業務特性</h3>
+  const ind=p?`<div class="panel" id="indBox" style="scroll-margin-top:120px"><h3>產業與業務特性</h3>
       <p class="note" style="margin:0 0 10px">用來標示附錄 A 的建議重點與相關法規，只做標示，不會改變判定。</p>
       <label class="lbl">產業<select id="pInd">${industryOptions(p.industry||"")}</select></label>
       <div class="fchips" style="margin-top:10px">${featureChips(projFeatures(p),"pF")}</div>
