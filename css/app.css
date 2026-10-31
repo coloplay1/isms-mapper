@@ -920,18 +920,18 @@ body{padding-left:var(--side)}
 .sidetog svg{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s ease}
 .sidetog:hover{color:var(--accent)}
 @media (min-width:961px){
-  .side{transition:width .2s ease,padding .2s ease}
+  .side{transition:width .2s ease}
   body{transition:padding-left .2s ease}
   body.side-collapsed{padding-left:72px}
   body.rail .side{width:72px;padding-inline:12px;overflow-x:hidden}
   /* 收合時每個圖示維持和展開時相同的上下位置：分組標題保留高度但隱藏文字，標誌列保留高度 */
   body.rail .side .sbrand>div,body.rail .side .tl,body.rail .side .sfoot{display:none}
   body.rail .side .tsec{visibility:hidden;white-space:nowrap;overflow:hidden}
-  body.rail .side .sbrand{justify-content:center;padding-left:0;min-height:var(--sbrand-h,auto);box-sizing:border-box}
-  body.rail .sidetog{margin-top:auto;justify-content:center;padding:9px 0}
+  body.rail .side .sbrand{justify-content:flex-start;padding-left:6px;min-height:var(--sbrand-h,auto);box-sizing:border-box}
+  body.rail .sidetog{margin-top:auto;justify-content:flex-start;padding-left:14px;padding-right:0}
   body.rail .sidetog .stl{display:none}
   body.rail .sidetog svg{transform:rotate(180deg)}
-  body.rail .side .tabs button{justify-content:center;padding-inline:0}
+  body.rail .side .tabs button{justify-content:flex-start;padding-left:14px;padding-right:0}
   body.rail .side .tabs button[aria-selected="true"]::before{left:-12px}
   body.rail .side .tbadge{position:absolute;top:2px;right:2px;min-width:16px;line-height:15px;font-size:10px;padding:0 4px}
   /* 詳細頁暫時收合時，內容跟著往左滑；用 left 位移而不是 transform，避免改變層疊順序（被點的項目要浮在遮罩上） */
@@ -1002,13 +1002,15 @@ button.dl:disabled{opacity:.6;cursor:progress}
 /* 矮螢幕（筆電瀏覽器扣掉網址列與工作列）：選單緊湊排列，避免出現捲動條 */
 @media (min-width:961px) and (max-height:760px){
   .side{padding-top:12px;padding-bottom:10px}
-  .sbrand{padding-bottom:8px}
-  .side .tsec{height:24px;padding-top:8px;padding-bottom:2px}
-  .side .tabs button{height:33px;padding-block:5px}
-  .sfoot{padding-top:8px;gap:6px}
+  .sbrand{padding-bottom:14px}
+  .side .tsec{height:26px;padding-top:10px;padding-bottom:2px}
+  .side .tabs button{height:35px;padding-block:5px}
+  .sfoot{padding-top:12px;gap:8px}
   .sfoot .proj{padding:6px 10px;gap:3px}
   .sfoot .proj label{display:none}
   .sfoot .srow .btn{padding-block:5px}
   .sidetog{margin-top:6px;padding-block:5px}
 }
 @media (min-width:961px) and (max-height:640px){.sbrand .stag{display:none}.side .tabs button{height:31px}}
+.sidetog{height:34px;box-sizing:border-box}
+@media (min-width:961px) and (max-height:760px){.sidetog{height:30px}.side .tsec{height:24px;padding-top:8px}}
