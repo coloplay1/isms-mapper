@@ -2,6 +2,10 @@
 
 本專案依[語意化版本](https://semver.org/lang/zh-TW/)編號。這裡每個功能版本只列重點，修正版併入所屬版本；逐版的完整說明見 [docs/changelog-detail.md](docs/changelog-detail.md)。
 
+## 1.42.1（2026-10-31）
+
+- AI 提示詞加上輸出格式：要求 AI 直接產生 Word（.docx）或 Excel（.xlsx）檔並指定檔名；無法產生檔案時改用 Markdown 輸出完整內容
+
 ## 1.42.0（2026-10-31）
 
 - Excel 範本也能自動帶入：每張工作表的標題前加上組織名稱，列印頁首放組織名稱與文件編號；「下載全部」帶入時 Word 與 Excel 一起處理
