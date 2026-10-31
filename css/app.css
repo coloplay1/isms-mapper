@@ -986,3 +986,4 @@ button.dl:disabled{opacity:.6;cursor:progress}
 .dgact{display:grid;gap:12px}
 .dgact>div{display:grid;gap:6px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface2)}
 .dgact>div>.btn{justify-self:start}
+.dgact .form{display:flex;gap:8px;flex-wrap:wrap}

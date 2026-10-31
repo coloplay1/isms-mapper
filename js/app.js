@@ -2325,7 +2325,7 @@ function renderDocs(){
     return `<div class="dneed ${n.level}"><span class="dnlab">建立依據</span><span>${esc(n.why)}${n.risks.length?"；風險評鑑引用：":""}</span>${rs}</div>`};
   const refs=d=>[...d.clauses,...d.controls].map(c=>`<button class="rc" data-open="${c}" data-tip="${c} ${esc((CLAUSE_MAP[c]||ANNEX_MAP[c]||{}).name||"")}">${c}</button>`).join("");
   $("#view-docs").innerHTML=`<h2>ISMS 文件範本</h2>
-  <p class="lede">依五層文件架構整理的通用範本，涵蓋 ISO/IEC 27001 條款 4–10 要求保存的文件化資訊。黃色標示的【】是需要依組織修改的地方；範本內容自行撰寫，不含標準原文。範本以 <a href="https://github.com/coloplay1/isms-mapper/blob/main/templates/LICENSE.md" target="_blank" rel="noopener">CC BY 4.0</a> 釋出，可自由使用與修改；轉載範本時請標示出處。</p>
+  <p class="lede">依五層文件架構整理的通用範本，涵蓋 ISO/IEC 27001 條款 4–10 要求保存的文件化資訊。黃色標示的【】是需要依組織修改的地方。每份文件可以直接<b>下載空白範本</b>，或按「產生文件」<b>自動帶入公司名稱與專案資料</b>（Word），也能<b>複製 AI 提示詞</b>交給你自己使用的 AI 服務撰寫草稿，資料不會送出；範本內容自行撰寫，不含標準原文。範本以 <a href="https://github.com/coloplay1/isms-mapper/blob/main/templates/LICENSE.md" target="_blank" rel="noopener">CC BY 4.0</a> 釋出，可自由使用與修改；轉載範本時請標示出處。</p>
   <div class="filters">
     <a class="btn primary" href="${TPL_BASE}isms-document-kit.zip" download="ISMS文件範本包.zip">⬇ 下載全部（ZIP）</a>
     <div class="seg" id="docSeg">${[["all","全部"],...(p?[["mine","本專案需要"]]:[]),["req","標準要求的文件"],...DOC_LAYERS.map(l=>[l.id,l.id+" "+l.name])].map(([k,t])=>`<button data-df="${k}" aria-pressed="${docFilter===k}">${t}</button>`).join("")}</div>
@@ -2334,18 +2334,18 @@ function renderDocs(){
   ${p?`<div class="callout dsum"><b>依「${esc(p.name)}」判斷</b>：本專案需要 <b>${cnt("req")+cnt("need")}</b> 份（標準要求 ${cnt("req")}、依適用的控制措施 ${cnt("need")}）${cnt("undec")?`；${cnt("undec")} 份要等附錄 A 判定後才知道`:""}${cnt("none")?`；${cnt("none")} 份對應的控制措施都不適用，可能不需要`:""}${cnt("opt")?`；${cnt("opt")} 份為選用`:""}。每份範本下方會說明建立依據，改了附錄 A 或風險，判斷會跟著更新。</div>`:""}
   ${docFilter==="all"||docFilter==="req"?`<div class="panel" style="margin-bottom:18px"><div class="secthead"><h3>條款 4–10 要求保存的文件化資訊</h3><span class="note">驗證稽核一定會查的文件。點條款編號可查看說明。</span></div>
     <div class="table-wrap" style="border:0"><table class="dreq"><thead><tr><th style="width:70px">條款</th><th>要求保存的內容</th><th>對應範本</th></tr></thead><tbody>
-    ${DOC_REQUIREMENTS.map(r=>`<tr><td class="code"><button data-open="${r.code}">${r.code}</button></td><td>${esc(r.req)}</td><td><div class="dchips">${r.docs.map(id=>{const d=DOC_MAP[id];return `<a class="dchip" href="${docHref(d)}" download="${esc(docDl(d))}" data-tip="${esc(d.name)}"><span class="mono">${d.id}</span> ${esc(d.name)}</a>`}).join("")}</div></td></tr>`).join("")}
+    ${DOC_REQUIREMENTS.map(r=>`<tr><td class="code"><button data-open="${r.code}">${r.code}</button></td><td>${esc(r.req)}</td><td><div class="dchips">${r.docs.map(id=>{const d=DOC_MAP[id];return `<a class="dchip" href="${docHref(d)}" data-dgen="${d.id}" data-tip="${esc(d.name)}：下載範本、產生文件或 AI 提示詞"><span class="mono">${d.id}</span> ${esc(d.name)}</a>`}).join("")}</div></td></tr>`).join("")}
     </tbody></table></div></div>`:""}
   ${DOC_LAYERS.map(l=>{const list=DOCS.filter(d=>d.layer===l.id&&show(d));if(!list.length)return "";
     return `<section class="dlayer"><div class="secthead"><h3>${l.id}　${esc(l.name)}</h3><span class="note">${esc(l.desc)}</span></div>
     <div class="dlist">${list.map(d=>`<article class="ditem ${d.status==="planned"?"planned":""}">
       <div class="dhead"><span class="mono">${d.id}</span><b>${esc(d.name)}</b>${p?`<span class="dtag ${need(d).level}">${need(d).label}</span>`:d.mandatory?`<span class="dtag">標準要求</span>`:""}${d.tool?`<span class="dtag tool">可匯入工具檢查</span>`:""}<span class="dfmt">${d.fmt==="docx"?"Word":"Excel"}</span></div>
       <p>${esc(d.desc)}</p>${needLine(d)}
-      <div class="dfoot"><div class="rcodes">${refs(d)}</div><div class="dbtns">${d.fmt==="docx"&&d.status!=="planned"?`<button class="dl ghost" data-dgen="${d.id}" data-tip="填入公司資料下載 Word，或產生給 AI 的提示詞">產生文件</button>`:""}${d.example?`<a class="dl ghost" href="${TPL_BASE+d.example}" download="${esc(d.id+" "+d.name+"_填寫範例."+d.fmt)}">填寫範例</a>`:""}${docLink(d,d.status==="planned"?"":"下載")}</div></div>
+      <div class="dfoot"><div class="rcodes">${refs(d)}</div><div class="dbtns">${d.status!=="planned"?`<button class="dl ghost" data-dgen="${d.id}" data-tip="填入公司資料下載 Word，或產生給 AI 的提示詞">產生文件</button>`:""}${d.example?`<a class="dl ghost" href="${TPL_BASE+d.example}" download="${esc(d.id+" "+d.name+"_填寫範例."+d.fmt)}">填寫範例</a>`:""}${docLink(d,d.status==="planned"?"":"下載")}</div></div>
     </article>`).join("")}</div></section>`}).join("")}
   <p class="note" style="margin-top:18px">範本以虛構公司「北辰精密製造」撰寫填寫範例；正式使用前請依組織實際情況修改，並經權責主管核准。法規內容整理於 ${RULES_DATE}，請以主管機關公告為準。</p>`;
   $("#docSeg").addEventListener("click",e=>{const b=e.target.closest("[data-df]");if(!b)return;docFilter=b.dataset.df;renderDocs()});
-  $("#view-docs").querySelectorAll("[data-dgen]").forEach(b=>b.addEventListener("click",()=>openDocGen(b.dataset.dgen)));
+  $("#view-docs").querySelectorAll("[data-dgen]").forEach(b=>b.addEventListener("click",e=>{e.preventDefault();openDocGen(b.dataset.dgen)}));
 }
 document.addEventListener("click",e=>{const b=e.target.closest("[data-cprompt]");if(b){e.preventDefault();openPrompt({kind:"ctl",id:b.dataset.cprompt})}});
 /* 下載填好本專案資料的 Word 範本：在瀏覽器中讀取範本、替換、打包，資料不會送出 */
@@ -2380,7 +2380,8 @@ function openDocGen(id){
       <label>補充說明（選填）<textarea id="gNotes" rows="4" placeholder="目前的做法、使用的系統或公司規定，例如：帳號由 AD 管理、每季由主管複審權限、離職當天停用">${esc(v.notes)}</textarea></label>
     </div>
     <div class="dgact">
-      <div><b>下載 Word</b><span class="note">範本的【公司名稱】換成上面的組織名稱，文末附上本次資料供撰寫參考</span><button class="btn primary" id="gWord">下載填好的 Word</button></div>
+      ${d.fmt==="docx"?`<div><b>下載 Word</b><span class="note">範本的【公司名稱】換成上面的組織名稱，文末附上本次資料供撰寫參考</span><div class="form"><button class="btn primary" id="gWord">下載填好的 Word</button><a class="btn" href="${docHref(d)}" download="${esc(docDl(d))}">下載空白範本</a></div></div>`:
+        `<div><b>下載 Excel 範本</b><span class="note">表單與紀錄範本直接下載使用${d.example?"；也有虛構公司的填寫範例":""}</span><div class="form"><a class="btn primary" href="${docHref(d)}" download="${esc(docDl(d))}">下載空白範本</a>${d.example?`<a class="btn" href="${TPL_BASE+d.example}" download="${esc(d.id+" "+d.name+"_填寫範例."+d.fmt)}">下載填寫範例</a>`:""}</div></div>`}
       <div><b>AI 提示詞</b><span class="note">貼到你自己使用的 AI 服務（ChatGPT、Claude、Copilot 等）產生草稿</span>
         <label class="pmanon"><input type="checkbox" id="pmAnon" ${promptAnon?"checked":""}> 去識別化：公司名稱改成「本公司」，負責人只保留單位</label>
         <textarea id="pmText" class="pmtext" readonly rows="10"></textarea>
@@ -2394,7 +2395,7 @@ function openDocGen(id){
   ["gOrg","gScope","gInd","gNotes"].forEach(k=>$("#"+k).addEventListener("input",()=>{keep();fill()}));
   $("#pmAnon").addEventListener("change",e=>{promptAnon=e.target.checked;fill()});
   $("#pmCopy").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(ta.value);toast("已複製提示詞")}catch(e){ta.focus();ta.select();toast("請按 Ctrl+C 複製選取的文字")}});
-  $("#gWord").addEventListener("click",e=>downloadFilledDoc(d,e.currentTarget,proj()));
+  const gw=$("#gWord");if(gw)gw.addEventListener("click",e=>downloadFilledDoc(d,e.currentTarget,proj()));
   host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeDrawer));
   fill();$("#gOrg").focus();
 }
