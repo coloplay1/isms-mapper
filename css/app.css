@@ -30,7 +30,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
 .bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding-block:12px 8px}
 .brand{font-family:var(--font-display);font-size:19px;letter-spacing:.02em;display:flex;align-items:center;gap:8px;margin-right:auto}
-.brand .mark{width:22px;height:22px;border:2px solid var(--accent);border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:10px;color:var(--accent)}
+.lgmark{width:44px;height:33px;flex:none;display:block;margin-left:-4px}.lgname{font-family:var(--font-body);font-weight:700;font-size:20px;letter-spacing:.01em;color:var(--logo-ink)}
 .proj{display:flex;align-items:center;gap:8px;min-width:0}
 .saved{font-size:12px;color:var(--muted);white-space:nowrap}
 .tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
@@ -292,7 +292,7 @@ tr.isna td:not(.keep){opacity:.55}
 .linkbtn{background:none;border:0;padding:4px 0 0;color:var(--accent);font:inherit;font-size:13px;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:6px;font-size:14px;z-index:30}
 footer{font-size:12px;color:var(--muted);padding-block:0 30px}
-@media (max-width:560px){.bar{padding-block:10px 4px}.brand{font-size:17px}.proj select{max-width:52vw}}
+@media (max-width:560px){.bar{padding-block:10px 4px}.brand{font-size:17px}.lgname{font-size:18px}.lgmark{width:38px;height:29px}.proj select{max-width:52vw}}
 @media (prefers-reduced-motion:no-preference){.drawer{animation:slide .18s ease-out}@keyframes slide{from{transform:translateX(24px);opacity:.6}}}
 
 /* ===== 風險評鑑 ===== */
@@ -857,3 +857,6 @@ footer{display:flex;flex-wrap:wrap;gap:2px 12px;line-height:1.7}footer a{color:v
 .lrow.seen .lmeta::after{content:"・已查看";color:var(--accent)}
 .lrow.flash{animation:flashring 2.4s ease-out}
 .lgone{margin:0 0 10px;font-size:13px;padding:8px 12px;border-radius:6px;background:var(--surface2);border-left:3px solid var(--accent)}
+:root{--logo-ink:#163f52;--logo-c:#164a5c;--logo-arc:#4fae9f}
+:root[data-theme="dark"]{--logo-ink:#e3ecea;--logo-c:#1f6577;--logo-arc:#5cc0ae}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--logo-ink:#e3ecea;--logo-c:#1f6577;--logo-arc:#5cc0ae}}

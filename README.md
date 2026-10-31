@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/banner.jpg" alt="ISMS 條款對照台：從工作情境到 SoA 的 ISO 27001 導入工具" width="100%"></p>
+
 # ISMS 條款對照台
 
 **從工作情境到 SoA 的 ISO 27001 導入工具**
@@ -95,6 +97,7 @@ js/cycle.js           純邏輯：建立新年度、年度比較與比較 Excel�
 js/guide.js           純邏輯：下一步建議、導入進度（8 個步驟）、稽核準備度、追蹤鏈
 js/app.js             畫面、事件、儲存與匯出
 vendor/               第三方元件（write-excel-file、read-excel-file）
+docs/                 使用指南 PDF、README 截圖、橫幅與分享預覽圖、標誌（docs/brand）
 templates/            Excel 範本（空白版、填寫範例、權限表單）
 templates/docs/       ISMS 文件範本（手冊、政策、程序的 Word 檔與表單、紀錄的 Excel 檔）
 tests/                單元測試
