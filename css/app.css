@@ -921,7 +921,6 @@ body{padding-left:var(--side)}
 .sidetog:hover{color:var(--accent)}
 @media (min-width:961px){
   .side{transition:width .2s ease}
-  body{transition:padding-left .2s ease}
   body.side-collapsed{padding-left:72px}
   body.rail .side{width:72px;padding-inline:12px;overflow-x:hidden}
   /* 收合時每個圖示維持和展開時相同的上下位置：分組標題保留高度但隱藏文字，標誌列保留高度 */
@@ -1014,3 +1013,5 @@ button.dl:disabled{opacity:.6;cursor:progress}
 @media (min-width:961px) and (max-height:640px){.sbrand .stag{display:none}.side .tabs button{height:31px}}
 .sidetog{height:34px;box-sizing:border-box}
 @media (min-width:961px) and (max-height:760px){.sidetog{height:30px}.side .tsec{height:24px;padding-top:8px}}
+/* 手動收合／展開時直接切換，不播動畫：內容區寬度一次改好，避免文字在動畫中反覆換行而看起來在晃 */
+body.notrans .side,body.notrans .sidetog svg{transition:none!important}

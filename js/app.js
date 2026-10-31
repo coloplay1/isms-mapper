@@ -2590,7 +2590,8 @@ function updateNavBadges(){
   addEventListener("resize",dock);
   // 收合／展開有 0.2 秒的動畫，動畫結束後再算一次版面，避免詳細頁停在舊位置蓋住內容
   B.addEventListener("transitionend",e=>{if(e.target===B&&e.propertyName==="padding-left")dock()});
-  tog.addEventListener("click",()=>{const tp=document.querySelector(".tip");if(tp)tp.hidden=true;collapsed=!collapsed;try{localStorage.setItem(KEYC,collapsed?"1":"0")}catch(e){}upd()});
+  tog.addEventListener("click",()=>requestAnimationFrame(dock));
+  tog.addEventListener("click",()=>{const tp=document.querySelector(".tip");if(tp)tp.hidden=true;B.classList.add("notrans");requestAnimationFrame(()=>requestAnimationFrame(()=>B.classList.remove("notrans")));collapsed=!collapsed;try{localStorage.setItem(KEYC,collapsed?"1":"0")}catch(e){}upd()});
   new MutationObserver(upd).observe(host,{childList:true});
   (mqTmp.addEventListener?mqTmp.addEventListener("change",upd):mqTmp.addListener(upd));
   upd();
