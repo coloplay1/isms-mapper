@@ -916,9 +916,9 @@ body{padding-left:var(--side)}
   .drawer{top:12px;bottom:12px;right:12px;border:0;border-radius:16px;box-shadow:0 24px 60px rgba(8,20,24,.28),0 2px 6px rgba(8,20,24,.12)}
 }
 /* 圖示窄欄（body.rail）：使用者手動收合，或在 961–1599px 打開右側詳細頁時暫時收合（由 JS 判斷後加上 class） */
-.sidetog{margin-left:auto;flex:none;width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--muted);cursor:pointer;padding:0}
-.sidetog svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s ease}
-.sidetog:hover{color:var(--accent);border-color:var(--accent)}
+.sidetog{flex:none;display:flex;align-items:center;gap:8px;width:100%;margin-top:10px;padding:7px 12px;border:0;border-top:1px solid var(--line);border-radius:0;background:none;color:var(--muted);font:inherit;font-size:13px;cursor:pointer}
+.sidetog svg{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s ease}
+.sidetog:hover{color:var(--accent)}
 @media (min-width:961px){
   .side{transition:width .2s ease,padding .2s ease}
   body{transition:padding-left .2s ease}
@@ -927,7 +927,8 @@ body{padding-left:var(--side)}
   body.rail .side .sbrand>div,body.rail .side .tsec,body.rail .side .tl,body.rail .side .sfoot{display:none}
   body.rail .side .sbrand{flex-direction:column;gap:10px;padding:0 0 10px;align-items:center}
   body.rail .side .sbrand .lgmark{width:42px;height:31px}
-  body.rail .sidetog{margin:0}
+  body.rail .sidetog{margin-top:auto;justify-content:center;padding:9px 0}
+  body.rail .sidetog .stl{display:none}
   body.rail .sidetog svg{transform:rotate(180deg)}
   body.rail .side .tabs{gap:6px;margin-top:6px}
   body.rail .side .tabs button{justify-content:center;padding:9px 0}

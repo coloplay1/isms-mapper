@@ -425,7 +425,11 @@ const filt={theme:"all",status:"all",q:"",lc:""};
 let searchQ="";
 
 const NEEDS_PROJECT=new Set(["overview","risks","annex","clauses","audit","improve"]);
+let renderedTab=null;
 function render(){
+  // 換到別的分頁時，關掉還開著的右側詳細頁（例如在寬螢幕點了數字卡或選單）
+  if(renderedTab!==null&&tab!==renderedTab&&$("#drawerHost").innerHTML){$("#drawerHost").innerHTML="";drawerTrail=[];drawerCode=null;riskDrawerId=null;lastList=null}
+  renderedTab=tab;
   if(!document.getElementById("view-"+tab))tab="overview";   // 已移除的分頁（例如舊版的路線圖）
   if(!cur()&&NEEDS_PROJECT.has(tab))tab="home";
   refreshFocus();refreshOwnerList();personEdit=personDel=null;
@@ -2398,6 +2402,8 @@ function openCaseDrawer(id){
 /* ================= INIT ================= */
 $("#tabs").addEventListener("click",e=>{const b=e.target.closest("[data-tab]");if(!b)return;
   if(!cur()&&NEEDS_PROJECT.has(b.dataset.tab)){toast("請先建立專案，或從首頁開啟一個範例");return}
+  // 換分頁時關掉右側詳細頁（寬螢幕沒有遮罩，詳細頁不會擋住選單）
+  if($("#drawerHost").innerHTML){$("#drawerHost").innerHTML="";drawerTrail=[];drawerCode=null;riskDrawerId=null;lastList=null}
   tab=b.dataset.tab;render();window.scrollTo(0,0)});
 $("#projSel").addEventListener("change",e=>{if(e.target.value)openProject(e.target.value,tab==="home"?"overview":tab)});
 $("#newBtn").addEventListener("click",goNew);
@@ -2424,7 +2430,7 @@ function updateNavBadges(){
   const upd=()=>{const drawer=!!host.querySelector(".drawer"),tmp=drawer&&!collapsed&&mqTmp.matches;
     B.classList.toggle("drawer-open",drawer);B.classList.toggle("side-collapsed",collapsed);
     B.classList.toggle("rail-tmp",tmp);const rail=mqDesk.matches&&(collapsed||tmp);B.classList.toggle("rail",rail);
-    tog.setAttribute("aria-expanded",String(!collapsed));const t=collapsed?"展開選單":"收合選單";tog.setAttribute("aria-label",t);tog.dataset.tip=t;
+    tog.setAttribute("aria-expanded",String(!collapsed));const t=collapsed?"展開選單":"收合選單";tog.setAttribute("aria-label",t);tog.querySelector(".stl").textContent=t;if(collapsed)tog.dataset.tip=t;else delete tog.dataset.tip;
     // 窄欄只剩圖示時，滑過顯示名稱
     document.querySelectorAll("#tabs button[data-tab]").forEach(b=>{if(rail)b.dataset.tip=b.querySelector(".tl").textContent;else delete b.dataset.tip});
     dock()};
@@ -2435,7 +2441,9 @@ function updateNavBadges(){
       left=Math.round(r.right-pr+GAP);ok=innerWidth-left>=DW+12}
     B.classList.toggle("dock",ok);if(ok)B.style.setProperty("--dock-l",left+"px");else B.style.removeProperty("--dock-l")};
   addEventListener("resize",dock);
-  tog.addEventListener("click",()=>{collapsed=!collapsed;try{localStorage.setItem(KEYC,collapsed?"1":"0")}catch(e){}upd()});
+  // 收合／展開有 0.2 秒的動畫，動畫結束後再算一次版面，避免詳細頁停在舊位置蓋住內容
+  B.addEventListener("transitionend",e=>{if(e.target===B&&e.propertyName==="padding-left")dock()});
+  tog.addEventListener("click",()=>{const tp=document.querySelector(".tip");if(tp)tp.hidden=true;collapsed=!collapsed;try{localStorage.setItem(KEYC,collapsed?"1":"0")}catch(e){}upd()});
   new MutationObserver(upd).observe(host,{childList:true});
   (mqTmp.addEventListener?mqTmp.addEventListener("change",upd):mqTmp.addListener(upd));
   upd();

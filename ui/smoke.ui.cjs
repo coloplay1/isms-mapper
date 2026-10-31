@@ -167,7 +167,8 @@ test("選單收合：只剩圖示、記住設定、詳細頁開關不出錯", as
   await pg.click('#tabs [data-tab="annex"]');
   assert.equal(await pg.evaluate(() => tab), "annex", "收合時仍可切換分頁");
   await pg.evaluate(() => openDrawer("A.5.15"));
-  await pg.evaluate(() => closeDrawer());
+  await pg.evaluate(() => { tab = "improve"; render(); });
+  assert.equal(await pg.locator("#drawerHost .drawer").count(), 0, "換分頁時關閉詳細頁");
   await pg.reload();
   await pg.waitForSelector("#view-home");
   assert.equal(await pg.evaluate(() => document.body.classList.contains("side-collapsed")), true, "重新整理後維持收合");
