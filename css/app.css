@@ -924,14 +924,14 @@ body{padding-left:var(--side)}
   body{transition:padding-left .2s ease}
   body.side-collapsed{padding-left:72px}
   body.rail .side{width:72px;padding-inline:12px;overflow-x:hidden}
-  body.rail .side .sbrand>div,body.rail .side .tsec,body.rail .side .tl,body.rail .side .sfoot{display:none}
-  body.rail .side .sbrand{flex-direction:column;gap:10px;padding:0 0 10px;align-items:center}
-  body.rail .side .sbrand .lgmark{width:42px;height:31px}
+  /* 收合時每個圖示維持和展開時相同的上下位置：分組標題保留高度但隱藏文字，標誌列保留高度 */
+  body.rail .side .sbrand>div,body.rail .side .tl,body.rail .side .sfoot{display:none}
+  body.rail .side .tsec{visibility:hidden;white-space:nowrap;overflow:hidden}
+  body.rail .side .sbrand{justify-content:center;padding-left:0;min-height:var(--sbrand-h,auto);box-sizing:border-box}
   body.rail .sidetog{margin-top:auto;justify-content:center;padding:9px 0}
   body.rail .sidetog .stl{display:none}
   body.rail .sidetog svg{transform:rotate(180deg)}
-  body.rail .side .tabs{gap:6px;margin-top:6px}
-  body.rail .side .tabs button{justify-content:center;padding:9px 0}
+  body.rail .side .tabs button{justify-content:center;padding-inline:0}
   body.rail .side .tabs button[aria-selected="true"]::before{left:-12px}
   body.rail .side .tbadge{position:absolute;top:2px;right:2px;min-width:16px;line-height:15px;font-size:10px;padding:0 4px}
   /* 詳細頁暫時收合時，內容跟著往左滑；用 left 位移而不是 transform，避免改變層疊順序（被點的項目要浮在遮罩上） */
@@ -967,3 +967,7 @@ body{padding-left:var(--side)}
   body.dock .drawer{left:var(--dock-l);right:auto;width:min(460px,calc(100vw - var(--dock-l) - 12px));box-shadow:0 10px 36px rgba(8,20,24,.16),0 1px 3px rgba(8,20,24,.08);border:1px solid var(--line)}
   body.dock .picked{box-shadow:0 0 0 3px var(--accent)!important;outline:0}
 }
+/* 待處理數字（不急）：附錄 A、條款 4–10 用淺色，紅色只留給逾期與可能不符合 */
+.tbadge.soft{background:var(--accent-soft);color:var(--accent)}
+.side .tabs button{height:38px;box-sizing:border-box}
+.side .tsec{height:31px;box-sizing:border-box;line-height:15px}

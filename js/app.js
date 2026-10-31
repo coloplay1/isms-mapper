@@ -2414,9 +2414,12 @@ render();
 /* 側欄的待辦數字：逾期的風險處理計畫、稽核準備可能不符合、逾期的改善事項 */
 function updateNavBadges(){
   const p=cur(),now=Date.now();
-  const set=(k,n,why)=>{const el=document.querySelector(`[data-badge="${k}"]`);if(!el)return;el.hidden=!n;el.textContent=n?String(n):"";
+  const set=(k,n,why,soft)=>{const el=document.querySelector(`[data-badge="${k}"]`);if(!el)return;el.hidden=!n;el.textContent=n?String(n):"";el.classList.toggle("soft",!!soft);
     const b=el.closest("button");if(b)b.setAttribute("aria-label",b.querySelector(".tl").textContent+(n?`，${n} ${why}`:""))};
-  if(!p){set("risks",0);set("audit",0);set("improve",0);return}
+  if(!p){["risks","annex","clauses","audit","improve"].forEach(k=>set(k,0));return}
+  // 附錄 A：未決定適用性＋適用但還沒實施；條款 4–10：還沒實施的條款
+  set("annex",ANNEX.filter(c=>{const v=(p.controls||{})[c.code]||{};return !v.app||(v.app==="Y"&&(v.status||0)<2)}).length,"項待判定或待實施",true);
+  set("clauses",CLAUSES.filter(c=>(((p.clauses||{})[c.code]||{}).status||0)<2).length,"條待實施",true);
   set("risks",(p.risks||[]).filter(r=>{const d=planDue(r,now);return d&&d.state==="late"}).length,"項處理計畫逾期");
   // 還沒有適用的控制措施時，稽核準備幾乎每項都會是可能不符合，不顯示數字以免干擾
   const hasApp=ANNEX.some(c=>((p.controls||{})[c.code]||{}).app==="Y");
@@ -2427,7 +2430,9 @@ function updateNavBadges(){
 (function(){const host=$("#drawerHost"),tog=$("#sideTog"),B=document.body;if(!host||!tog)return;
   const KEYC="isms-side-collapsed",mqTmp=matchMedia("(min-width:961px) and (max-width:1599px)"),mqDesk=matchMedia("(min-width:961px)");
   let collapsed=false;try{collapsed=localStorage.getItem(KEYC)==="1"}catch(e){}
-  const upd=()=>{const drawer=!!host.querySelector(".drawer"),tmp=drawer&&!collapsed&&mqTmp.matches;
+  // 記下展開時標誌列的高度，收合時沿用，圖示才不會往上移
+  const sb=document.querySelector(".sbrand");const keepH=()=>{if(sb&&!B.classList.contains("rail"))B.style.setProperty("--sbrand-h",sb.offsetHeight+"px")};keepH();
+  const upd=()=>{keepH();const drawer=!!host.querySelector(".drawer"),tmp=drawer&&!collapsed&&mqTmp.matches;
     B.classList.toggle("drawer-open",drawer);B.classList.toggle("side-collapsed",collapsed);
     B.classList.toggle("rail-tmp",tmp);const rail=mqDesk.matches&&(collapsed||tmp);B.classList.toggle("rail",rail);
     tog.setAttribute("aria-expanded",String(!collapsed));const t=collapsed?"展開選單":"收合選單";tog.setAttribute("aria-label",t);tog.querySelector(".stl").textContent=t;if(collapsed)tog.dataset.tip=t;else delete tog.dataset.tip;
