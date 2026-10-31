@@ -2398,9 +2398,10 @@ function openDocGen(id){
   let prevOpen=false;
   const prev=()=>{const ex=$("#gPrevX");if(ex){const org=$("#gOrg").value.trim();ex.innerHTML=`<div class="dgline ${org?"":"warn"}">${org?`工作表標題會變成「${esc(org)}｜…」，頁首左邊「${esc(org)}」、右邊「${esc(d.id+" "+d.name)}」`:"沒有填組織名稱，會下載原樣的範本"}</div>`}
     const el=$("#gPrev");if(!el)return;const od=el.querySelector("details");if(od)prevOpen=od.open;const q=proj(),c=docContext(q,d),org=q.org;
-    const ph=phN===null?"計算中…":phN?`共 ${phN} 處`:"範本中沒有";
+    const PH="<b>【公司名稱】</b>";
+    const phLine=phN===null?`${PH}計算中…`:!phN?`範本中沒有${PH}`:org?`範本中 ${phN} 處${PH}會換成「${esc(org)}」`:`範本中有 ${phN} 處${PH}，沒有填組織名稱，會維持原樣`;
     const tb=(h,rows)=>rows.length?`<table class="dgtb"><thead><tr>${h.map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>${rows.slice(0,8).map(r=>`<tr>${r.map(x=>`<td>${esc(x||"—")}</td>`).join("")}</tr>`).join("")}</tbody></table>${rows.length>8?`<p class="note">另有 ${rows.length-8} 項</p>`:""}`:"";
-    el.innerHTML=`<div class="dgline ${org?"":"warn"}"><b>【公司名稱】</b>${ph}${org?` → ${esc(org)}`:"，沒有填組織名稱，會維持【公司名稱】"}</div>
+    el.innerHTML=`<div class="dgline ${org?"":"warn"}">${phLine}</div>
       <details ${prevOpen?"open":""}><summary>文末附錄會放：基本資料${c.controls.length?`、${c.controls.length} 項控制措施`:""}${c.clauses.length?`、${c.clauses.length} 條條款`:""}${c.risks.length?`、${c.risks.length} 項風險`:""}${q.notes?"、補充說明":""}</summary>
       ${tb(["項目","內容"],[["組織",org||"（未填）"],["驗證範圍",q.scope||"（未填）"],["產業與業務特性",[c.industry,...c.features].filter(Boolean).join("、")||"（未選）"],...(q.notes?[["補充說明",q.notes]]:[])])}
       ${tb(["編號","名稱","適用性／狀態","負責人"],c.controls.map(v=>[v.code,v.name,[v.app,v.status].filter(Boolean).join("・"),v.owner]))}
