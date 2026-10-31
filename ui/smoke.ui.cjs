@@ -184,6 +184,10 @@ test("文件範本：有無專案都能產生 Word 與 AI 提示詞", async () =
   await pg.fill("#gNotes", "帳號由 AD 管理");
   const t = await pg.inputValue("#pmText");
   assert.ok(t.includes("晨光科技") && t.includes("帳號由 AD 管理"), "沒有專案時用輸入的資料");
+  await pg.click("#gReset");
+  assert.equal(await pg.inputValue("#gOrg"), "", "清除填寫內容");
+  assert.ok(!(await pg.inputValue("#pmText")).includes("晨光科技"));
+  await pg.fill("#gOrg", "晨光科技");
   const [dl] = await Promise.all([pg.waitForEvent("download"), pg.click("#gWord")]);
   assert.ok(fs.statSync(await dl.path()).size > 50000);
   await pg.keyboard.press("Escape");

@@ -11,7 +11,7 @@
 **線上試用：** https://coloplay1.github.io/isms-mapper/
 （開啟後點首頁的「先看範例公司怎麼做」即可預覽範例專案：9 個產業、各 3 個導入階段，共 27 家虛構公司，不需註冊或安裝）
 
-**使用指南：** [ISMS 條款對照台使用指南（PDF，17 頁）](docs/user-guide.pdf)：依熟悉程度分成第一次導入、已有 Excel 資料、年度維運與顧問三條路線
+**使用指南：** [ISMS 條款對照台使用指南（PDF，18 頁）](docs/user-guide.pdf)：依熟悉程度分成第一次導入、已有 Excel 資料、年度維運與顧問三條路線
 
 ![總覽](docs/overview.png)
 
