@@ -999,3 +999,16 @@ button.dl:disabled{opacity:.6;cursor:progress}
 .dgreset{display:flex;justify-content:flex-end;margin-bottom:-6px}.dgreset .linkbtn{padding:0}
 .sfoot .proj[hidden]{display:none}
 .sbrand,.mbrand{cursor:pointer;border-radius:10px}.sbrand:hover .lgname,.mbrand:hover .lgname{color:var(--accent)}.sbrand:focus-visible,.mbrand:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+/* 矮螢幕（筆電瀏覽器扣掉網址列與工作列）：選單緊湊排列，避免出現捲動條 */
+@media (min-width:961px) and (max-height:760px){
+  .side{padding-top:12px;padding-bottom:10px}
+  .sbrand{padding-bottom:8px}
+  .side .tsec{height:24px;padding-top:8px;padding-bottom:2px}
+  .side .tabs button{height:33px;padding-block:5px}
+  .sfoot{padding-top:8px;gap:6px}
+  .sfoot .proj{padding:6px 10px;gap:3px}
+  .sfoot .proj label{display:none}
+  .sfoot .srow .btn{padding-block:5px}
+  .sidetog{margin-top:6px;padding-block:5px}
+}
+@media (min-width:961px) and (max-height:640px){.sbrand .stag{display:none}.side .tabs button{height:31px}}
