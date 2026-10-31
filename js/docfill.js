@@ -189,3 +189,12 @@ async function fillKit(buf,p,now){
   }
   return {bytes:zipEntries(entries),filled,replaced};
 }
+/* 預覽用：範本中某個【】出現幾次（內文、頁首、頁尾） */
+async function countPlaceholder(buf,key){
+  const dec=new TextDecoder();let n=0;
+  for(const e of await unzipEntries(buf)){
+    if(!/^word\/(document|header\d*|footer\d*)\.xml$/.test(e.name))continue;
+    for(const t of dec.decode(e.data).match(/<w:t(?:\s[^>]*)?>[\s\S]*?<\/w:t>/g)||[])n+=xmlUnesc(t.replace(/<[^>]+>/g,"")).split(key).length-1;
+  }
+  return n;
+}

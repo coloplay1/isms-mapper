@@ -99,3 +99,8 @@ test('整包範本：所有 Word 都帶入資料，Excel 與說明檔原樣保�
   const doc = new TextDecoder().decode((await A.unzipEntries(pol.data)).find(e => e.name === 'word/document.xml').data);
   assert.ok(doc.includes('晨光科技'));
 });
+
+test('預覽：計算範本中【公司名稱】出現的次數', async () => {
+  assert.ok(await A.countPlaceholder(TPL('docs/POL-01.docx'), '【公司名稱】') >= 2);
+  assert.equal(await A.countPlaceholder(TPL('docs/POL-01.docx'), '【不存在】'), 0);
+});

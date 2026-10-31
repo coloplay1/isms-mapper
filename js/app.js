@@ -2382,7 +2382,7 @@ function openDocGen(id){
       <label>補充說明（選填）<textarea id="gNotes" rows="4" placeholder="目前的做法、使用的系統或公司規定，例如：帳號由 AD 管理、每季由主管複審權限、離職當天停用">${esc(v.notes)}</textarea></label>
     </div>
     <div class="dgact">
-      ${d.fmt==="docx"?`<div><b>下載 Word</b><span class="note">範本的【公司名稱】換成上面的組織名稱，文末附上本次資料供撰寫參考</span><div class="form"><button class="btn primary" id="gWord">下載填好的 Word</button><a class="btn" href="${docHref(d)}" download="${esc(docDl(d))}">下載空白範本</a></div></div>`:
+      ${d.fmt==="docx"?`<div><b>下載 Word</b><span class="note">範本的【公司名稱】換成上面的組織名稱，文末附上本次資料供撰寫參考</span><div class="dgprev" id="gPrev"></div><div class="form"><button class="btn primary" id="gWord">下載填好的 Word</button><a class="btn" href="${docHref(d)}" download="${esc(docDl(d))}">下載空白範本</a></div></div>`:
         `<div><b>下載 Excel 範本</b><span class="note">表單與紀錄範本直接下載使用${d.example?"；也有虛構公司的填寫範例":""}</span><div class="form"><a class="btn primary" href="${docHref(d)}" download="${esc(docDl(d))}">下載空白範本</a>${d.example?`<a class="btn" href="${TPL_BASE+d.example}" download="${esc(d.id+" "+d.name+"_填寫範例."+d.fmt)}">下載填寫範例</a>`:""}</div></div>`}
       <div><b>AI 提示詞</b><span class="note">貼到你自己使用的 AI 服務（ChatGPT、Claude、Copilot 等）產生草稿</span>
         <label class="pmanon"><input type="checkbox" id="pmAnon" ${promptAnon?"checked":""}> 去識別化：公司名稱改成「本公司」，負責人只保留單位</label>
@@ -2392,7 +2392,18 @@ function openDocGen(id){
     <p class="note" style="margin-top:10px"><b>工具不會把任何資料送出。</b>貼到 AI 服務前請確認公司規定；AI 產生的內容要經權責人員審閱後才能發行。</p>
   </aside>`;
   const proj=()=>docInputProject(p,{org:$("#gOrg").value,scope:$("#gScope").value,industry:$("#gInd").value,notes:$("#gNotes").value});
-  const ta=$("#pmText"),fill=()=>{ta.value=docPrompt(proj(),d,{anon:promptAnon,notes:$("#gNotes").value});$("#pmLen").textContent=`約 ${ta.value.length} 字`};
+  let phN=null;
+  const prev=()=>{const el=$("#gPrev");if(!el)return;const q=proj(),c=docContext(q,d),org=q.org;
+    const ph=phN===null?"計算中…":phN?`共 ${phN} 處`:"範本中沒有";
+    const tb=(h,rows)=>rows.length?`<table class="dgtb"><thead><tr>${h.map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>${rows.slice(0,8).map(r=>`<tr>${r.map(x=>`<td>${esc(x||"—")}</td>`).join("")}</tr>`).join("")}</tbody></table>${rows.length>8?`<p class="note">另有 ${rows.length-8} 項</p>`:""}`:"";
+    el.innerHTML=`<div class="dgline ${org?"":"warn"}"><b>【公司名稱】</b>${ph}${org?` → ${esc(org)}`:"，沒有填組織名稱，會維持【公司名稱】"}</div>
+      <details><summary>文末附錄會放：基本資料${c.controls.length?`、${c.controls.length} 項控制措施`:""}${c.clauses.length?`、${c.clauses.length} 條條款`:""}${c.risks.length?`、${c.risks.length} 項風險`:""}${q.notes?"、補充說明":""}</summary>
+      ${tb(["項目","內容"],[["組織",org||"（未填）"],["驗證範圍",q.scope||"（未填）"],["產業與業務特性",[c.industry,...c.features].filter(Boolean).join("、")||"（未選）"],...(q.notes?[["補充說明",q.notes]]:[])])}
+      ${tb(["編號","名稱","適用性／狀態","負責人"],c.controls.map(v=>[v.code,v.name,[v.app,v.status].filter(Boolean).join("・"),v.owner]))}
+      ${tb(["條款","名稱","狀態"],c.clauses.map(v=>[v.code,v.name,v.status]))}
+      ${tb(["編號","風險","固有","殘餘"],c.risks.map(r=>[r.id,r.title,r.inherent,r.residual]))}</details>`};
+  if(d.fmt==="docx"&&typeof DecompressionStream!=="undefined"&&location.protocol!=="file:")fetch(docHref(d)).then(r=>r.arrayBuffer()).then(b=>countPlaceholder(b,"【公司名稱】")).then(n=>{phN=n;prev()}).catch(()=>{phN=0;prev()});
+  const ta=$("#pmText"),fill=()=>{ta.value=docPrompt(proj(),d,{anon:promptAnon,notes:$("#gNotes").value});$("#pmLen").textContent=`約 ${ta.value.length} 字`;prev()};
   const keep=()=>{if(!p){DOCGEN.org=$("#gOrg").value;DOCGEN.scope=$("#gScope").value;DOCGEN.industry=$("#gInd").value}DOCGEN[id+":notes"]=$("#gNotes").value};
   ["gOrg","gScope","gInd","gNotes"].forEach(k=>$("#"+k).addEventListener("input",()=>{keep();fill()}));
   $("#pmAnon").addEventListener("change",e=>{promptAnon=e.target.checked;fill()});
