@@ -72,3 +72,15 @@ test('提示詞：包含背景、做法、風險與撰寫要求；去識別化�
   assert.ok(cp.includes('實施方式') && cp.includes('證據') && !cp.includes('周處長'));
   assert.equal(A.controlPrompt(p, 'X.1'), '');
 });
+
+test('沒有專案也能產生：用輸入的組織、範圍、產業與補充說明', async () => {
+  const d = A.DOC_MAP['POL-04'];
+  const p = A.docInputProject(null, { org: '晨光科技', scope: '總部', industry: 'mfg', notes: '帳號由 AD 管理\n每季複審' });
+  const t = A.docPrompt(p, d, { notes: p.notes });
+  for (const s of ['晨光科技', '總部', '製造業', '帳號由 AD 管理', '每季複審', '尚未提供控制措施']) assert.ok(t.includes(s), s);
+  const { bytes, replaced } = await A.fillDocx(TPL(d.file), p, d, NOW);
+  assert.ok(replaced >= 1);
+  const doc = new TextDecoder().decode((await A.unzipEntries(bytes)).find(e => e.name === 'word/document.xml').data);
+  assert.ok(doc.includes('補充說明') && doc.includes('每季複審'));
+  assert.equal(A.docInputProject(null, { industry: 'nope' }).industry, '');
+});
