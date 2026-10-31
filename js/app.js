@@ -530,7 +530,7 @@ function renderHome(){
         <p class="note" style="margin:12px 0 0">還沒有自己的格式？可下載<a href="${TPL_BASE}isms-soa-risk-template.xlsx" download>空白範本</a>或<a href="${TPL_BASE}isms-soa-risk-example.xlsx" download>填寫範例</a>，填好後再匯入。</p>
       </div>
       </div>
-      <p class="guidehint" style="margin:10px 0 0"><span>不確定怎麼用？<a href="${GUIDE_URL}" target="_blank" rel="noopener">看使用指南（PDF，17 頁）</a></span><span class="ghsep" aria-hidden="true">｜</span><span>只需要文件？<a href="#" data-goto="docs">下載 ${nDocs} 份文件範本</a>直接編輯</span></p>
+      <p class="guidehint" style="margin:10px 0 0"><span>不確定怎麼用？<a href="${GUIDE_URL}" target="_blank" rel="noopener">看使用指南（PDF，18 頁）</a></span><span class="ghsep" aria-hidden="true">｜</span><span>只需要文件？<a href="#" data-goto="docs">下載 ${nDocs} 份文件範本</a>直接編輯</span></p>
     </section>
   </div>`;
   const v=$("#view-home");
@@ -2376,6 +2376,7 @@ function openDocGen(id){
     <div class="code">${esc(d.id)}・產生文件</div><h2>${esc(d.name)}</h2>
     <p class="note">${p?`已帶入專案「${esc(p.name)}」的基本資料，並會附上相關控制措施與風險；這裡的修改只用在這份文件，不會改到專案。`:`沒有開啟專案也可以使用：填入基本資料後產生。開啟或建立專案，還能自動附上相關的控制措施與風險。`}</p>
     <div class="dgform">
+      <div class="dgreset"><button type="button" class="linkbtn" id="gReset">${p?"重置為專案資料":"清除填寫內容"}</button></div>
       <label>組織名稱<input id="gOrg" value="${esc(v.org)}" placeholder="例如：晨光科技股份有限公司" autocomplete="organization"></label>
       <label>驗證範圍<input id="gScope" value="${esc(v.scope)}" placeholder="例如：台北總部資訊機房與核心營運系統"></label>
       <label>產業<select id="gInd">${INDUSTRIES.map(x=>`<option value="${x.id}" ${x.id===v.industry?"selected":""}>${esc(x.label)}</option>`).join("")}</select></label>
@@ -2408,6 +2409,7 @@ function openDocGen(id){
   const keep=()=>{if(!p){DOCGEN.org=$("#gOrg").value;DOCGEN.scope=$("#gScope").value;DOCGEN.industry=$("#gInd").value}DOCGEN[id+":notes"]=$("#gNotes").value};
   ["gOrg","gScope","gInd","gNotes"].forEach(k=>$("#"+k).addEventListener("input",()=>{keep();fill()}));
   $("#pmAnon").addEventListener("change",e=>{promptAnon=e.target.checked;fill()});
+  $("#gReset").addEventListener("click",()=>{$("#gOrg").value=p?p.org||"":"";$("#gScope").value=p?p.scope||"":"";$("#gInd").value=p?p.industry||"":"";$("#gNotes").value="";keep();fill();$("#gOrg").focus();toast(p?"已重置為專案資料":"已清除填寫內容")});
   $("#pmCopy").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(ta.value);toast("已複製提示詞")}catch(e){ta.focus();ta.select();toast("請按 Ctrl+C 複製選取的文字")}});
   const gw=$("#gWord");if(gw)gw.addEventListener("click",e=>downloadFilledDoc(d,e.currentTarget,proj()));
   host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeDrawer));
@@ -2425,6 +2427,7 @@ function openDocKit(){
       <div><b>空白範本包</b><span class="note">${nAll} 份範本原樣打包，依五層架構分資料夾</span><div class="form"><a class="btn" href="${TPL_BASE}isms-document-kit.zip" download="ISMS文件範本包.zip">下載空白範本包</a></div></div>
       <div><b>帶入資料後打包</b><span class="note">${nW} 份 Word 範本的【公司名稱】換成下面的組織名稱，每份文末附上相關資料${p?"（含本專案的控制措施與風險）":""}；Excel 範本原樣附上</span>
         <div class="dgform">
+          <div class="dgreset"><button type="button" class="linkbtn" id="kReset">${p?"重置為專案資料":"清除填寫內容"}</button></div>
           <label>組織名稱<input id="kOrg" value="${esc(v.org)}" placeholder="例如：晨光科技股份有限公司"></label>
           <label>驗證範圍<input id="kScope" value="${esc(v.scope)}" placeholder="例如：台北總部資訊機房與核心營運系統"></label>
           <label>產業<select id="kInd">${INDUSTRIES.map(x=>`<option value="${x.id}" ${x.id===v.industry?"selected":""}>${esc(x.label)}</option>`).join("")}</select></label>
@@ -2447,6 +2450,7 @@ function openDocKit(){
       setTimeout(()=>toast(`已帶入 ${filled} 份 Word 範本`),2300);
     }catch(err){toast("無法產生："+(err&&err.message||"請稍後再試"))}
     finally{btn.disabled=false;btn.textContent=old}});
+  $("#kReset").addEventListener("click",()=>{$("#kOrg").value=p?p.org||"":"";$("#kScope").value=p?p.scope||"":"";$("#kInd").value=p?p.industry||"":"";if(!p){DOCGEN.org=DOCGEN.scope=DOCGEN.industry=""}$("#kOrg").focus();toast(p?"已重置為專案資料":"已清除填寫內容")});
   $("#kOrg").focus();
 }
 /* AI 提示詞：預覽、可去識別化，按鈕複製；工具本身不呼叫任何 AI 服務 */
