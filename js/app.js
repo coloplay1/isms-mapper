@@ -1023,7 +1023,7 @@ function renderAnnex(){
       <details class="panel lcwrap" ${lcOpen?"open":""} id="lcWrap"><summary><b>依產品／服務生命週期檢視</b><span class="note">從需求到退休，每個階段該注意哪些控制措施。階段依 ISO/IEC 24748 的生命週期概念整理，與控制措施的對應為本工具歸納，非標準規定；與附錄 A.8.25「安全開發生命週期」最直接相關。點階段可篩選下方清單</span></summary><div id="lcStrip"></div></details>
       <div class="filters">
         <div class="seg" id="themeSeg"><button data-th="all" aria-pressed="true">全部</button>${THEMES.map(t=>`<button data-th="${t.id}" aria-pressed="false">A.${t.id} ${t.name}</button>`).join("")}</div>
-        <select id="stFilter" aria-label="狀態篩選"><option value="all">所有狀態</option><option value="undec">未決定適用性</option><option value="notimpl">適用但未實施</option><option value="N">不適用</option>${STATUS.map(s=>`<option value="${s.v}">${s.label}</option>`).join("")}<option value="new">2022 新增</option><option value="noreason">不適用但未填理由</option><option value="noevid">已驗證但未填證據位置</option><option value="noevany">已實施但未填證據位置</option><option value="verissue">已驗證但未記錄確認人或自我確認</option><option value="focus">產業建議重點</option><option value="nacand">可能不適用候選</option><option value="risk">有風險引用</option><option value="riskissue">風險連動待確認</option></select>
+        <select id="stFilter" aria-label="狀態篩選"><option value="all">所有狀態</option>${recentApplied().size?`<option value="recent">本次從連動檢查設為適用（${recentApplied().size}）</option>`:""}<option value="undec">未決定適用性</option><option value="notimpl">適用但未實施</option><option value="N">不適用</option>${STATUS.map(s=>`<option value="${s.v}">${s.label}</option>`).join("")}<option value="new">2022 新增</option><option value="noreason">不適用但未填理由</option><option value="noevid">已驗證但未填證據位置</option><option value="noevany">已實施但未填證據位置</option><option value="verissue">已驗證但未記錄確認人或自我確認</option><option value="focus">產業建議重點</option><option value="nacand">可能不適用候選</option><option value="risk">有風險引用</option><option value="riskissue">風險連動待確認</option></select>
         <input id="qFilter" class="grow" type="search" placeholder="篩選編號、名稱或負責人">
         <button class="btn primary" id="xlsBtn" data-tip="正式文件格式，8 欄＋公式統計，可直接提供稽核">匯出稽核用 SoA</button><button class="btn" id="xlsFull" data-tip="含產業建議、關聯風險、風險登錄表、連動檢查等工作資訊">匯出工作底稿</button>
       </div>
@@ -1082,6 +1082,7 @@ function renderAnnexRows(){
     if(filt.status==="verissue"&&!(v.app==="Y"&&v.status===3&&(!String(v.verifier||"").trim()||selfVerified(v))))return false;
     if(filt.status==="noevany"&&!(v.app==="Y"&&v.status>=2&&!String(v.evidence||"").trim()))return false;
     if(filt.status==="nacand"&&!NAC[c.code])return false;
+    if(filt.status==="recent"&&!recentApplied().has(c.code))return false;
     if(filt.status==="risk"&&!RBC[c.code])return false;
     if(filt.status==="riskissue"&&!(RBC[c.code]&&v.app!=="Y"))return false;
     if(/^\d$/.test(filt.status)&&(v.app!=="Y"||v.status!==+filt.status))return false;
@@ -1364,13 +1365,14 @@ function setField(code,f,val,opts={}){
   return true;
 }
 let undoEl=null,undoTimer=null;
-function undoToast(msg,fn){
+function undoToast(msg,fn,extra){
   if(undoEl)undoEl.remove();clearTimeout(undoTimer);
   const t=document.createElement("div");t.className="toast utoast";t.setAttribute("role","status");
-  t.innerHTML=`<span></span><button type="button">復原</button>`;t.firstChild.textContent=msg;
-  t.querySelector("button").addEventListener("click",()=>{clearTimeout(undoTimer);t.remove();undoEl=null;fn();toast("已復原")});
+  t.innerHTML=`<span></span>${extra?`<button type="button" class="ux"></button>`:""}<button type="button" class="uu">復原</button>`;t.firstChild.textContent=msg;
+  t.querySelector(".uu").addEventListener("click",()=>{clearTimeout(undoTimer);t.remove();undoEl=null;fn();toast("已復原")});
+  if(extra){const x=t.querySelector(".ux");x.textContent=extra.label;x.addEventListener("click",()=>{clearTimeout(undoTimer);t.remove();undoEl=null;extra.fn()})}
   document.body.appendChild(t);undoEl=t;
-  undoTimer=setTimeout(()=>{t.remove();if(undoEl===t)undoEl=null},6000);
+  undoTimer=setTimeout(()=>{t.remove();if(undoEl===t)undoEl=null},extra?10000:6000);
 }
 function rerenderAfterUndo(code){
   const host=$("#drawerHost");
@@ -1894,13 +1896,21 @@ function riskFromCase(idx){
   tab="risks";render();window.scrollTo(0,0);openRiskDrawer(r.id);
   toast(`已建立 ${r.id}，請評估可能性與衝擊`);
 }
+/* 本次從連動檢查設為適用的控制措施：還要補負責人、執行狀態與證據，在連動檢查下方提醒，並可在附錄 A 篩出來 */
+const RECENT={pid:null,set:new Set()};
+function recentApplied(){const p=cur();const id=p&&(p.id||S.activeId);if(RECENT.pid!==id){RECENT.pid=id;RECENT.set=new Set()}return RECENT.set}
+function recentPending(){return [...recentApplied()].filter(c=>{const v=ctl(c);return v.app==="Y"&&((v.status||0)<2||!String(v.owner||"").trim())})}
+const NEED_TXT="還需要補：負責人、執行狀態、證據位置";
+function gotoRecent(){Object.assign(filt,{theme:"all",status:"recent",q:"",lc:""});$("#drawerHost").innerHTML="";delete $("#view-annex").dataset.built;tab="annex";render();window.scrollTo(0,0)}
 /* 一次把所有風險引用、但 SoA 尚未判定的控制措施設為適用（可復原） */
 function applyAllRiskToSoA(){
   const codes=[...new Set(riskChecks(cur()).filter(c=>c.kind==="undecided").map(c=>c.code))];if(!codes.length)return;
   const before=codes.map(c=>({c,reason:ctl(c).reason}));
   codes.forEach(code=>{const v=ctl(code);setField(code,"app","Y",{silent:true});
     if(!splitReasons(v.reason).includes(RISK_REASON))setField(code,"reason",[...splitReasons(v.reason),RISK_REASON].join(SEP),{silent:true})});
-  undoToast(`${codes.length} 項設為適用，理由：${RISK_REASON}`,()=>{before.forEach(({c,reason})=>{setField(c,"reason",reason,{silent:true});setField(c,"app","",{silent:true})});render()});
+  codes.forEach(c=>recentApplied().add(c));
+  undoToast(`${codes.length} 項已設為適用（依風險評鑑結果）。${NEED_TXT}`,()=>{before.forEach(({c,reason})=>{setField(c,"reason",reason,{silent:true});setField(c,"app","",{silent:true});recentApplied().delete(c)});render()},
+    {label:"前往附錄 A",fn:gotoRecent});
   render();
 }
 /* 把風險引用、但 SoA 尚未判定的控制措施設為適用，並補上納入理由（使用者按下才執行） */
@@ -1908,7 +1918,9 @@ function applyRiskToSoA(code){
   const v=ctl(code);if(v.app!=="")return;
   setField(code,"app","Y",{silent:true});
   if(!splitReasons(v.reason).includes(RISK_REASON))setField(code,"reason",[...splitReasons(v.reason),RISK_REASON].join(SEP),{silent:true});
-  undoToast(`${code} 設為適用，理由：${RISK_REASON}`,()=>{setField(code,"reason","",{silent:true});setField(code,"app","",{silent:true});render()});
+  recentApplied().add(code);
+  undoToast(`${code} 已設為適用（依風險評鑑結果）。${NEED_TXT}`,()=>{setField(code,"reason","",{silent:true});setField(code,"app","",{silent:true});recentApplied().delete(code);render()},
+    {label:`開啟 ${code}`,fn:()=>openDrawer(code)});
   render();
 }
 function riskMatrix(mode){
@@ -1955,6 +1967,7 @@ function renderRisks(){
     <div class="panel"><div class="secthead"><h3>連動檢查</h3>${(()=>{const u=[...new Set(issues.filter(c=>c.kind==="undecided").map(c=>c.code))];return u.length>1?`<button class="btn" id="ckApplyAll" style="margin-left:auto">全部設為適用（${u.length} 項）</button>`:""})()}</div>
       ${issues.length?`<ul class="cklist">${ck.map(checkRow).join("")}</ul>${issues.length>6?`<button class="chip" id="ckMore" style="margin-top:8px">${showAllChecks?"收合":"顯示全部 "+issues.length+" 項"}</button>`:""}`:
         `<p class="note">${list.length?"風險評鑑與 SoA 沒有發現不一致。":"新增風險後，這裡會檢查風險評鑑與 SoA 是否一致。"}</p>`}
+      ${(()=>{const rp=recentPending();return rp.length?`<div class="ckrecent"><span>本次已設為適用 ${rp.length} 項（${rp.slice(0,4).map(esc).join("、")}${rp.length>4?"…":""}），待補負責人與執行狀態</span><button class="btn" data-goto="annex" data-gofilter="recent">前往附錄 A →</button></div>`:""})()}
       ${info.length?`<details class="ckinfo"><summary>${info.length} 項控制措施的理由寫「依風險評鑑結果」，但沒有風險引用</summary><ul class="cklist">${info.map(checkRow).join("")}</ul></details>`:""}
     </div>
   </div>
@@ -2117,15 +2130,15 @@ function openRiskDrawer(id,trail){
   });
   $("#rDel").addEventListener("click",()=>deleteRisk(r.id));
   /* 連動檢查：在詳細頁直接設為適用，設好的項目留在清單上並可復原 */
-  const applyOne=code=>{const v=ctl(code);if(v.app!=="")return false;applied[code]=v.reason;setField(code,"app","Y",{silent:true});
+  const applyOne=code=>{const v=ctl(code);if(v.app!=="")return false;applied[code]=v.reason;recentApplied().add(code);setField(code,"app","Y",{silent:true});
     if(!splitReasons(v.reason).includes(RISK_REASON))setField(code,"reason",[...splitReasons(v.reason),RISK_REASON].join(SEP),{silent:true});return true};
   const afterApply=()=>{renderCtl($("#rcQ")?$("#rcQ").value:"");refresh();if(tab==="risks")renderRisks();else render()};
   $("#rCkTop").addEventListener("click",e=>{if(e.target.closest("[data-ckjump]"))$("#rChecks").scrollIntoView({behavior:"smooth",block:"start"})});
   $("#rChecks").addEventListener("click",e=>{
     const one=e.target.closest("[data-dapply]"),all=e.target.closest("[data-dapplyall]"),un=e.target.closest("[data-dundo]");
-    if(one){if(applyOne(one.dataset.dapply))toast(`${one.dataset.dapply} 已設為適用，理由：${RISK_REASON}`);afterApply()}
-    if(all){const codes=[...new Set(riskChecks(cur()).filter(c=>c.rid===r.id&&c.kind==="undecided").map(c=>c.code))];const n=codes.filter(applyOne).length;if(n)toast(`${n} 項已設為適用，理由：${RISK_REASON}`);afterApply()}
-    if(un){const c=un.dataset.dundo;setField(c,"reason",applied[c]||"",{silent:true});setField(c,"app","",{silent:true});delete applied[c];toast(`${c} 已復原為未判定`);afterApply()}
+    if(one){if(applyOne(one.dataset.dapply))toast(`${one.dataset.dapply} 已設為適用（依風險評鑑結果）。${NEED_TXT}`);afterApply()}
+    if(all){const codes=[...new Set(riskChecks(cur()).filter(c=>c.rid===r.id&&c.kind==="undecided").map(c=>c.code))];const n=codes.filter(applyOne).length;if(n)toast(`${n} 項已設為適用（依風險評鑑結果）。${NEED_TXT}`);afterApply()}
+    if(un){const c=un.dataset.dundo;setField(c,"reason",applied[c]||"",{silent:true});setField(c,"app","",{silent:true});delete applied[c];recentApplied().delete(c);toast(`${c} 已復原為未判定`);afterApply()}
   });
   host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeDrawer));
   renderCtl();refresh();

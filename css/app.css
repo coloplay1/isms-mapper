@@ -971,3 +971,6 @@ body{padding-left:var(--side)}
 .tbadge.soft{background:var(--accent-soft);color:var(--accent)}
 .side .tabs button{height:38px;box-sizing:border-box}
 .side .tsec{height:31px;box-sizing:border-box;line-height:15px}
+.ckrecent{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--accent-soft);color:var(--ink);font-size:13.5px}
+.utoast .ux{font-weight:600}
+.utoast button{white-space:nowrap;flex:none}.utoast{max-width:min(720px,calc(100vw - 32px))}
