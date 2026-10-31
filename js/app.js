@@ -2358,9 +2358,10 @@ async function downloadFilledDoc(d,btn,proj){
   const old=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent="產生中…"}
   try{
     const res=await fetch(docHref(d),{cache:"no-cache"});if(!res.ok)throw new Error("讀取範本失敗");
-    const {bytes,replaced}=await fillDocx(await res.arrayBuffer(),p,d);
+    const isX=d.fmt==="xlsx",{bytes}=isX?await fillXlsx(await res.arrayBuffer(),p,d):await fillDocx(await res.arrayBuffer(),p,d);
     const who=safeName(p.org||p.name||"本專案").slice(0,30);
-    await saveFile(`${d.id} ${d.name}_${who}.docx`,new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}),"application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    const mime=isX?"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":"application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    await saveFile(`${d.id} ${d.name}_${who}.${d.fmt}`,new Blob([bytes],{type:mime}),mime);
     if(!p.org)setTimeout(()=>toast("沒有填組織名稱，【公司名稱】維持原樣"),2400);
   }catch(e){toast("無法產生："+(e&&e.message||"請稍後再試"))}
   finally{if(btn){btn.disabled=false;btn.textContent=old}}
@@ -2384,7 +2385,7 @@ function openDocGen(id){
     </div>
     <div class="dgact">
       ${d.fmt==="docx"?`<div><b>下載 Word</b><span class="note">範本的【公司名稱】換成上面的組織名稱，文末附上本次資料供撰寫參考</span><div class="dgprev" id="gPrev"></div><div class="form"><button class="btn primary" id="gWord">下載填好的 Word</button><a class="btn" href="${docHref(d)}" download="${esc(docDl(d))}">下載空白範本</a></div></div>`:
-        `<div><b>下載 Excel 範本</b><span class="note">表單與紀錄範本直接下載使用${d.example?"；也有虛構公司的填寫範例":""}</span><div class="form"><a class="btn primary" href="${docHref(d)}" download="${esc(docDl(d))}">下載空白範本</a>${d.example?`<a class="btn" href="${TPL_BASE+d.example}" download="${esc(d.id+" "+d.name+"_填寫範例."+d.fmt)}">下載填寫範例</a>`:""}</div></div>`}
+        `<div><b>下載 Excel</b><span class="note">每張工作表的標題前加上組織名稱，列印頁首放組織名稱與文件編號；日期、單位等【】由組織填寫${d.example?"。也有虛構公司的填寫範例":""}</span><div class="dgprev" id="gPrevX"></div><div class="form"><button class="btn primary" id="gWord">下載帶入組織名稱的 Excel</button><a class="btn" href="${docHref(d)}" download="${esc(docDl(d))}">下載空白範本</a>${d.example?`<a class="btn" href="${TPL_BASE+d.example}" download="${esc(d.id+" "+d.name+"_填寫範例."+d.fmt)}">下載填寫範例</a>`:""}</div></div>`}
       <div><b>AI 提示詞</b><span class="note">貼到你自己使用的 AI 服務（ChatGPT、Claude、Copilot 等）產生草稿</span>
         <label class="pmanon"><input type="checkbox" id="pmAnon" ${promptAnon?"checked":""}> 去識別化：公司名稱改成「本公司」，負責人只保留單位</label>
         <textarea id="pmText" class="pmtext" readonly rows="10"></textarea>
@@ -2395,7 +2396,8 @@ function openDocGen(id){
   const proj=()=>docInputProject(p,{org:$("#gOrg").value,scope:$("#gScope").value,industry:$("#gInd").value,notes:$("#gNotes").value});
   let phN=null;
   let prevOpen=false;
-  const prev=()=>{const el=$("#gPrev");if(!el)return;const od=el.querySelector("details");if(od)prevOpen=od.open;const q=proj(),c=docContext(q,d),org=q.org;
+  const prev=()=>{const ex=$("#gPrevX");if(ex){const org=$("#gOrg").value.trim();ex.innerHTML=`<div class="dgline ${org?"":"warn"}">${org?`工作表標題會變成「${esc(org)}｜…」，頁首左邊「${esc(org)}」、右邊「${esc(d.id+" "+d.name)}」`:"沒有填組織名稱，會下載原樣的範本"}</div>`}
+    const el=$("#gPrev");if(!el)return;const od=el.querySelector("details");if(od)prevOpen=od.open;const q=proj(),c=docContext(q,d),org=q.org;
     const ph=phN===null?"計算中…":phN?`共 ${phN} 處`:"範本中沒有";
     const tb=(h,rows)=>rows.length?`<table class="dgtb"><thead><tr>${h.map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>${rows.slice(0,8).map(r=>`<tr>${r.map(x=>`<td>${esc(x||"—")}</td>`).join("")}</tr>`).join("")}</tbody></table>${rows.length>8?`<p class="note">另有 ${rows.length-8} 項</p>`:""}`:"";
     el.innerHTML=`<div class="dgline ${org?"":"warn"}"><b>【公司名稱】</b>${ph}${org?` → ${esc(org)}`:"，沒有填組織名稱，會維持【公司名稱】"}</div>
@@ -2425,7 +2427,7 @@ function openDocKit(){
     <div class="code">文件範本・下載全部</div><h2>ISMS 文件範本包</h2>
     <div class="dgact">
       <div><b>空白範本包</b><span class="note">${nAll} 份範本原樣打包，依五層架構分資料夾</span><div class="form"><a class="btn" href="${TPL_BASE}isms-document-kit.zip" download="ISMS文件範本包.zip">下載空白範本包</a></div></div>
-      <div><b>帶入資料後打包</b><span class="note">${nW} 份 Word 範本的【公司名稱】換成下面的組織名稱，每份文末附上相關資料${p?"（含本專案的控制措施與風險）":""}；Excel 範本原樣附上</span>
+      <div><b>帶入資料後打包</b><span class="note">${nW} 份 Word 範本的【公司名稱】換成下面的組織名稱，每份文末附上相關資料${p?"（含本專案的控制措施與風險）":""}；Excel 範本的標題與頁首加上組織名稱</span>
         <div class="dgform">
           <div class="dgreset"><button type="button" class="linkbtn" id="kReset">${p?"重置為專案資料":"清除填寫內容"}</button></div>
           <label>組織名稱<input id="kOrg" value="${esc(v.org)}" placeholder="例如：晨光科技股份有限公司"></label>
@@ -2447,7 +2449,7 @@ function openDocKit(){
     try{const res=await fetch(TPL_BASE+"isms-document-kit.zip",{cache:"no-cache"});if(!res.ok)throw new Error("讀取範本包失敗");
       const {bytes,filled}=await fillKit(await res.arrayBuffer(),docInputProject(p,{org,scope:$("#kScope").value,industry:$("#kInd").value}));
       await saveFile(`ISMS文件範本包_${safeName(org).slice(0,30)}.zip`,new Blob([bytes],{type:"application/zip"}),"application/zip");
-      setTimeout(()=>toast(`已帶入 ${filled} 份 Word 範本`),2300);
+      setTimeout(()=>toast(`已帶入 ${filled} 份範本`),2300);
     }catch(err){toast("無法產生："+(err&&err.message||"請稍後再試"))}
     finally{btn.disabled=false;btn.textContent=old}});
   $("#kReset").addEventListener("click",()=>{$("#kOrg").value=p?p.org||"":"";$("#kScope").value=p?p.scope||"":"";$("#kInd").value=p?p.industry||"":"";if(!p){DOCGEN.org=DOCGEN.scope=DOCGEN.industry=""}$("#kOrg").focus();toast(p?"已重置為專案資料":"已清除填寫內容")});

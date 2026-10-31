@@ -85,16 +85,16 @@ test('沒有專案也能產生：用輸入的組織、範圍、產業與補充�
   assert.equal(A.docInputProject(null, { industry: 'nope' }).industry, '');
 });
 
-test('整包範本：所有 Word 都帶入資料，Excel 與說明檔原樣保留', async () => {
+test('整包範本：Word 與 Excel 範本都帶入資料，填寫範例與說明檔原樣保留', async () => {
   const kit = TPL('isms-document-kit.zip');
   const before = await A.unzipEntries(kit);
   const p = A.docInputProject(null, { org: '晨光科技', scope: '總部', industry: 'mfg' });
   const { bytes, filled } = await A.fillKit(kit, p, NOW);
   const after = await A.unzipEntries(bytes);
   assert.deepEqual(after.map(e => e.name), before.map(e => e.name));
-  assert.equal(filled, before.filter(e => /\.docx$/.test(e.name)).length);
-  const x = after.find(e => /\.xlsx$/.test(e.name)), x0 = before.find(e => e.name === x.name);
-  assert.deepEqual(Array.from(x.data), Array.from(x0.data));
+  assert.equal(filled, before.filter(e => /\.(docx|xlsx)$/.test(e.name) && !/填寫範例/.test(e.name) && /\/[A-Z]+-\d+ /.test(e.name)).length);
+  const ex = after.find(e => /填寫範例.*\.xlsx$/.test(e.name)), ex0 = before.find(e => e.name === ex.name);
+  assert.deepEqual(Array.from(ex.data), Array.from(ex0.data), '填寫範例原樣保留');
   const pol = after.find(e => /POL-01/.test(e.name));
   const doc = new TextDecoder().decode((await A.unzipEntries(pol.data)).find(e => e.name === 'word/document.xml').data);
   assert.ok(doc.includes('晨光科技'));
@@ -103,4 +103,14 @@ test('整包範本：所有 Word 都帶入資料，Excel 與說明檔原樣保�
 test('預覽：計算範本中【公司名稱】出現的次數', async () => {
   assert.ok(await A.countPlaceholder(TPL('docs/POL-01.docx'), '【公司名稱】') >= 2);
   assert.equal(await A.countPlaceholder(TPL('docs/POL-01.docx'), '【不存在】'), 0);
+});
+
+test('Excel 範本：工作表標題前加組織名稱、頁首加上組織與文件編號，仍可讀回', async () => {
+  const d = A.DOC_MAP['FRM-05'];
+  const { bytes, replaced, sheets } = await A.fillXlsx(TPL(d.file), { org: '晨光 & 商務' }, d);
+  assert.ok(sheets >= 2 && replaced >= sheets * 2 - 1);
+  const s1 = new TextDecoder().decode((await A.unzipEntries(bytes)).find(e => e.name === 'xl/worksheets/sheet1.xml').data);
+  assert.ok(s1.includes('晨光 &amp; 商務｜FRM-05'));
+  assert.ok(s1.includes('<oddHeader>&amp;L晨光 &amp;&amp; 商務&amp;RFRM-05'), '頁首中的 & 要寫成 &&');
+  assert.equal((await A.fillXlsx(TPL(d.file), { org: '' }, d)).replaced, 0);
 });
