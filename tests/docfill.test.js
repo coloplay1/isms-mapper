@@ -71,6 +71,17 @@ test('提示詞：包含背景、做法、風險與撰寫要求；去識別化�
   const cp = A.controlPrompt(p, 'A.5.1', { anon: true });
   assert.ok(cp.includes('實施方式') && cp.includes('證據') && !cp.includes('周處長'));
   assert.equal(A.controlPrompt(p, 'X.1'), '');
+  assert.ok(!cp.includes('輸出格式'), '控制措施說明貼回工具，不要求產生檔案');
+});
+
+test('提示詞：指定輸出 Word 或 Excel 檔，並提供無法產生檔案時的替代格式', () => {
+  const p = proj();
+  const w = A.docPrompt(p, A.DOC_MAP['POL-01']);
+  assert.ok(w.includes('【輸出格式】') && w.includes('.docx') && w.includes('POL-01 資訊安全政策.docx') && w.includes('Markdown'));
+  assert.ok(!w.includes('.xlsx'));
+  const x = A.docPrompt(p, A.DOC_MAP['FRM-05']);
+  assert.ok(x.includes('.xlsx') && x.includes('FRM-05') && x.includes('Markdown 表格') && x.includes('填寫說明'));
+  assert.ok(!x.includes('.docx'));
 });
 
 test('沒有專案也能產生：用輸入的組織、範圍、產業與補充說明', async () => {
