@@ -434,6 +434,7 @@ function render(){
   const fv=$("#footVer");if(fv&&!fv.dataset.v){const m=(document.querySelector('script[src*="js/app.js"]')||{}).src?.match(/[?&]v=([\d.]+)/);if(m){fv.dataset.v=m[1];fv.textContent=`版本 ${m[1]}｜更新紀錄`}}   // 版本號取自載入網址，不另外維護   // 首頁已有使用指南連結，頁尾不重複
   document.querySelectorAll("#tabs button").forEach(b=>{b.setAttribute("aria-selected",b.dataset.tab===tab);
     b.setAttribute("aria-disabled",!cur()&&NEEDS_PROJECT.has(b.dataset.tab))});
+  updateNavBadges();
   ["home","overview","search","risks","annex","clauses","audit","improve","docs","projects"].forEach(v=>$("#view-"+v).hidden=v!==tab);
   ({home:renderHome,overview:renderOverview,search:renderSearch,risks:renderRisks,annex:renderAnnex,docs:renderDocs,clauses:renderClauses,audit:renderAudit,improve:renderImprove,projects:renderProjects})[tab]();
 }
@@ -2390,6 +2391,31 @@ tab="home";
 try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){storeOK=false}
 render();
 
+/* 側欄的待辦數字：逾期的風險處理計畫、稽核準備可能不符合、逾期的改善事項 */
+function updateNavBadges(){
+  const p=cur(),now=Date.now();
+  const set=(k,n,why)=>{const el=document.querySelector(`[data-badge="${k}"]`);if(!el)return;el.hidden=!n;el.textContent=n?String(n):"";
+    const b=el.closest("button");if(b)b.setAttribute("aria-label",b.querySelector(".tl").textContent+(n?`，${n} ${why}`:""))};
+  if(!p){set("risks",0);set("audit",0);set("improve",0);return}
+  set("risks",(p.risks||[]).filter(r=>{const d=planDue(r,now);return d&&d.state==="late"}).length,"項處理計畫逾期");
+  // 還沒有適用的控制措施時，稽核準備幾乎每項都會是可能不符合，不顯示數字以免干擾
+  const hasApp=ANNEX.some(c=>((p.controls||{})[c.code]||{}).app==="Y");
+  set("audit",hasApp?auditReadiness(p,now).flatMap(x=>x.items).filter(x=>x.grade==="nc").length:0,"項可能不符合");
+  set("improve",(p.actions||[]).filter(x=>actionOverdue(x,now)).length,"項改善事項逾期");
+}
+/* 右側詳細頁開著時，側欄縮成圖示窄欄 */
+(function(){const host=$("#drawerHost");if(!host)return;
+  const upd=()=>document.body.classList.toggle("drawer-open",!!host.querySelector(".drawer"));
+  new MutationObserver(upd).observe(host,{childList:true});upd();
+})();
+/* 平板與手機：上方列的選單鈕開關側欄 */
+(function(){const btn=$("#menuBtn"),scrim=$("#sideScrim");if(!btn)return;
+  const setOpen=o=>{document.body.classList.toggle("sideopen",o);btn.setAttribute("aria-expanded",o);scrim.hidden=!o;if(o){const sel=$("#tabs [aria-selected=\"true\"]");if(sel)sel.focus({preventScroll:true})}};
+  btn.addEventListener("click",()=>setOpen(!document.body.classList.contains("sideopen")));
+  scrim.addEventListener("click",()=>setOpen(false));
+  $("#tabs").addEventListener("click",e=>{if(e.target.closest("[data-tab]"))setOpen(false)});
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&document.body.classList.contains("sideopen")){setOpen(false);btn.focus()}});
+})();
 /* 分頁列：還能往右捲時右側淡出，捲到底就取消 */
 (function(){const t=document.getElementById("tabs");if(!t)return;
   const upd=()=>t.classList.toggle("atend",t.scrollLeft+t.clientWidth>=t.scrollWidth-4);

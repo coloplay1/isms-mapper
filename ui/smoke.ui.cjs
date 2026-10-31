@@ -142,6 +142,21 @@ test("清單點進項目再返回：回到原本位置並標出剛才查看的�
   await ctx.close();
 });
 
+test("手機：選單鈕開關側欄，點分頁後自動收起", async () => {
+  const { pg, ctx, errors } = await open({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await pg.evaluate(() => openProject("sample:audit", "overview"));
+  assert.equal(await pg.locator("#side").evaluate(el => el.getBoundingClientRect().right <= 0), true, "一開始側欄收在畫面外");
+  await pg.click("#menuBtn");
+  await pg.waitForTimeout(300);
+  assert.equal(await pg.locator("#menuBtn").getAttribute("aria-expanded"), "true");
+  await pg.click('#tabs [data-tab="annex"]');
+  await pg.waitForTimeout(300);
+  assert.equal(await pg.evaluate(() => tab), "annex");
+  assert.equal(await pg.evaluate(() => document.body.classList.contains("sideopen")), false, "點分頁後收起");
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
 test("手機寬度、深色模式：每個分頁都沒有左右捲動", async () => {
   const { pg, ctx, errors } = await open({ viewport: { width: 390, height: 844 }, colorScheme: "dark", isMobile: true, hasTouch: true });
   const wide = await pg.evaluate(TABS => {
