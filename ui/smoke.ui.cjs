@@ -157,6 +157,24 @@ test("手機：選單鈕開關側欄，點分頁後自動收起", async () => {
   await ctx.close();
 });
 
+test("選單收合：只剩圖示、記住設定、詳細頁開關不出錯", async () => {
+  const { pg, ctx, errors } = await open();
+  await pg.evaluate(() => openProject("sample:audit", "overview"));
+  await pg.click("#sideTog");
+  await pg.waitForTimeout(300);
+  assert.equal(await pg.locator(".side").evaluate(el => el.offsetWidth), 72, "收合後寬 72px");
+  assert.equal(await pg.locator("#sideTog").getAttribute("aria-expanded"), "false");
+  await pg.click('#tabs [data-tab="annex"]');
+  assert.equal(await pg.evaluate(() => tab), "annex", "收合時仍可切換分頁");
+  await pg.evaluate(() => openDrawer("A.5.15"));
+  await pg.evaluate(() => closeDrawer());
+  await pg.reload();
+  await pg.waitForSelector("#view-home");
+  assert.equal(await pg.evaluate(() => document.body.classList.contains("side-collapsed")), true, "重新整理後維持收合");
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
 test("手機寬度、深色模式：每個分頁都沒有左右捲動", async () => {
   const { pg, ctx, errors } = await open({ viewport: { width: 390, height: 844 }, colorScheme: "dark", isMobile: true, hasTouch: true });
   const wide = await pg.evaluate(TABS => {

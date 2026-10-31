@@ -709,6 +709,21 @@ document.addEventListener("click",e=>{
 const AUD_GRADE={nc:"可能不符合",obs:"可能列為觀察",ok:"資料齊全",na:"尚無資料"};
 function auditSum(s){const n=g=>s.items.filter(x=>x.grade===g).length,nc=n("nc"),ob=n("obs"),na=n("na");
   return nc||ob||na?(nc?`<span class="ag nc">不符合 ${nc}</span>`:"")+(ob?`<span class="ag obs">觀察 ${ob}</span>`:"")+(na?`<span class="ag nd">尚無資料 ${na}</span>`:""):`<span class="ag ok">資料齊全</span>`}
+/* 總覽最上方的四張數字卡：做到哪、還沒決定、逾期、稽核會被抓的；點卡片直接前往對應的清單 */
+function kpiCards(p,c,pct){
+  const now=Date.now(),risks=p.risks||[];
+  const due=risks.map(r=>planDue(r,now)).filter(Boolean),late=due.filter(d=>d.state==="late").length,soon=due.filter(d=>d.state==="soon").length;
+  const items=auditReadiness(p,now).flatMap(x=>x.items),nc=items.filter(x=>x.grade==="nc").length,obs=items.filter(x=>x.grade==="obs").length;
+  const clPct=Math.round(CLAUSES.filter(x=>cls(x.code).status>=2).length/CLAUSES.length*100);
+  const done=ANNEX.filter(x=>{const v=ctl(x.code);return v.app==="Y"&&v.status>=2}).length;
+  const card=(cls2,attrs,k,v,s)=>`<button class="kpi ${cls2}" ${attrs}><span class="k">${k}</span><span class="v">${v}</span><span class="s">${s}</span></button>`;
+  return `<div class="kpis" aria-label="重點數字">
+    ${card("hero",c.app?`data-goto="annex" data-gofilter="notimpl" data-tip="列出適用但還沒實施的控制措施"`:`data-goto="annex" data-gofilter="undec"`,"適用項目已實施",c.app?`${pct}<small>%</small>`:"—",c.app?`${done}／${c.app} 項・條款 4–10 ${clPct}%`:"判定適用性後開始計算")}
+    ${card(c.undec?"":"good",`data-goto="annex" data-gofilter="undec" data-tip="列出還沒判定適用性的控制措施"`,"未決定適用性",c.undec,c.undec?`共 93 項，已判定 ${93-c.undec} 項`:"93 項都已判定")}
+    ${card(late?"bad":risks.length?"good":"",`data-goto="risks" ${late||soon?`data-riskf="${late?"late":"soon"}"`:""} data-tip="風險處理計畫的期限"`,"逾期處理計畫",risks.length?late:"—",risks.length?(soon?`30 天內到期 ${soon} 項`:late?"請更新進度或期限":"沒有逾期"):"還沒有風險")}
+    ${card(c.app&&nc?"bad":c.app?"good":"",`data-goto="audit" data-tip="用稽核員的角度檢查"`,"稽核準備",c.app?nc:"—",c.app?(nc?`可能不符合${obs?`・另有觀察 ${obs} 項`:""}`:obs?`可能列為觀察 ${obs} 項`:"沒有明顯缺口"):"判定適用性後檢查")}
+  </div>`;
+}
 function auditBar(p){
   const st=auditReadiness(p);
   return `<div class="panel audbar"><b>稽核準備</b><span class="audsum">${st.map(s=>`<span class="audst">${esc(s.name.split("：")[0])}${auditSum(s)}</span>`).join("")}</span>
@@ -894,14 +909,13 @@ function renderOverview(){
   $("#view-overview").innerHTML=`
     <h2>${esc(p.name)}</h2>
     <p class="lede">${p.scope?`驗證範圍：${esc(p.scope)}。`:""}附錄 A 共 93 項控制措施的適用與執行狀況。滑過圖表可看數字，點熱圖方格可查看說明並更新狀態。</p>
+    ${kpiCards(p,c,pct)}
     <section class="panel ovstrip" aria-label="整體狀況">
-      <div class="osk"><b>${pct}%</b><span>適用項目已實施</span><small>${c.app} 項適用・${c.na} 項不適用</small>${c.undec?`<small class="warn">${c.undec} 項未決定適用性</small>`:""}<small><button class="linkbtn" data-goto="clauses">條款 4–10：${Math.round(CLAUSES.filter(x=>cls(x.code).status>=2).length/CLAUSES.length*100)}% 完成 →</button></small></div>
       <div class="osbar"><div class="blab"><span>整體狀態</span><span class="mono">點色塊可查看項目</span></div>${stackBar(tAll,93,"all")}
         <div class="oslg">${SEGS.map(sg=>`<span ${tAll[sg.k]?`data-lseg="${sg.k}" data-lscope="all" role="button" tabindex="0"`:`class="zero"`}><i class="${sg.k==="na"?"na":sg.k==="undec"?"undec":""}" style="${sg.k.startsWith("s")?`background:var(--${sg.k})`:""}"></i>${sg.label} <b>${tAll[sg.k]}</b></span>`).join("")}</div></div>
       <div class="osth"><div class="blab osthh"><span>各主題進度</span><span class="mono">已實施／適用</span></div>${themeBars}</div>
     </section>
     ${nextCard(p)}
-    ${auditBar(p)}
     <div class="grid2 ovgrid" style="margin-top:18px">
       <div class="panel">
         <h3>附錄 A 覆蓋熱圖</h3>
@@ -2403,10 +2417,20 @@ function updateNavBadges(){
   set("audit",hasApp?auditReadiness(p,now).flatMap(x=>x.items).filter(x=>x.grade==="nc").length:0,"項可能不符合");
   set("improve",(p.actions||[]).filter(x=>actionOverdue(x,now)).length,"項改善事項逾期");
 }
-/* 右側詳細頁開著時，側欄縮成圖示窄欄 */
-(function(){const host=$("#drawerHost");if(!host)return;
-  const upd=()=>document.body.classList.toggle("drawer-open",!!host.querySelector(".drawer"));
-  new MutationObserver(upd).observe(host,{childList:true});upd();
+/* 圖示窄欄：手動收合（記在這台瀏覽器），或在筆電寬度打開右側詳細頁時暫時收合 */
+(function(){const host=$("#drawerHost"),tog=$("#sideTog"),B=document.body;if(!host||!tog)return;
+  const KEYC="isms-side-collapsed",mqTmp=matchMedia("(min-width:961px) and (max-width:1599px)"),mqDesk=matchMedia("(min-width:961px)");
+  let collapsed=false;try{collapsed=localStorage.getItem(KEYC)==="1"}catch(e){}
+  const upd=()=>{const drawer=!!host.querySelector(".drawer"),tmp=drawer&&!collapsed&&mqTmp.matches;
+    B.classList.toggle("drawer-open",drawer);B.classList.toggle("side-collapsed",collapsed);
+    B.classList.toggle("rail-tmp",tmp);const rail=mqDesk.matches&&(collapsed||tmp);B.classList.toggle("rail",rail);
+    tog.setAttribute("aria-expanded",String(!collapsed));const t=collapsed?"展開選單":"收合選單";tog.setAttribute("aria-label",t);tog.dataset.tip=t;
+    // 窄欄只剩圖示時，滑過顯示名稱
+    document.querySelectorAll("#tabs button[data-tab]").forEach(b=>{if(rail)b.dataset.tip=b.querySelector(".tl").textContent;else delete b.dataset.tip})};
+  tog.addEventListener("click",()=>{collapsed=!collapsed;try{localStorage.setItem(KEYC,collapsed?"1":"0")}catch(e){}upd()});
+  new MutationObserver(upd).observe(host,{childList:true});
+  (mqTmp.addEventListener?mqTmp.addEventListener("change",upd):mqTmp.addListener(upd));
+  upd();
 })();
 /* 平板與手機：上方列的選單鈕開關側欄 */
 (function(){const btn=$("#menuBtn"),scrim=$("#sideScrim");if(!btn)return;
