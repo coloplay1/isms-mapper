@@ -2426,7 +2426,15 @@ function updateNavBadges(){
     B.classList.toggle("rail-tmp",tmp);const rail=mqDesk.matches&&(collapsed||tmp);B.classList.toggle("rail",rail);
     tog.setAttribute("aria-expanded",String(!collapsed));const t=collapsed?"展開選單":"收合選單";tog.setAttribute("aria-label",t);tog.dataset.tip=t;
     // 窄欄只剩圖示時，滑過顯示名稱
-    document.querySelectorAll("#tabs button[data-tab]").forEach(b=>{if(rail)b.dataset.tip=b.querySelector(".tl").textContent;else delete b.dataset.tip})};
+    document.querySelectorAll("#tabs button[data-tab]").forEach(b=>{if(rail)b.dataset.tip=b.querySelector(".tl").textContent;else delete b.dataset.tip});
+    dock()};
+  // 超寬螢幕：內容右邊還放得下詳細頁時，詳細頁直接接在內容右側（不加暗色遮罩，內容仍可操作），視線不用橫跨整個螢幕
+  const main=document.querySelector("main"),DW=460,GAP=20;
+  const dock=()=>{const drawer=!!host.querySelector(".drawer");let ok=false,left=0;
+    if(drawer&&mqDesk.matches&&main){const r=main.getBoundingClientRect(),pr=parseFloat(getComputedStyle(main).paddingRight)||0;
+      left=Math.round(r.right-pr+GAP);ok=innerWidth-left>=DW+12}
+    B.classList.toggle("dock",ok);if(ok)B.style.setProperty("--dock-l",left+"px");else B.style.removeProperty("--dock-l")};
+  addEventListener("resize",dock);
   tog.addEventListener("click",()=>{collapsed=!collapsed;try{localStorage.setItem(KEYC,collapsed?"1":"0")}catch(e){}upd()});
   new MutationObserver(upd).observe(host,{childList:true});
   (mqTmp.addEventListener?mqTmp.addEventListener("change",upd):mqTmp.addListener(upd));

@@ -960,3 +960,9 @@ body{padding-left:var(--side)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .kpi:not(.hero){border-color:rgba(255,255,255,.07)}}
 @media (prefers-reduced-motion:reduce){.kpi{transition:none}.kpi:hover{transform:none}}
 @media (max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.kpi .v{font-size:34px}.ovstrip{grid-template-columns:1fr}}
+/* 超寬螢幕：詳細頁接在內容右側，不加遮罩 */
+@media (min-width:961px){
+  body.dock .scrim{display:none}
+  body.dock .drawer{left:var(--dock-l);right:auto;width:min(460px,calc(100vw - var(--dock-l) - 12px));box-shadow:0 10px 36px rgba(8,20,24,.16),0 1px 3px rgba(8,20,24,.08);border:1px solid var(--line)}
+  body.dock .picked{box-shadow:0 0 0 3px var(--accent)!important;outline:0}
+}
