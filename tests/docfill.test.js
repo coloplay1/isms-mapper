@@ -84,3 +84,18 @@ test('沒有專案也能產生：用輸入的組織、範圍、產業與補充�
   assert.ok(doc.includes('補充說明') && doc.includes('每季複審'));
   assert.equal(A.docInputProject(null, { industry: 'nope' }).industry, '');
 });
+
+test('整包範本：所有 Word 都帶入資料，Excel 與說明檔原樣保留', async () => {
+  const kit = TPL('isms-document-kit.zip');
+  const before = await A.unzipEntries(kit);
+  const p = A.docInputProject(null, { org: '晨光科技', scope: '總部', industry: 'mfg' });
+  const { bytes, filled } = await A.fillKit(kit, p, NOW);
+  const after = await A.unzipEntries(bytes);
+  assert.deepEqual(after.map(e => e.name), before.map(e => e.name));
+  assert.equal(filled, before.filter(e => /\.docx$/.test(e.name)).length);
+  const x = after.find(e => /\.xlsx$/.test(e.name)), x0 = before.find(e => e.name === x.name);
+  assert.deepEqual(Array.from(x.data), Array.from(x0.data));
+  const pol = after.find(e => /POL-01/.test(e.name));
+  const doc = new TextDecoder().decode((await A.unzipEntries(pol.data)).find(e => e.name === 'word/document.xml').data);
+  assert.ok(doc.includes('晨光科技'));
+});

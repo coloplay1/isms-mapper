@@ -2325,9 +2325,10 @@ function renderDocs(){
     return `<div class="dneed ${n.level}"><span class="dnlab">建立依據</span><span>${esc(n.why)}${n.risks.length?"；風險評鑑引用：":""}</span>${rs}</div>`};
   const refs=d=>[...d.clauses,...d.controls].map(c=>`<button class="rc" data-open="${c}" data-tip="${c} ${esc((CLAUSE_MAP[c]||ANNEX_MAP[c]||{}).name||"")}">${c}</button>`).join("");
   $("#view-docs").innerHTML=`<h2>ISMS 文件範本</h2>
-  <p class="lede">依五層文件架構整理的通用範本，涵蓋 ISO/IEC 27001 條款 4–10 要求保存的文件化資訊。黃色標示的【】是需要依組織修改的地方。每份文件可以直接<b>下載空白範本</b>，或按「產生文件」<b>自動帶入公司名稱與專案資料</b>（Word），也能<b>複製 AI 提示詞</b>交給你自己使用的 AI 服務撰寫草稿，資料不會送出；範本內容自行撰寫，不含標準原文。範本以 <a href="https://github.com/coloplay1/isms-mapper/blob/main/templates/LICENSE.md" target="_blank" rel="noopener">CC BY 4.0</a> 釋出，可自由使用與修改；轉載範本時請標示出處。</p>
+  <p class="lede">依五層架構整理的通用範本，涵蓋條款 4–10 要求保存的文件化資訊；黃色【】是要依組織修改的地方。範本自行撰寫、不含標準原文，以 <a href="https://github.com/coloplay1/isms-mapper/blob/main/templates/LICENSE.md" target="_blank" rel="noopener">CC BY 4.0</a> 釋出。</p>
+  <div class="dways"><span><b>⬇ 下載空白範本</b>直接編輯使用</span><span><b>✎ 自動帶入</b>公司名稱與專案資料填進 Word</span><span><b>✦ AI 提示詞</b>交給你自己的 AI 服務撰寫草稿</span><span class="note">每份文件按「產生文件」，或用「下載全部」一次處理；資料不會送出</span></div>
   <div class="filters">
-    <a class="btn primary" href="${TPL_BASE}isms-document-kit.zip" download="ISMS文件範本包.zip">⬇ 下載全部（ZIP）</a>
+    <button class="btn primary" id="docKit">⬇ 下載全部（ZIP）</button>
     <div class="seg" id="docSeg">${[["all","全部"],...(p?[["mine","本專案需要"]]:[]),["req","標準要求的文件"],...DOC_LAYERS.map(l=>[l.id,l.id+" "+l.name])].map(([k,t])=>`<button data-df="${k}" aria-pressed="${docFilter===k}">${t}</button>`).join("")}</div>
     <span class="count">已提供 ${ready.length} 份${planned?`，規劃中 ${planned} 份`:""}</span>
   </div>
@@ -2345,6 +2346,7 @@ function renderDocs(){
     </article>`).join("")}</div></section>`}).join("")}
   <p class="note" style="margin-top:18px">範本以虛構公司「北辰精密製造」撰寫填寫範例；正式使用前請依組織實際情況修改，並經權責主管核准。法規內容整理於 ${RULES_DATE}，請以主管機關公告為準。</p>`;
   $("#docSeg").addEventListener("click",e=>{const b=e.target.closest("[data-df]");if(!b)return;docFilter=b.dataset.df;renderDocs()});
+  $("#docKit").addEventListener("click",openDocKit);
   $("#view-docs").querySelectorAll("[data-dgen]").forEach(b=>b.addEventListener("click",e=>{e.preventDefault();openDocGen(b.dataset.dgen)}));
 }
 document.addEventListener("click",e=>{const b=e.target.closest("[data-cprompt]");if(b){e.preventDefault();openPrompt({kind:"ctl",id:b.dataset.cprompt})}});
@@ -2398,6 +2400,42 @@ function openDocGen(id){
   const gw=$("#gWord");if(gw)gw.addEventListener("click",e=>downloadFilledDoc(d,e.currentTarget,proj()));
   host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeDrawer));
   fill();$("#gOrg").focus();
+}
+/* 下載全部：空白範本包，或把所有 Word 範本帶入資料後一次打包 */
+function openDocKit(){
+  const p=cur(),v=p?{org:p.org||"",scope:p.scope||"",industry:p.industry||""}:{org:DOCGEN.org,scope:DOCGEN.scope,industry:DOCGEN.industry};
+  const nW=DOCS.filter(d=>d.fmt==="docx"&&d.status!=="planned").length,nAll=DOCS.filter(d=>d.status!=="planned").length;
+  const host=$("#drawerHost");
+  host.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="下載全部範本">
+    <button class="btn x" data-close>關閉</button>
+    <div class="code">文件範本・下載全部</div><h2>ISMS 文件範本包</h2>
+    <div class="dgact">
+      <div><b>空白範本包</b><span class="note">${nAll} 份範本原樣打包，依五層架構分資料夾</span><div class="form"><a class="btn" href="${TPL_BASE}isms-document-kit.zip" download="ISMS文件範本包.zip">下載空白範本包</a></div></div>
+      <div><b>帶入資料後打包</b><span class="note">${nW} 份 Word 範本的【公司名稱】換成下面的組織名稱，每份文末附上相關資料${p?"（含本專案的控制措施與風險）":""}；Excel 範本原樣附上</span>
+        <div class="dgform">
+          <label>組織名稱<input id="kOrg" value="${esc(v.org)}" placeholder="例如：晨光科技股份有限公司"></label>
+          <label>驗證範圍<input id="kScope" value="${esc(v.scope)}" placeholder="例如：台北總部資訊機房與核心營運系統"></label>
+          <label>產業<select id="kInd">${INDUSTRIES.map(x=>`<option value="${x.id}" ${x.id===v.industry?"selected":""}>${esc(x.label)}</option>`).join("")}</select></label>
+        </div>
+        <div class="form"><button class="btn primary" id="kGo">下載帶入資料的範本包</button></div></div>
+    </div>
+    <p class="note" style="margin-top:10px">全部在瀏覽器裡完成，資料不會送出。要 AI 提示詞時，請在個別文件按「產生文件」。</p>
+  </aside>`;
+  host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeDrawer));
+  $("#kGo").addEventListener("click",async e=>{
+    const btn=e.currentTarget,old=btn.textContent,org=$("#kOrg").value.trim();
+    if(!org){toast("請先填組織名稱");$("#kOrg").focus();return}
+    if(!p){DOCGEN.org=org;DOCGEN.scope=$("#kScope").value;DOCGEN.industry=$("#kInd").value}
+    if(location.protocol==="file:"){toast("從本機檔案開啟時無法讀取範本，請改用網站版");return}
+    if(typeof DecompressionStream==="undefined"){toast("這個瀏覽器不支援，請改用最新版 Chrome、Edge、Firefox 或 Safari");return}
+    btn.disabled=true;btn.textContent="產生中…";
+    try{const res=await fetch(TPL_BASE+"isms-document-kit.zip",{cache:"no-cache"});if(!res.ok)throw new Error("讀取範本包失敗");
+      const {bytes,filled}=await fillKit(await res.arrayBuffer(),docInputProject(p,{org,scope:$("#kScope").value,industry:$("#kInd").value}));
+      await saveFile(`ISMS文件範本包_${safeName(org).slice(0,30)}.zip`,new Blob([bytes],{type:"application/zip"}),"application/zip");
+      setTimeout(()=>toast(`已帶入 ${filled} 份 Word 範本`),2300);
+    }catch(err){toast("無法產生："+(err&&err.message||"請稍後再試"))}
+    finally{btn.disabled=false;btn.textContent=old}});
+  $("#kOrg").focus();
 }
 /* AI 提示詞：預覽、可去識別化，按鈕複製；工具本身不呼叫任何 AI 服務 */
 let promptAnon=false;

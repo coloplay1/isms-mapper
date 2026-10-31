@@ -178,3 +178,14 @@ function docInputProject(base,{org="",scope="",industry="",notes=""}={}){
   return {...b,name:b.name||"（未建立專案）",org:String(org).trim(),scope:String(scope).trim(),industry:INDUSTRY_MAP[industry]?industry:"",
     features:base&&b.industry===industry?(b.features||[]):[],controls:b.controls||{},clauses:b.clauses||{},risks:b.risks||[],notes:String(notes).trim()};
 }
+/* 整包範本：解開範本包，逐份 Word 帶入資料（依檔名開頭的文件編號對應），Excel 與說明檔原樣保留，再打包 */
+async function fillKit(buf,p,now){
+  const entries=await unzipEntries(buf);let filled=0,replaced=0;
+  for(const e of entries){
+    if(!/\.docx$/i.test(e.name))continue;
+    const base=e.name.split("/").pop(),id=(base.match(/^([A-Z]+-\d+)\s/)||[])[1],d=id&&DOC_MAP[id];
+    if(!d)continue;
+    const r=await fillDocx(e.data,p,d,now);e.data=r.bytes;filled++;replaced+=r.replaced;
+  }
+  return {bytes:zipEntries(entries),filled,replaced};
+}
