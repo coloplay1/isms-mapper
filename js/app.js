@@ -2595,6 +2595,10 @@ function updateNavBadges(){
   (mqTmp.addEventListener?mqTmp.addEventListener("change",upd):mqTmp.addListener(upd));
   upd();
 })();
+/* 點左上角標誌回到首頁（收合按鈕本身除外） */
+document.querySelectorAll(".sbrand,.mbrand").forEach(el=>{
+  const go=e=>{if(e.target.closest("button"))return;const h=document.querySelector('#tabs [data-tab="home"]');if(h)h.click()};
+  el.addEventListener("click",go);el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go(e)}})});
 /* 平板與手機：上方列的選單鈕開關側欄 */
 (function(){const btn=$("#menuBtn"),scrim=$("#sideScrim");if(!btn)return;
   const setOpen=o=>{document.body.classList.toggle("sideopen",o);btn.setAttribute("aria-expanded",o);scrim.hidden=!o;if(o){const sel=$("#tabs [aria-selected=\"true\"]");if(sel)sel.focus({preventScroll:true})}};
