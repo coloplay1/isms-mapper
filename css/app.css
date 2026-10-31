@@ -860,3 +860,23 @@ footer{display:flex;flex-wrap:wrap;gap:2px 12px;line-height:1.7}footer a{color:v
 :root{--logo-ink:#163f52;--logo-c:#164a5c;--logo-arc:#4fae9f}
 :root[data-theme="dark"]{--logo-ink:#e3ecea;--logo-c:#1f6577;--logo-arc:#5cc0ae}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--logo-ink:#e3ecea;--logo-c:#1f6577;--logo-arc:#5cc0ae}}
+/* 頂端識別橫條：左邊標誌，右邊斜切深藍綠底放專案選單與按鈕 */
+:root{--band-l:#ebeef3;--band-t:#234c5e}
+:root[data-theme="dark"]{--band-l:#15242a;--band-t:#1d4655}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--band-l:#15242a;--band-t:#1d4655}}
+.band{background:var(--band-l);border-bottom:1px solid var(--line);overflow:hidden}
+.band .bar{padding-block:0;min-height:68px;flex-wrap:nowrap;gap:0;align-items:stretch}
+.band .brand{gap:12px;padding-block:12px;padding-right:20px;flex:none}
+.band .lgmark{width:54px;height:40px}.band .lgname{font-size:23px;font-weight:800}
+.bandR{flex:1;min-width:0;display:flex;align-items:center;justify-content:flex-end;background:var(--band-t);padding-left:56px;
+  margin-right:calc(-1 * max(16px,(100vw - 1180px) / 2 + 16px));padding-right:max(16px,calc((100vw - 1180px) / 2 + 16px));
+  clip-path:polygon(28px 0,100% 0,100% 100%,0 100%)}
+.bandR .saved{color:#cfe3e6}
+.bandR .btn{background:rgba(255,255,255,.08);color:#fff;border-color:rgba(255,255,255,.45)}
+.bandR .btn:hover{background:rgba(255,255,255,.16);border-color:#fff}
+.bandR select{background:#fff;color:#16232a;border-color:transparent}
+.bandR :focus-visible{outline-color:#fff}
+@media (max-width:1000px){.band .bar{flex-wrap:wrap}.bandR{background:none;clip-path:none;margin-right:0;padding:0 0 10px;flex-basis:100%;justify-content:flex-start}
+  .bandR .btn{background:var(--surface);color:var(--ink);border-color:var(--line)}.bandR .btn:hover{background:var(--surface2);border-color:var(--accent)}.bandR .saved{color:var(--muted)}.bandR select{border-color:var(--line)}
+  .band .brand{padding-block:12px 8px}}
+@media (max-width:560px){.band .lgname{font-size:19px}.band .lgmark{width:44px;height:33px}}
