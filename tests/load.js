@@ -4,7 +4,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const FILES = ['js/data/controls.js', 'js/data/cases.js', 'js/data/rules.js', 'js/data/docs.js', 'js/core.js', 'js/workbook.js', 'js/cycle.js', 'js/guide.js'];
+const FILES = ['js/data/controls.js', 'js/data/cases.js', 'js/data/rules.js', 'js/data/docs.js', 'js/core.js', 'js/workbook.js', 'js/cycle.js', 'js/guide.js', 'js/docfill.js'];
 const NAMES = ['THEMES', 'ANNEX', 'ANNEX_MAP', 'CLAUSES', 'CLAUSE_MAP', 'CASES', 'SYN', 'FEATURES', 'FEATURE_MAP',
   'INDUSTRIES', 'INDUSTRY_MAP', 'LAWS', 'DEV_ONLY', 'DEV_OR_VENDOR', 'STATUS', 'APP', 'FIELD_LABEL', 'BACKUP_DAYS', 'BACKUP_CHANGES',
   'MAX_IMPORT_BYTES', 'search', 'expand', 'norm', 'baseFocus', 'focusMap', 'naCandidates', 'lawsFor',
@@ -16,7 +16,7 @@ const NAMES = ['THEMES', 'ANNEX', 'ANNEX_MAP', 'CLAUSES', 'CLAUSE_MAP', 'CASES',
   'DOCS', 'DOC_LAYERS', 'DOC_REQUIREMENTS', 'DOC_MAP', 'sanitizeCase', 'nextCaseId', 'exportCaseLib', 'mergeCaseLib', 'CASE_LIB_MAX', 'parseRefCodes', 'splitKeywords',
   'snapshotProject', 'sanitizeBaseline', 'bumpVersion', 'nextPeriod', 'rolloverProject', 'compareProjects', 'buildComparisonWorkbook',
   'ACTION_TYPES', 'ACTION_STATUS', 'blankAction', 'sanitizeAction', 'nextActionId', 'actionOverdue', 'actionChecks', 'actionStats',
-  'nextSteps', 'guideFacts', 'roadmapSteps', 'roadmapItems', 'docNeed', 'sanitizeScale', 'SCALE_REF', 'LIFECYCLE', 'LIFECYCLE_MAP', 'riskStages', 'caseBrief', 'planDue', 'PLAN_SOON_DAYS', 'auditReadiness', 'signoffSheet', 'SIGNOFF_MANUAL', 'traceChain', 'AUDIT_RULES', 'SPOT_STALE_DAYS', 'evidenceAge', 'spotCandidates', 'pickSpot', 'sanitizeSpots', 'nextSpotId', 'spotStats', 'selfVerified', 'riskSanity', 'reverseLookup', 'spotEvExample', 'coList', 'normCo'];
+  'nextSteps', 'guideFacts', 'roadmapSteps', 'roadmapItems', 'docNeed', 'sanitizeScale', 'SCALE_REF', 'LIFECYCLE', 'LIFECYCLE_MAP', 'riskStages', 'caseBrief', 'planDue', 'PLAN_SOON_DAYS', 'auditReadiness', 'crc32', 'unzipEntries', 'zipEntries', 'docFillMap', 'fillDocXml', 'docContext', 'docAppendixXml', 'fillDocx', 'docPrompt', 'controlPrompt', 'anonPerson', 'signoffSheet', 'SIGNOFF_MANUAL', 'traceChain', 'AUDIT_RULES', 'SPOT_STALE_DAYS', 'evidenceAge', 'spotCandidates', 'pickSpot', 'sanitizeSpots', 'nextSpotId', 'spotStats', 'selfVerified', 'riskSanity', 'reverseLookup', 'spotEvExample', 'coList', 'normCo'];
 
 function load() {
   const src = FILES.map(f => `// ---- ${f}\n` + fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');

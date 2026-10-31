@@ -1656,7 +1656,7 @@ function openDrawer(code,fromList,trail){
     <dl>
       ${isA?`<div><dt>適用性</dt><dd><select id="dApp">${APP.map(a=>`<option value="${a.v}" ${a.v===v.app?"selected":""}>${a.label}</option>`).join("")}</select></dd></div>
       <div><dt>納入／排除理由</dt><dd><input id="dReason" data-reason="${code}" autocomplete="off" placeholder="選擇或輸入理由，可複選" value="${esc(v.reason)}" class="${missingReason(v)?"warn":""}" aria-describedby="dReasonHint"><small id="dReasonHint" class="warnhint" ${missingReason(v)?"":"hidden"}>不適用的項目需要填寫排除理由，SoA 稽核時會檢查。</small></dd></div>
-      <div><dt>實施方式</dt><dd><textarea id="dImpl" rows="2" placeholder="如何落實，例如依哪份程序、由誰執行">${esc(v.impl||"")}</textarea></dd></div>`:""}
+      <div><dt>實施方式</dt><dd><textarea id="dImpl" rows="2" placeholder="如何落實，例如依哪份程序、由誰執行">${esc(v.impl||"")}</textarea><button type="button" class="linkbtn pmlink" data-cprompt="${code}">AI 提示詞：撰寫實施方式與證據清單</button></dd></div>`:""}
       <div><dt>執行狀態</dt><dd><select id="dStatus">${STATUS.map(s=>`<option value="${s.v}" ${s.v===v.status?"selected":""}>${s.label}</option>`).join("")}</select></dd></div>
       <div><dt>負責人</dt><dd><input id="dOwner" data-owner autocomplete="off" value="${esc(v.owner)}" placeholder="從名單選擇或輸入新名字"></dd></div>
       <div><dt>協辦單位</dt><dd><input id="dCo" autocomplete="off" list="ownerList" value="${esc(v.co||"")}" placeholder="跨單位執行時填寫，多個用「、」分隔，例如：人資處、總務課"></dd></div>
@@ -2341,10 +2341,50 @@ function renderDocs(){
     <div class="dlist">${list.map(d=>`<article class="ditem ${d.status==="planned"?"planned":""}">
       <div class="dhead"><span class="mono">${d.id}</span><b>${esc(d.name)}</b>${p?`<span class="dtag ${need(d).level}">${need(d).label}</span>`:d.mandatory?`<span class="dtag">標準要求</span>`:""}${d.tool?`<span class="dtag tool">可匯入工具檢查</span>`:""}<span class="dfmt">${d.fmt==="docx"?"Word":"Excel"}</span></div>
       <p>${esc(d.desc)}</p>${needLine(d)}
-      <div class="dfoot"><div class="rcodes">${refs(d)}</div><div class="dbtns">${d.example?`<a class="dl ghost" href="${TPL_BASE+d.example}" download="${esc(d.id+" "+d.name+"_填寫範例."+d.fmt)}">填寫範例</a>`:""}${docLink(d,d.status==="planned"?"":"下載")}</div></div>
+      <div class="dfoot"><div class="rcodes">${refs(d)}</div><div class="dbtns">${p&&d.fmt==="docx"&&d.status!=="planned"?`<button class="dl ghost" data-dfill="${d.id}" data-tip="把公司名稱與本專案的相關控制措施、風險填進範本">填入本專案</button><button class="dl ghost" data-dprompt="${d.id}" data-tip="整理成給 AI 的提示詞，貼到你自己使用的 AI 服務">AI 提示詞</button>`:""}${d.example?`<a class="dl ghost" href="${TPL_BASE+d.example}" download="${esc(d.id+" "+d.name+"_填寫範例."+d.fmt)}">填寫範例</a>`:""}${docLink(d,d.status==="planned"?"":"下載")}</div></div>
     </article>`).join("")}</div></section>`}).join("")}
   <p class="note" style="margin-top:18px">範本以虛構公司「北辰精密製造」撰寫填寫範例；正式使用前請依組織實際情況修改，並經權責主管核准。法規內容整理於 ${RULES_DATE}，請以主管機關公告為準。</p>`;
   $("#docSeg").addEventListener("click",e=>{const b=e.target.closest("[data-df]");if(!b)return;docFilter=b.dataset.df;renderDocs()});
+  $("#view-docs").querySelectorAll("[data-dfill]").forEach(b=>b.addEventListener("click",()=>downloadFilledDoc(DOC_MAP[b.dataset.dfill],b)));
+  $("#view-docs").querySelectorAll("[data-dprompt]").forEach(b=>b.addEventListener("click",()=>openPrompt({kind:"doc",id:b.dataset.dprompt})));
+}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-cprompt]");if(b){e.preventDefault();openPrompt({kind:"ctl",id:b.dataset.cprompt})}});
+/* 下載填好本專案資料的 Word 範本：在瀏覽器中讀取範本、替換、打包，資料不會送出 */
+async function downloadFilledDoc(d,btn){
+  const p=cur();if(!p||!d)return;
+  if(location.protocol==="file:"){toast("從本機檔案開啟時無法讀取範本，請改用網站版");return}
+  if(typeof DecompressionStream==="undefined"){toast("這個瀏覽器不支援，請改用最新版 Chrome、Edge、Firefox 或 Safari");return}
+  const old=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent="產生中…"}
+  try{
+    const res=await fetch(docHref(d),{cache:"no-cache"});if(!res.ok)throw new Error("讀取範本失敗");
+    const {bytes,replaced}=await fillDocx(await res.arrayBuffer(),p,d);
+    const who=safeName(p.org||p.name||"本專案").slice(0,30);
+    await saveFile(`${d.id} ${d.name}_${who}.docx`,new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}),"application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    if(!p.org)setTimeout(()=>toast("專案沒有填組織名稱，【公司名稱】維持原樣；可到專案管理補上"),2400);
+  }catch(e){toast("無法產生："+(e&&e.message||"請稍後再試"))}
+  finally{if(btn){btn.disabled=false;btn.textContent=old}}
+}
+/* AI 提示詞：預覽、可去識別化，按鈕複製；工具本身不呼叫任何 AI 服務 */
+let promptAnon=false;
+function openPrompt(spec){
+  const p=cur();if(!p)return;
+  const build=()=>spec.kind==="doc"?docPrompt(p,DOC_MAP[spec.id],{anon:promptAnon}):controlPrompt(p,spec.id,{anon:promptAnon});
+  const title=spec.kind==="doc"?`${spec.id} ${DOC_MAP[spec.id].name}`:`${spec.id} ${(ANNEX_MAP[spec.id]||{}).name||""} 的實施說明`;
+  const host=$("#drawerHost");
+  host.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="AI 提示詞">
+    <button class="btn x" data-close>關閉</button>
+    <div class="code">AI 提示詞</div><h2>${esc(title)}</h2>
+    <p class="note">工具已把這個專案的相關資料整理成提示詞。複製後貼到你自己使用的 AI 服務（例如 ChatGPT、Claude、Copilot），產生草稿後再依實際情況修改。<b>工具本身不會把任何資料送出。</b></p>
+    <label class="pmanon"><input type="checkbox" id="pmAnon" ${promptAnon?"checked":""}> 去識別化：公司名稱改成「本公司」，負責人只保留單位</label>
+    <textarea id="pmText" class="pmtext" readonly rows="18"></textarea>
+    <div class="form" style="margin-top:12px"><button class="btn primary" id="pmCopy">複製提示詞</button><span class="saved" id="pmLen"></span></div>
+    <p class="note" style="margin-top:10px">貼上前請確認公司規定是否允許把這些內容提供給外部 AI 服務；AI 產生的內容要經過權責人員審閱後才能發行。</p>
+  </aside>`;
+  const ta=$("#pmText"),fill=()=>{ta.value=build();$("#pmLen").textContent=`約 ${ta.value.length} 字`};fill();
+  $("#pmAnon").addEventListener("change",e=>{promptAnon=e.target.checked;fill()});
+  $("#pmCopy").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(ta.value);toast("已複製提示詞")}catch(e){ta.focus();ta.select();toast("請按 Ctrl+C 複製選取的文字")}});
+  host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeDrawer));
+  host.querySelector(".x").focus();
 }
 /* 控制措施或條款詳細頁中的相關文件 */
 function relatedDocsHTML(code){

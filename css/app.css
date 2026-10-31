@@ -409,8 +409,8 @@ footer{font-size:12px;color:var(--muted);padding-block:0 30px}
 .dfmt{margin-left:auto;font-size:12px;color:var(--muted)}
 .dfoot{display:flex;align-items:flex-end;gap:8px;justify-content:space-between}
 .dfoot .rcodes{flex:1;min-width:0}
-a.dl{font:inherit;font-size:13px;border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:3px 10px;text-decoration:none;white-space:nowrap;flex:none}
-a.dl:hover{background:var(--accent);color:var(--accent-ink)}
+a.dl,button.dl{font:inherit;font-size:13px;border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:3px 10px;text-decoration:none;white-space:nowrap;flex:none}
+a.dl:hover,button.dl:hover:not(:disabled){background:var(--accent);color:var(--accent-ink)}
 a.btn{text-decoration:none;display:inline-block}
 .drel{display:block;text-align:left;background:var(--surface2);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:14px;color:var(--ink);text-decoration:none}
 .drel.planned{color:var(--muted)}
@@ -433,8 +433,8 @@ a.btn{text-decoration:none;display:inline-block}
 .fopt summary .note{font-size:12px;margin:0}
 .fopt summary .fcount{margin-left:auto}
 .dbtns{display:flex;gap:6px;flex:none}
-a.dl.ghost{border-color:var(--line);color:var(--muted)}
-a.dl.ghost:hover{background:var(--surface2);color:var(--ink)}
+a.dl.ghost,button.dl.ghost{border-color:var(--line);color:var(--muted)}
+a.dl.ghost:hover,button.dl.ghost:hover:not(:disabled){background:var(--surface2);color:var(--ink)}
 
 /* ===== 深淺色切換按鈕 ===== */
 .themebtn{display:inline-flex;align-items:center;gap:4px}
@@ -974,3 +974,9 @@ body{padding-left:var(--side)}
 .ckrecent{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--accent-soft);color:var(--ink);font-size:13.5px}
 .utoast .ux{font-weight:600}
 .utoast button{white-space:nowrap;flex:none}.utoast{max-width:min(720px,calc(100vw - 32px))}
+/* 文件範本：填入本專案、AI 提示詞 */
+button.dl{cursor:pointer;background:none}
+button.dl:disabled{opacity:.6;cursor:progress}
+.pmanon{display:flex;gap:8px;align-items:center;font-size:13.5px;margin:12px 0 8px}
+.pmtext{width:100%;box-sizing:border-box;font:13px/1.6 var(--font-body);background:var(--surface2);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 12px;resize:vertical}
+.pmlink{display:inline-block;margin-top:6px;font-size:12.5px}
