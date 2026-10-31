@@ -1,6 +1,6 @@
 {
   "name": "isms-mapper",
-  "version": "1.39.4",
+  "version": "1.40.0",
   "private": true,
   "description": "ISO/IEC 27001:2022 ISMS 導入輔助工具",
   "license": "MIT",
