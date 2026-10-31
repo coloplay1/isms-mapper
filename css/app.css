@@ -998,3 +998,4 @@ button.dl:disabled{opacity:.6;cursor:progress}
 .dgtb th,.dgtb td{border:1px solid var(--line);padding:3px 6px;text-align:left;vertical-align:top;position:static;font-size:12px;letter-spacing:0}
 .dgreset{display:flex;justify-content:flex-end;margin-bottom:-6px}.dgreset .linkbtn{padding:0}
 .sfoot .proj[hidden]{display:none}
+.sbrand,.mbrand{cursor:pointer;border-radius:10px}.sbrand:hover .lgname,.mbrand:hover .lgname{color:var(--accent)}.sbrand:focus-visible,.mbrand:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
