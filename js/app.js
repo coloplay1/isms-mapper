@@ -2341,17 +2341,16 @@ function renderDocs(){
     <div class="dlist">${list.map(d=>`<article class="ditem ${d.status==="planned"?"planned":""}">
       <div class="dhead"><span class="mono">${d.id}</span><b>${esc(d.name)}</b>${p?`<span class="dtag ${need(d).level}">${need(d).label}</span>`:d.mandatory?`<span class="dtag">標準要求</span>`:""}${d.tool?`<span class="dtag tool">可匯入工具檢查</span>`:""}<span class="dfmt">${d.fmt==="docx"?"Word":"Excel"}</span></div>
       <p>${esc(d.desc)}</p>${needLine(d)}
-      <div class="dfoot"><div class="rcodes">${refs(d)}</div><div class="dbtns">${p&&d.fmt==="docx"&&d.status!=="planned"?`<button class="dl ghost" data-dfill="${d.id}" data-tip="把公司名稱與本專案的相關控制措施、風險填進範本">填入本專案</button><button class="dl ghost" data-dprompt="${d.id}" data-tip="整理成給 AI 的提示詞，貼到你自己使用的 AI 服務">AI 提示詞</button>`:""}${d.example?`<a class="dl ghost" href="${TPL_BASE+d.example}" download="${esc(d.id+" "+d.name+"_填寫範例."+d.fmt)}">填寫範例</a>`:""}${docLink(d,d.status==="planned"?"":"下載")}</div></div>
+      <div class="dfoot"><div class="rcodes">${refs(d)}</div><div class="dbtns">${d.fmt==="docx"&&d.status!=="planned"?`<button class="dl ghost" data-dgen="${d.id}" data-tip="填入公司資料下載 Word，或產生給 AI 的提示詞">產生文件</button>`:""}${d.example?`<a class="dl ghost" href="${TPL_BASE+d.example}" download="${esc(d.id+" "+d.name+"_填寫範例."+d.fmt)}">填寫範例</a>`:""}${docLink(d,d.status==="planned"?"":"下載")}</div></div>
     </article>`).join("")}</div></section>`}).join("")}
   <p class="note" style="margin-top:18px">範本以虛構公司「北辰精密製造」撰寫填寫範例；正式使用前請依組織實際情況修改，並經權責主管核准。法規內容整理於 ${RULES_DATE}，請以主管機關公告為準。</p>`;
   $("#docSeg").addEventListener("click",e=>{const b=e.target.closest("[data-df]");if(!b)return;docFilter=b.dataset.df;renderDocs()});
-  $("#view-docs").querySelectorAll("[data-dfill]").forEach(b=>b.addEventListener("click",()=>downloadFilledDoc(DOC_MAP[b.dataset.dfill],b)));
-  $("#view-docs").querySelectorAll("[data-dprompt]").forEach(b=>b.addEventListener("click",()=>openPrompt({kind:"doc",id:b.dataset.dprompt})));
+  $("#view-docs").querySelectorAll("[data-dgen]").forEach(b=>b.addEventListener("click",()=>openDocGen(b.dataset.dgen)));
 }
 document.addEventListener("click",e=>{const b=e.target.closest("[data-cprompt]");if(b){e.preventDefault();openPrompt({kind:"ctl",id:b.dataset.cprompt})}});
 /* 下載填好本專案資料的 Word 範本：在瀏覽器中讀取範本、替換、打包，資料不會送出 */
-async function downloadFilledDoc(d,btn){
-  const p=cur();if(!p||!d)return;
+async function downloadFilledDoc(d,btn,proj){
+  const p=proj||cur();if(!p||!d)return;
   if(location.protocol==="file:"){toast("從本機檔案開啟時無法讀取範本，請改用網站版");return}
   if(typeof DecompressionStream==="undefined"){toast("這個瀏覽器不支援，請改用最新版 Chrome、Edge、Firefox 或 Safari");return}
   const old=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent="產生中…"}
@@ -2360,9 +2359,44 @@ async function downloadFilledDoc(d,btn){
     const {bytes,replaced}=await fillDocx(await res.arrayBuffer(),p,d);
     const who=safeName(p.org||p.name||"本專案").slice(0,30);
     await saveFile(`${d.id} ${d.name}_${who}.docx`,new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}),"application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-    if(!p.org)setTimeout(()=>toast("專案沒有填組織名稱，【公司名稱】維持原樣；可到專案管理補上"),2400);
+    if(!p.org)setTimeout(()=>toast("沒有填組織名稱，【公司名稱】維持原樣"),2400);
   }catch(e){toast("無法產生："+(e&&e.message||"請稍後再試"))}
   finally{if(btn){btn.disabled=false;btn.textContent=old}}
+}
+/* 產生文件：固定的輸入欄位（有專案時預先帶入），可下載填好的 Word 或複製 AI 提示詞；沒有專案也能用 */
+const DOCGEN={org:"",scope:"",industry:"",notes:""};
+function openDocGen(id){
+  const d=DOC_MAP[id];if(!d)return;const p=cur();
+  const v=p?{org:p.org||"",scope:p.scope||"",industry:p.industry||"",notes:DOCGEN[id+":notes"]||""}:{org:DOCGEN.org,scope:DOCGEN.scope,industry:DOCGEN.industry,notes:DOCGEN[id+":notes"]||""};
+  const host=$("#drawerHost");
+  host.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="產生文件">
+    <button class="btn x" data-close>關閉</button>
+    <div class="code">${esc(d.id)}・產生文件</div><h2>${esc(d.name)}</h2>
+    <p class="note">${p?`已帶入專案「${esc(p.name)}」的基本資料，並會附上相關控制措施與風險；這裡的修改只用在這份文件，不會改到專案。`:`沒有開啟專案也可以使用：填入基本資料後產生。開啟或建立專案，還能自動附上相關的控制措施與風險。`}</p>
+    <div class="dgform">
+      <label>組織名稱<input id="gOrg" value="${esc(v.org)}" placeholder="例如：晨光科技股份有限公司" autocomplete="organization"></label>
+      <label>驗證範圍<input id="gScope" value="${esc(v.scope)}" placeholder="例如：台北總部資訊機房與核心營運系統"></label>
+      <label>產業<select id="gInd">${INDUSTRIES.map(x=>`<option value="${x.id}" ${x.id===v.industry?"selected":""}>${esc(x.label)}</option>`).join("")}</select></label>
+      <label>補充說明（選填）<textarea id="gNotes" rows="4" placeholder="目前的做法、使用的系統或公司規定，例如：帳號由 AD 管理、每季由主管複審權限、離職當天停用">${esc(v.notes)}</textarea></label>
+    </div>
+    <div class="dgact">
+      <div><b>下載 Word</b><span class="note">範本的【公司名稱】換成上面的組織名稱，文末附上本次資料供撰寫參考</span><button class="btn primary" id="gWord">下載填好的 Word</button></div>
+      <div><b>AI 提示詞</b><span class="note">貼到你自己使用的 AI 服務（ChatGPT、Claude、Copilot 等）產生草稿</span>
+        <label class="pmanon"><input type="checkbox" id="pmAnon" ${promptAnon?"checked":""}> 去識別化：公司名稱改成「本公司」，負責人只保留單位</label>
+        <textarea id="pmText" class="pmtext" readonly rows="10"></textarea>
+        <div class="form" style="margin-top:8px"><button class="btn" id="pmCopy">複製提示詞</button><span class="saved" id="pmLen"></span></div></div>
+    </div>
+    <p class="note" style="margin-top:10px"><b>工具不會把任何資料送出。</b>貼到 AI 服務前請確認公司規定；AI 產生的內容要經權責人員審閱後才能發行。</p>
+  </aside>`;
+  const proj=()=>docInputProject(p,{org:$("#gOrg").value,scope:$("#gScope").value,industry:$("#gInd").value,notes:$("#gNotes").value});
+  const ta=$("#pmText"),fill=()=>{ta.value=docPrompt(proj(),d,{anon:promptAnon,notes:$("#gNotes").value});$("#pmLen").textContent=`約 ${ta.value.length} 字`};
+  const keep=()=>{if(!p){DOCGEN.org=$("#gOrg").value;DOCGEN.scope=$("#gScope").value;DOCGEN.industry=$("#gInd").value}DOCGEN[id+":notes"]=$("#gNotes").value};
+  ["gOrg","gScope","gInd","gNotes"].forEach(k=>$("#"+k).addEventListener("input",()=>{keep();fill()}));
+  $("#pmAnon").addEventListener("change",e=>{promptAnon=e.target.checked;fill()});
+  $("#pmCopy").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(ta.value);toast("已複製提示詞")}catch(e){ta.focus();ta.select();toast("請按 Ctrl+C 複製選取的文字")}});
+  $("#gWord").addEventListener("click",e=>downloadFilledDoc(d,e.currentTarget,proj()));
+  host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeDrawer));
+  fill();$("#gOrg").focus();
 }
 /* AI 提示詞：預覽、可去識別化，按鈕複製；工具本身不呼叫任何 AI 服務 */
 let promptAnon=false;

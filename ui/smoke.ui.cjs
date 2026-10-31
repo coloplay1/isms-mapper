@@ -176,17 +176,22 @@ test("選單收合：只剩圖示、記住設定、詳細頁開關不出錯", as
   await ctx.close();
 });
 
-test("文件範本：填入本專案下載 Word、AI 提示詞可去識別化", async () => {
+test("文件範本：有無專案都能產生 Word 與 AI 提示詞", async () => {
   const { pg, ctx, errors } = await open({ acceptDownloads: true });
-  await pg.evaluate(() => openProject("sample:audit", "docs"));
-  const [dl] = await Promise.all([pg.waitForEvent("download"), pg.click('[data-dfill="POL-04"]')]);
-  const size = fs.statSync(await dl.path()).size;
-  assert.ok(size > 50000, "下載的 Word 檔有內容");
-  await pg.click('[data-dprompt="POL-04"]');
+  await pg.click('nav [data-tab="docs"]');
+  await pg.click('[data-dgen="POL-04"]');
+  await pg.fill("#gOrg", "晨光科技");
+  await pg.fill("#gNotes", "帳號由 AD 管理");
   const t = await pg.inputValue("#pmText");
-  assert.match(t, /存取控制政策/);
+  assert.ok(t.includes("晨光科技") && t.includes("帳號由 AD 管理"), "沒有專案時用輸入的資料");
+  const [dl] = await Promise.all([pg.waitForEvent("download"), pg.click("#gWord")]);
+  assert.ok(fs.statSync(await dl.path()).size > 50000);
+  await pg.keyboard.press("Escape");
+  await pg.evaluate(() => openProject("sample:audit", "docs"));
+  await pg.click('[data-dgen="POL-04"]');
+  assert.equal(await pg.inputValue("#gOrg"), await pg.evaluate(() => cur().org), "有專案時預先帶入");
   await pg.check("#pmAnon");
-  assert.ok(!(await pg.inputValue("#pmText")).includes("北辰精密製造"), "去識別化後沒有公司名");
+  assert.ok(!(await pg.inputValue("#pmText")).includes(await pg.evaluate(() => cur().org)), "去識別化");
   assert.deepEqual(errors, []);
   await ctx.close();
 });

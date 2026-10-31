@@ -103,6 +103,7 @@ function docAppendixXml(p,d,now){
   x+=wPara("附錄　本專案的相關資料",{bold:true,size:28,after:60});
   x+=wPara(`由 ISMS 條款對照台於 ${ds} 依專案「${p.name||""}」產生，供撰寫本文件時參考；發行前請整理成正式內容或刪除本附錄。`,{size:18,color:"5A6B72",after:160,shade:"FFF4CC"});
   const meta=[["組織",c.org||"（未填）"],["驗證範圍",c.scope||"（未填）"],["產業與業務特性",[c.industry,...c.features].filter(Boolean).join("、")||"（未選）"]];
+  if(String(p.notes||"").trim())meta.push(["補充說明",String(p.notes).trim()]);
   x+=wTable(["項目","內容"],meta,[2000,W-2000]);
   if(c.controls.length){x+=wPara("相關控制措施（附錄 A）",{bold:true,size:22,before:200,after:80});
     x+=wTable(["編號","名稱","適用性／狀態","負責人","實施方式／理由","證據位置"],c.controls.map(v=>[v.code,v.name,v.status?`${v.app}\n${v.status}`:v.app,v.owner,v.impl||v.reason,v.evidence]),[900,1700,1250,1550,2600,1600])}
@@ -134,7 +135,7 @@ async function fillDocx(buf,p,d,now){
 /* ---------- 給 AI 的提示詞 ---------- */
 /* 去識別化：公司名換成「本公司」，負責人只留單位（「資訊處 周處長」→「資訊處」） */
 function anonPerson(s){const t=String(s||"").trim();if(!t)return "";return t.split(/[、；;,，]/).map(x=>x.trim().split(/\s+/)[0]).filter(Boolean).join("、")}
-function docPrompt(p,d,{anon=false}={}){
+function docPrompt(p,d,{anon=false,notes=""}={}){
   const c=docContext(p,d),org=anon||!c.org?"本公司":c.org,who=s=>anon?anonPerson(s):s;
   const scrub=s=>anon&&c.org?String(s||"").split(c.org).join("本公司"):String(s||"");
   const L=[];
@@ -144,6 +145,8 @@ function docPrompt(p,d,{anon=false}={}){
   if(c.scope)L.push(`- 驗證範圍：${scrub(c.scope)}`);
   if(c.industry||c.features.length)L.push(`- 產業與業務特性：${[c.industry,...c.features].filter(Boolean).join("、")}`);
   if(d.desc)L.push(d.ctl?`- 控制措施要求（摘要）：${d.desc}`:`- 這份文件的目的：${d.desc}`);
+  if(String(notes||"").trim()){L.push("");L.push("【組織提供的補充說明（目前做法、系統、規定）】");String(notes).trim().split(/\n+/).forEach(x=>L.push(`- ${scrub(x.trim())}`))}
+  if(!(p.controls&&Object.keys(p.controls).length)&&!(p.risks||[]).length){L.push("");L.push("（尚未提供控制措施的執行狀況與風險評鑑結果，請依一般做法撰寫，並用【】標出需要組織確認的地方。）")}
   if(c.clauses.length){L.push("");L.push("【需要涵蓋的條款】");c.clauses.forEach(v=>L.push(`- ${v.code} ${v.name}（目前：${v.status}${v.owner?`，負責：${who(v.owner)}`:""}）`))}
   if(c.controls.length){L.push("");L.push("【相關控制措施與目前做法】");
     c.controls.forEach(v=>L.push(`- ${v.code} ${v.name}：${v.app}${v.status?`、${v.status}`:""}${v.owner?`；負責：${who(v.owner)}`:""}${v.impl?`；目前做法：${scrub(v.impl)}`:""}${v.app==="不適用"&&v.reason?`；排除理由：${scrub(v.reason)}`:""}`))}
@@ -167,4 +170,11 @@ function controlPrompt(p,code,{anon=false}={}){
 2. 列出稽核時可以出示的證據（紀錄名稱、產生頻率、保存位置的建議），並標出目前資料中還缺的部分。
 3. 資料不足或需要組織決定的地方用【】標示並給建議值；不要寫組織沒有提到的措施。
 4. 不要引用或改寫 ISO/IEC 27001 的標準原文。`;
+}
+
+/* 沒有開啟專案（或想覆寫）時，用輸入框的內容組成填寫與提示詞用的資料；有專案時保留它的控制措施與風險 */
+function docInputProject(base,{org="",scope="",industry="",notes=""}={}){
+  const b=base||{};
+  return {...b,name:b.name||"（未建立專案）",org:String(org).trim(),scope:String(scope).trim(),industry:INDUSTRY_MAP[industry]?industry:"",
+    features:base&&b.industry===industry?(b.features||[]):[],controls:b.controls||{},clauses:b.clauses||{},risks:b.risks||[],notes:String(notes).trim()};
 }
