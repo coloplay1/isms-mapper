@@ -182,10 +182,10 @@ function docInputProject(base,{org="",scope="",industry="",notes=""}={}){
 async function fillKit(buf,p,now){
   const entries=await unzipEntries(buf);let filled=0,replaced=0;
   for(const e of entries){
-    if(!/\.docx$/i.test(e.name))continue;
+    if(!/\.(docx|xlsx)$/i.test(e.name)||/填寫範例/.test(e.name))continue;
     const base=e.name.split("/").pop(),id=(base.match(/^([A-Z]+-\d+)\s/)||[])[1],d=id&&DOC_MAP[id];
     if(!d)continue;
-    const r=await fillDocx(e.data,p,d,now);e.data=r.bytes;filled++;replaced+=r.replaced;
+    const r=/\.xlsx$/i.test(e.name)?await fillXlsx(e.data,p,d):await fillDocx(e.data,p,d,now);e.data=r.bytes;filled++;replaced+=r.replaced;
   }
   return {bytes:zipEntries(entries),filled,replaced};
 }
@@ -197,4 +197,24 @@ async function countPlaceholder(buf,key){
     for(const t of dec.decode(e.data).match(/<w:t(?:\s[^>]*)?>[\s\S]*?<\/w:t>/g)||[])n+=xmlUnesc(t.replace(/<[^>]+>/g,"")).split(key).length-1;
   }
   return n;
+}
+/* ---------- Excel 範本 ----------
+   Excel 範本沒有【公司名稱】，帶入方式是：每張工作表 A1 標題前加上組織名稱，
+   列印頁首左邊放組織名稱、右邊放文件編號與名稱；其他【】（日期、單位）由組織決定，維持原樣 */
+const decEnt=s=>xmlUnesc(String(s).replace(/&#(\d+);/g,(m,n)=>String.fromCodePoint(+n)).replace(/&#x([0-9a-f]+);/gi,(m,n)=>String.fromCodePoint(parseInt(n,16))));
+function fillSheetXml(xml,org,d){
+  if(!org)return {xml,count:0};let count=0;
+  let out=xml.replace(/(<c r="A1"[^>]*><is><t(?:\s[^>]*)?>)([\s\S]*?)(<\/t><\/is><\/c>)/,(m,a,t,c)=>{const cur=decEnt(t);if(cur.startsWith(org))return m;count++;return a+xmlEsc(`${org}｜${cur}`)+c});
+  const hf=s=>String(s).replace(/&/g,"&&");
+  const head=`<oddHeader>${xmlEsc(`&L${hf(org)}&R${hf(d.id+" "+d.name)}`)}</oddHeader>`;
+  if(/<oddHeader\s*\/>|<oddHeader><\/oddHeader>/.test(out)){out=out.replace(/<oddHeader\s*\/>|<oddHeader><\/oddHeader>/,head);count++}
+  else if(/<headerFooter(?:\s[^>]*)?\/>/.test(out)){out=out.replace(/<headerFooter(?:\s[^>]*)?\/>/,`<headerFooter>${head}</headerFooter>`);count++}
+  else if(/<headerFooter(?:\s[^>]*)?>/.test(out)&&!/<oddHeader>/.test(out)){out=out.replace(/(<headerFooter(?:\s[^>]*)?>)/,`$1${head}`);count++}
+  return {xml:out,count};
+}
+async function fillXlsx(buf,p,d){
+  const entries=await unzipEntries(buf),dec=new TextDecoder(),enc=new TextEncoder(),org=String((p&&p.org)||"").trim();let replaced=0,sheets=0;
+  for(const e of entries){if(!/^xl\/worksheets\/sheet\d+\.xml$/.test(e.name))continue;sheets++;
+    const r=fillSheetXml(dec.decode(e.data),org,d);replaced+=r.count;e.data=enc.encode(r.xml)}
+  return {bytes:zipEntries(entries),replaced,sheets};
 }
