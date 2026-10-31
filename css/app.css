@@ -13,7 +13,7 @@ img{max-width:100%}
   --font-display:"Noto Serif TC","Noto Serif CJK TC","Songti TC","PMingLiU",serif;
   --font-body:"PingFang TC","Microsoft JhengHei","Noto Sans TC","Noto Sans CJK TC",system-ui,sans-serif;
   --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
-  --r:8px;
+  --r:12px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0f171a; --surface:#16211f; --surface2:#1b2826; --ink:#e3ecea; --muted:#a9b9bb; --on-fill:#08130f; --line:#4a5e5e;
@@ -860,23 +860,77 @@ footer{display:flex;flex-wrap:wrap;gap:2px 12px;line-height:1.7}footer a{color:v
 :root{--logo-ink:#163f52;--logo-c:#164a5c;--logo-arc:#4fae9f}
 :root[data-theme="dark"]{--logo-ink:#e3ecea;--logo-c:#1f6577;--logo-arc:#5cc0ae}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--logo-ink:#e3ecea;--logo-c:#1f6577;--logo-arc:#5cc0ae}}
-/* 頂端識別橫條：左邊標誌，右邊斜切深藍綠底放專案選單與按鈕 */
-:root{--band-l:#ebeef3;--band-t:#234c5e}
-:root[data-theme="dark"]{--band-l:#15242a;--band-t:#1d4655}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--band-l:#15242a;--band-t:#1d4655}}
-.band{background:var(--band-l);border-bottom:1px solid var(--line);overflow:hidden}
-.band .bar{padding-block:0;min-height:68px;flex-wrap:nowrap;gap:0;align-items:stretch}
-.band .brand{gap:12px;padding-block:12px;padding-right:20px;flex:none}
-.band .lgmark{width:54px;height:40px}.band .lgname{font-size:23px;font-weight:800}
-.bandR{flex:1;min-width:0;display:flex;align-items:center;justify-content:flex-end;background:var(--band-t);padding-left:56px;
-  margin-right:calc(-1 * max(16px,(100vw - 1180px) / 2 + 16px));padding-right:max(16px,calc((100vw - 1180px) / 2 + 16px));
-  clip-path:polygon(28px 0,100% 0,100% 100%,0 100%)}
-.bandR .saved{color:#cfe3e6}
-.bandR .btn{background:rgba(255,255,255,.08);color:#fff;border-color:rgba(255,255,255,.45)}
-.bandR .btn:hover{background:rgba(255,255,255,.16);border-color:#fff}
-.bandR select{background:#fff;color:#16232a;border-color:transparent}
-.bandR :focus-visible{outline-color:#fff}
-@media (max-width:1000px){.band .bar{flex-wrap:wrap}.bandR{background:none;clip-path:none;margin-right:0;padding:0 0 10px;flex-basis:100%;justify-content:flex-start}
-  .bandR .btn{background:var(--surface);color:var(--ink);border-color:var(--line)}.bandR .btn:hover{background:var(--surface2);border-color:var(--accent)}.bandR .saved{color:var(--muted)}.bandR select{border-color:var(--line)}
-  .band .brand{padding-block:12px 8px}}
-@media (max-width:560px){.band .lgname{font-size:19px}.band .lgmark{width:44px;height:33px}}
+/* ================= 側欄版面 =================
+   左側固定選單：分組標題、圖示、待辦數字；底部放目前專案、新專案與深淺色切換。
+   寬度 960px 以下改成上方列＋抽屜選單。 */
+:root{--side:248px;--shadow:0 1px 2px rgba(16,40,48,.05),0 6px 20px rgba(16,40,48,.06)}
+:root[data-theme="dark"]{--shadow:0 1px 2px rgba(0,0,0,.35),0 6px 20px rgba(0,0,0,.25)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--shadow:0 1px 2px rgba(0,0,0,.35),0 6px 20px rgba(0,0,0,.25)}}
+body{padding-left:var(--side)}
+.side{position:fixed;left:0;top:0;bottom:0;width:var(--side);box-sizing:border-box;background:var(--surface);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;padding:calc(18px + env(safe-area-inset-top,0px)) 14px calc(14px + env(safe-area-inset-bottom,0px));z-index:12;overflow-y:auto;scrollbar-width:thin}
+.sbrand{display:flex;align-items:center;gap:10px;padding:0 6px 14px}
+.sbrand .lgmark{width:46px;height:34px;flex:none;margin:0}
+.sbrand .lgname{display:block;font-size:17px;font-weight:800;line-height:1.25}
+.sbrand .stag{display:block;font-size:11.5px;color:var(--muted)}
+.side .tabs{flex-direction:column;gap:2px;overflow:visible;-webkit-mask-image:none;mask-image:none}
+.side .tsec{font-size:11px;letter-spacing:.12em;color:var(--muted);font-weight:600;padding:12px 12px 4px}
+.side .tabs button{display:flex;align-items:center;gap:11px;width:100%;padding:7px 12px;border:0;border-radius:10px;font-size:14.5px;color:var(--ink);text-align:left;position:relative}
+.side .tabs button .ti{width:19px;height:19px;flex:none;fill:none;stroke:var(--muted);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.side .tabs button:hover{background:var(--surface2)}
+.side .tabs button[aria-selected="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600;border-bottom:0}
+.side .tabs button[aria-selected="true"] .ti{stroke:var(--accent)}
+.side .tabs button[aria-selected="true"]::before{content:"";position:absolute;left:-14px;top:7px;bottom:7px;width:4px;border-radius:0 4px 4px 0;background:var(--accent)}
+.side .tabs button[aria-disabled="true"]{opacity:.45}
+.tbadge{margin-left:auto;min-width:20px;box-sizing:border-box;text-align:center;font-size:11px;font-weight:700;line-height:18px;color:#fff;background:var(--seal);border-radius:10px;padding:0 6px}
+.sfoot{margin-top:auto;padding-top:14px;display:grid;gap:10px}
+.sfoot .proj{display:grid;gap:5px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface2)}
+.sfoot .proj label{display:block;font-size:11px;letter-spacing:.08em}
+.sfoot .proj select{width:100%;max-width:none;min-width:0}
+.sfoot .proj #savedAt{white-space:normal}
+.sfoot .srow{display:flex;gap:8px}.sfoot .srow .btn{flex:1;justify-content:center}
+.mbar,.sidescrim{display:none}
+/* 卡片：大圓角、柔和陰影 */
+.panel,.scard{border-color:transparent;box-shadow:var(--shadow)}
+.nextcard{border-radius:var(--r);box-shadow:var(--shadow)}
+.btn{border-radius:10px}
+:root[data-theme="dark"] .panel,:root[data-theme="dark"] .scard{border-color:rgba(255,255,255,.07)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .panel,:root:not([data-theme="light"]) .scard{border-color:rgba(255,255,255,.07)}}
+/* 平板與手機：上方列＋抽屜選單 */
+@media (max-width:960px){
+  body{padding-left:0}
+  .mbar{display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:11;background:var(--surface);border-bottom:1px solid var(--line);
+    padding:calc(8px + env(safe-area-inset-top,0px)) 16px 8px max(12px,env(safe-area-inset-left,0px))}
+  .mbrand{display:flex;align-items:center;gap:8px}.mbrand .lgmark{width:38px;height:29px;margin:0}.mbrand .lgname{font-size:17px;font-weight:800}
+  .mmenu{display:grid;gap:4px;place-content:center;width:40px;height:40px;border:1px solid var(--line);border-radius:10px;background:var(--surface);cursor:pointer;padding:0}
+  .mmenu span{display:block;width:18px;height:2px;border-radius:2px;background:var(--ink)}
+  .side{transform:translateX(-102%);transition:transform .2s ease;width:min(300px,86vw);box-shadow:var(--shadow)}
+  body.sideopen .side{transform:none}
+  .sidescrim{display:block;position:fixed;inset:0;background:rgba(10,20,24,.38);z-index:11}
+  .sidescrim[hidden]{display:none}
+}
+@media (prefers-reduced-motion:reduce){.side{transition:none}}
+/* 詳細頁：背景加深並輕微模糊，右側面板浮起來，視線集中在面板與被點的項目 */
+.scrim{background:rgba(10,20,22,.45)}
+@media (min-width:961px){
+  .drawer{top:12px;bottom:12px;right:12px;border:0;border-radius:16px;box-shadow:0 24px 60px rgba(8,20,24,.28),0 2px 6px rgba(8,20,24,.12)}
+}
+/* 開啟右側詳細頁時，側欄縮成只剩圖示的窄欄（內容位置不變，不會跳動） */
+@media (min-width:961px){
+  .side{transition:width .2s ease,padding .2s ease}
+  body.drawer-open .side{width:72px;padding-inline:12px;overflow:hidden}
+  body.drawer-open .side .sbrand>div,body.drawer-open .side .tsec,body.drawer-open .side .tl,body.drawer-open .side .sfoot{display:none}
+  body.drawer-open .side .sbrand{padding:0 0 14px;justify-content:center}
+  body.drawer-open .side .sbrand .lgmark{width:42px;height:31px}
+  body.drawer-open .side .tabs{gap:6px;margin-top:10px}
+  body.drawer-open .side .tabs button{justify-content:center;padding:9px 0}
+  body.drawer-open .side .tabs button[aria-selected="true"]::before{left:-12px}
+  body.drawer-open .side .tbadge{position:absolute;top:2px;right:2px;min-width:16px;line-height:15px;font-size:10px;padding:0 4px}
+}
+@media (min-width:961px) and (prefers-reduced-motion:reduce){.side{transition:none}}
+/* 側欄縮起時，內容跟著往左滑；用 left 位移而不是 transform，避免改變層疊順序（被點的項目要浮在遮罩上） */
+@media (min-width:961px){
+  main.wrap,body>footer.wrap{position:relative;left:0;transition:left .2s ease}
+  body.drawer-open main.wrap,body.drawer-open>footer.wrap{left:calc(72px - var(--side))}
+}
+@media (min-width:961px) and (prefers-reduced-motion:reduce){main.wrap,body>footer.wrap{transition:none}}
