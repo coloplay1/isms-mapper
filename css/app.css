@@ -997,3 +997,4 @@ button.dl:disabled{opacity:.6;cursor:progress}
 .dgtb{width:100%;min-width:0;border-collapse:collapse;font-size:12px;margin-top:6px}
 .dgtb th,.dgtb td{border:1px solid var(--line);padding:3px 6px;text-align:left;vertical-align:top;position:static;font-size:12px;letter-spacing:0}
 .dgreset{display:flex;justify-content:flex-end;margin-bottom:-6px}.dgreset .linkbtn{padding:0}
+.sfoot .proj[hidden]{display:none}
