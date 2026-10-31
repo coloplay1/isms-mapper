@@ -991,3 +991,8 @@ button.dl:disabled{opacity:.6;cursor:progress}
 .dways>span:not(.note){display:inline-flex;gap:6px;align-items:baseline;padding:6px 12px;border-radius:999px;background:var(--accent-soft);font-size:13px;color:var(--ink)}
 .dways b{color:var(--accent)}
 .dways .note{font-size:12.5px}
+.dgprev{display:grid;gap:6px;font-size:13px;padding:8px 10px;border-radius:8px;background:var(--surface);border:1px dashed var(--line)}
+.dgline.warn{color:var(--seal)}
+.dgprev summary{cursor:pointer;color:var(--accent)}
+.dgtb{width:100%;min-width:0;border-collapse:collapse;font-size:12px;margin-top:6px}
+.dgtb th,.dgtb td{border:1px solid var(--line);padding:3px 6px;text-align:left;vertical-align:top;position:static;font-size:12px;letter-spacing:0}
