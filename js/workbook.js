@@ -222,8 +222,16 @@ function dueFrom(v){
 /* 「須處理，或經擁有者核准後條件接受」屬於需核准，所以先判斷「不可接受」，再判斷「核准」 */
 function policyFrom(t){return /不可接受|不得|須優先/.test(t)?"treat":/核准/.test(t)?"approve":/可接受/.test(t)?"accept":/須處理|必須處理/.test(t)?"treat":""}
 /* 風險評鑑準則表中的「可能性定義」「衝擊定義」 */
+/* 文字描述格式：「可能性 L｜5 幾乎必然(每月) / 3 可能(每年) / 1 幾乎不發生(數年)」，只填有寫到的等級 */
+function parseScaleText(data){
+  const s={l:["","","","",""],i:["","","","",""]};let hit=false;
+  for(const row of data){const cells=(row||[]).map(cellText);
+    for(let k=0;k<cells.length-1;k++){const lab=cells[k].replace(/\s+/g,"");const key=/^可能性(L)?$/i.test(lab)?"l":/^(衝擊|影響)(I)?$/i.test(lab)?"i":null;if(!key)continue;
+      for(const part of cells[k+1].split(/[\/／；;\n]+/)){const m=part.trim().match(/^([1-5])\s*[:：.、]?\s*(.+)$/);if(m){s[key][+m[1]-1]=m[2].trim().slice(0,200);hit=true}}}}
+  return hit?sanitizeScale(s):null;
+}
 function parseScale(data){
-  const h=data.findIndex(r=>(r||[]).map(normHead).includes("可能性定義"));if(h<0)return null;
+  const h=data.findIndex(r=>(r||[]).map(normHead).includes("可能性定義"));if(h<0)return parseScaleText(data);
   const hs=data[h].map(normHead),cl=hs.indexOf("可能性定義"),ci=hs.indexOf("衝擊定義"),cn=hs.indexOf("等級");
   const s={l:["","","","",""],i:["","","","",""]};
   for(const row of data.slice(h+1,h+8)){const n=Number(cellText((row||[])[cn<0?0:cn]));if(!(n>=1&&n<=5))continue;
@@ -273,6 +281,7 @@ function importWorkbook(sheets,opts={}){
         const rs=splitReasons(g("reason"));
         (g("codes").match(/RA|LR|CO|BP/g)||[]).forEach(k=>{if(!rs.includes(REASON_CODES[k]))rs.push(REASON_CODES[k])});
         let impl=g("impl");if(app==="N"&&!g("reason")&&impl){rs.push(impl);impl=""}
+        if(app==="Y"&&/待驗證|待確認|待查證/.test(st))(report.pending=report.pending||[]).push(code);
         raw.controls[code]={app,status:app==="N"?0:statusFrom(st),owner:g("owner"),evidence:g("evidence"),reason:rs.join("；"),impl};if(g("co"))raw.controls[code].co=g("co");n++}
       report.controls+=n;if(n){report.sheets.push(sheet);report.columns.push(colReport(sheet,"soa",data[hs],m))}
       if(n&&n<93)warn(`「${sheet}」只有 ${n} 項控制措施，其餘項目為未決定`);
@@ -323,6 +332,7 @@ function importWorkbook(sheets,opts={}){
     if(!raw.scale){const sc=parseScale(data);if(sc)raw.scale=sc}
     if(/準則/.test(sheet)||!raw.criteria){const c=parseCriteria(data);if(c&&!raw.criteria){raw.criteria=c;report.criteria=true;report.sheets.push(sheet)}}
   }
+  if(report.pending&&report.pending.length)warn(`${report.pending.length} 項執行狀態寫「待驗證」，已先當成「已實施」匯入（${report.pending.slice(0,6).join("、")}${report.pending.length>6?"…":""}）；建議用稽核準備的「模擬抽查」實際確認證據`);
   function k_due(row,m){return "due" in m?row[m.due]:""}
   if(!report.controls&&!report.risks)throw new Error(`找不到 SoA 或風險評鑑表：需要有「控制措施編號」加「適用性」欄，或「風險編號」加風險描述、可能性等欄位${report.seen.length?`（已檢查工作表：${report.seen.slice(0,6).join("、")}${report.seen.length>6?" 等":""}）`:""}。可下載空白範本對照欄位名稱`);
   return {raw,report};

@@ -188,7 +188,7 @@ function docNeed(p,d){
 /* 每一項「資料齊全」的判斷條件，顯示在畫面上，讓使用者知道工具看的是什麼、要補什麼 */
 const AUDIT_RULES={
   scope:"專案有填寫驗證範圍，條款 4.3 標為「已實施」以上，並寫了範圍文件的位置（例如 POL-02 ISMS 適用範圍書，或手冊中的範圍章節）",
-  criteria:"風險準則已按「確認」，並寫了可能性與衝擊各級的定義",
+  criteria:"風險準則已按「確認」，並寫了可能性與衝擊每一級的定義",
   riskAssess:"至少登錄一項風險、全部都已評分，並在風險識別按過「確認風險識別完成」；沒有明顯的矛盾，例如發生過相關事件卻把可能性評得很低、沒寫威脅或脆弱性、所有風險分數都一樣",
   verify:"標為已驗證的控制措施與條款都記錄了確認人，且確認人不是負責人本人；風險識別完成也記錄了確認人",
   soa:"93 項控制措施都已判定適用性，判為不適用的都有排除理由",
@@ -196,7 +196,7 @@ const AUDIT_RULES={
   approve:"文件管制狀態為「已核准」、需核准的殘餘風險都已勾選擁有者核准、處理計畫都有預計完成日",
   clauses:"條款 4–10 都標為「已實施」或「已驗證」",
   impl:"判為適用的控制措施都標為「已實施」或「已驗證」",
-  evidence:"已實施與已驗證的控制措施都有填寫證據位置，抽查確認過的不超過一年；建議用「模擬抽查」實際打開證據確認",
+  evidence:"已實施與已驗證的控制措施都有填寫證據位置，而且不是只寫手冊或政策編號；實施方式不是同一段制式文字；抽查確認過的不超過一年。建議用「模擬抽查」實際打開證據確認",
   owner:"判為適用的控制措施都有負責人",
   plan:"降低、移轉或避免的處理計畫都沒有逾期，也沒有 30 天內到期",
   reassess:"建立過新年度，沿用去年分數的風險都已重新評估",
@@ -204,6 +204,14 @@ const AUDIT_RULES={
   review:"條款 9.3 標為「已實施」或「已驗證」",
   correct:"改善事項沒有逾期，已完成的都已確認有效"
 };
+/* 證據品質：只寫手冊、政策或程序的編號（例如「ISMS-M-01」「POL-01」），稽核員會要求出示執行紀錄 */
+const POLICY_ONLY=/^(?:ISMS-)?(?:M|D|POL|PRO|P|WI)-\d{1,3}(?:-\d{1,3})?$|^(?:資訊安全|資安)?(?:管理)?(?:手冊|政策)$/i;
+function weakEvidence(ev){const parts=String(ev||"").split(/[、；;,，\/／\s]+/).map(x=>x.trim()).filter(Boolean);return parts.length>0&&parts.every(x=>POLICY_ONLY.test(x))}
+/* 制式文字：同一段實施方式被複製到很多項控制措施，通常代表還沒寫出各自的具體做法 */
+function boilerplateImpl(vs,min=5){const m={};vs.forEach(x=>{const t=String(x.v.impl||"").replace(/\s+/g,"");if(t.length>=8)(m[t]=m[t]||[]).push(x.c.code)});
+  return Object.entries(m).filter(([,c])=>c.length>=min).map(([t,codes])=>({text:t,codes}))}
+/* 可能性與衝擊各級定義：有寫但缺了某些等級 */
+function scaleGaps(scale){const s=sanitizeScale(scale);if(!s)return null;const miss=k=>s[k].map((t,i)=>t?null:i+1).filter(Boolean);return {l:miss("l"),i:miss("i")}}
 function auditReadiness(p,now){
   if(!p)return [];
   const f=guideFacts(p,now);
@@ -211,6 +219,9 @@ function auditReadiness(p,now){
   const notStart=vs.filter(x=>x.v.status===0).length,partial=vs.filter(x=>x.v.status===1).length;
   const implNoEv=vs.filter(x=>x.v.status===2&&!String(x.v.evidence||"").trim()).length;
   const stale=vs.filter(x=>x.v.status>=2&&(evidenceAge(x.v,now)||0)>SPOT_STALE_DAYS).length;
+  const weakEv=vs.filter(x=>x.v.status>=2&&weakEvidence(x.v.evidence)).length;
+  const boiler=boilerplateImpl(vs),boilerN=boiler.reduce((a,b)=>a+b.codes.length,0);
+  const gaps=scaleGaps(p.scale),gapTxt=gaps&&(gaps.l.length||gaps.i.length)?[gaps.l.length?`可能性第 ${gaps.l.join("、")} 級`:"",gaps.i.length?`衝擊第 ${gaps.i.join("、")} 級`:""].filter(Boolean).join("、"):"";
   const verified=[...vs.map(x=>x.v),...CLAUSES.map(c=>(p.clauses||{})[c.code]).filter(Boolean)].filter(v=>v.status===3);
   const noVer=verified.filter(v=>!String(v.verifier||"").trim()).length,selfVer=verified.filter(selfVerified).length;
   const sanity=riskSanity(p);
@@ -231,7 +242,7 @@ function auditReadiness(p,now){
        ["obs",cl43.status>=2&&!String(cl43.evidence||"").trim(),"條款 4.3 沒有寫範圍文件放在哪裡"]],
       f.scope?{tab:"clauses",cta:"前往條款 4–10"}:{tab:"projects",cta:"前往專案管理"}),
     it("criteria","6.1.2 a、b","風險評鑑準則","風險怎麼評分？多少分以上要處理？由誰核定？",
-      [["nc",!f.criteria,"風險準則尚未確認"],["obs",f.criteria&&!f.scaleDefs,"可能性與衝擊沒有寫各級定義，不同人評分可能不一致"]],
+      [["nc",!f.criteria,"風險準則尚未確認"],["obs",f.criteria&&!f.scaleDefs,"可能性與衝擊沒有寫各級定義，不同人評分可能不一致"],["obs",f.criteria&&!!gapTxt,`${gapTxt}沒有定義，評分時可能各自解讀`]],
       {tab:"risks",open:"criteria",cta:"開啟風險準則"}),
     it("riskAssess","6.1.2","風險評鑑結果","請出示風險評鑑表，這些風險是怎麼識別出來的？",
       [["nc",!f.risks,"還沒有登錄風險"],["nc",f.unscored,`${f.unscored} 項風險未評分`],["obs",f.risks&&!f.identOk,"尚未確認風險清單涵蓋整個範圍"],
@@ -255,7 +266,9 @@ function auditReadiness(p,now){
       [["nc",notStart,`${notStart} 項適用但未開始`],["obs",partial,`${partial} 項部分實施`]],
       {tab:"annex",filter:"notimpl",cta:"前往附錄 A"},noApp),
     it("evidence","7.5、附錄 A","執行證據","請出示最近一次執行的紀錄。",
-      [["nc",f.noEvidence,`${f.noEvidence} 項標為已驗證但沒有證據位置`],["obs",implNoEv,`${implNoEv} 項已實施但沒寫證據位置`],["obs",stale,`${stale} 項證據超過一年沒有抽查確認`]],
+      [["nc",f.noEvidence,`${f.noEvidence} 項標為已驗證但沒有證據位置`],["obs",implNoEv,`${implNoEv} 項已實施但沒寫證據位置`],["obs",stale,`${stale} 項證據超過一年沒有抽查確認`],
+       ["obs",weakEv,`${weakEv} 項的證據位置只寫手冊或政策編號，稽核員會要求出示實際執行的紀錄`],
+       ["obs",boilerN,`${boilerN} 項控制措施的實施方式是同一段文字（例如「${(boiler[0]||{text:""}).text.slice(0,18)}…」），請寫出各自的具體做法`]],
       {tab:"annex",filter:"noevany",cta:"前往附錄 A"},noApp),
     it("owner","5.3","責任分工","這項控制措施由誰負責？他知道嗎？",
       [["obs",f.applicable&&f.noOwner,`${f.noOwner} 項沒有負責人`]],
