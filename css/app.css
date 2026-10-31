@@ -915,8 +915,8 @@ body{padding-left:var(--side)}
 @media (min-width:961px){
   .drawer{top:12px;bottom:12px;right:12px;border:0;border-radius:16px;box-shadow:0 24px 60px rgba(8,20,24,.28),0 2px 6px rgba(8,20,24,.12)}
 }
-/* 開啟右側詳細頁時，側欄縮成只剩圖示的窄欄（內容位置不變，不會跳動） */
-@media (min-width:961px){
+/* 開啟右側詳細頁時，側欄縮成只剩圖示的窄欄；寬螢幕（1600px 以上）空間足夠，維持原樣 */
+@media (min-width:961px) and (max-width:1599px){
   .side{transition:width .2s ease,padding .2s ease}
   body.drawer-open .side{width:72px;padding-inline:12px;overflow:hidden}
   body.drawer-open .side .sbrand>div,body.drawer-open .side .tsec,body.drawer-open .side .tl,body.drawer-open .side .sfoot{display:none}
@@ -927,10 +927,10 @@ body{padding-left:var(--side)}
   body.drawer-open .side .tabs button[aria-selected="true"]::before{left:-12px}
   body.drawer-open .side .tbadge{position:absolute;top:2px;right:2px;min-width:16px;line-height:15px;font-size:10px;padding:0 4px}
 }
-@media (min-width:961px) and (prefers-reduced-motion:reduce){.side{transition:none}}
+@media (min-width:961px) and (max-width:1599px) and (prefers-reduced-motion:reduce){.side{transition:none}}
 /* 側欄縮起時，內容跟著往左滑；用 left 位移而不是 transform，避免改變層疊順序（被點的項目要浮在遮罩上） */
-@media (min-width:961px){
+@media (min-width:961px) and (max-width:1599px){
   main.wrap,body>footer.wrap{position:relative;left:0;transition:left .2s ease}
   body.drawer-open main.wrap,body.drawer-open>footer.wrap{left:calc(72px - var(--side))}
 }
-@media (min-width:961px) and (prefers-reduced-motion:reduce){main.wrap,body>footer.wrap{transition:none}}
+@media (min-width:961px) and (max-width:1599px) and (prefers-reduced-motion:reduce){main.wrap,body>footer.wrap{transition:none}}
